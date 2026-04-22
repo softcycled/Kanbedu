@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Column {
+  id    String @id @default(cuid())
+  label String
+  order Int    @default(0)
+}
+
+model Task {
+  id               String    @id @default(cuid())
+  title            String
+  description      String    @default("")
+  deadline         DateTime?
+  createdAt        DateTime  @default(now())
+  column           String    @default("todo")
+  columnUpdatedAt  DateTime  @default(now())
+  assignee         String    @default("")
+  order            Float     @default(0)
+  comments         Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
