@@ -1,94 +1,35 @@
 # Kanbedu
 
-A lightweight kanban board built for student group projects. Fast, minimal, no clutter.
+A fast, minimal kanban board designed for students.
 
-## Stack
-
-- **Next.js 14** (App Router)
-- **SQLite** via Prisma ORM
-- **Tailwind CSS**
-- **dnd-kit** for drag and drop
-
-## Getting Started
-
-### 1. Install dependencies
-
-```bash
-npm install
-```
-
-### 2. Set up the database
-
-```bash
-npx prisma db push
-npx prisma generate
-```
-
-This creates a local `dev.db` SQLite file inside the `prisma/` directory.
-
-### 3. Run the development server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## Project Structure
-
-```
-kanbedu/
-├── prisma/
-│   └── schema.prisma         # Database schema (Task, Comment)
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── tasks/
-│   │   │   │   ├── route.ts          # GET all tasks, POST new task
-│   │   │   │   └── [id]/route.ts     # PATCH update, DELETE task
-│   │   │   └── comments/
-│   │   │       └── route.ts          # POST new comment
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx                  # Server component, fetches board data
-│   ├── components/
-│   │   ├── Board.tsx                 # DnD context, state management
-│   │   ├── KanbanColumn.tsx          # Column with droppable zone
-│   │   ├── TaskCard.tsx              # Draggable task card
-│   │   ├── TaskModal.tsx             # Task detail modal with auto-save
-│   │   └── AddTask.tsx               # Inline task creation input
-│   └── lib/
-│       ├── prisma.ts                 # Prisma singleton
-│       ├── types.ts                  # Shared TypeScript types
-│       └── utils.ts                  # Time helpers, date formatting
-├── .env                              # DATABASE_URL
-├── package.json
-├── tailwind.config.js
-└── tsconfig.json
-```
-
----
+Built to manage tasks without clutter — simple, clean, and flexible.
 
 ## Features
 
-- **3-column kanban**: To Do → Doing → Done
-- **Drag & drop**: Smooth task movement between columns
-- **Inline task creation**: Type + Enter, no modals
-- **Task modal**: Click any card to view/edit details
-- **Auto-save**: Description, assignee, deadline save as you type (debounced)
-- **Comments**: Simple per-task comment thread
-- **Time in column**: Each card shows how long a task has been in its current column
-- **Overdue indicator**: Red dot on cards past their deadline
+- Drag and drop tasks between columns
+- Inline editing for task titles and descriptions
+- Customizable columns (add, rename, reorder, delete)
+- Automatic saving
+- Clean, minimal UI
 
-## Useful Commands
+## Tech Stack
+
+- Next.js
+- TypeScript
+- Prisma
+- SQLite
+
+## Why Kanbedu?
+
+Most tools are too complex for simple student workflows.
+
+Kanbedu focuses on:
+- speed
+- simplicity
+- usability
+
+## Setup
 
 ```bash
-npm run db:studio     # Open Prisma Studio (visual DB browser)
-npm run db:push       # Push schema changes to DB
-npm run build         # Production build
-```
-## Things To Note
-
-This readme.md section will easily be outdated in the future, and is subject to change.
+npm install
+npm run dev
