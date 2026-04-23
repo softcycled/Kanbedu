@@ -19,6 +19,8 @@ model Task {
   description      String    @default("")
   deadline         DateTime?
   createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
   column           String    @default("todo")
   columnUpdatedAt  DateTime  @default(now())
   assignee         String    @default("")

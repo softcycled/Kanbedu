@@ -19,6 +19,8 @@ export interface Task {
   description: string;
   deadline: string | Date | null;
   createdAt: string | Date;
+  updatedAt: string | Date;
+  completedAt: string | Date | null;
   column: Column;
   columnUpdatedAt: string | Date;
   assignee: string;

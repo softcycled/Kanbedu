@@ -14,6 +14,22 @@ export async function PATCH(
     const current = await prisma.task.findUnique({ where: { id } });
     if (current && current.column !== body.column) {
       updateData.columnUpdatedAt = new Date();
+
+      // Set completion metadata when entering or leaving the Done column.
+      const destinationColumn = await prisma.column.findUnique({
+        where: { id: body.column },
+      });
+      const destinationIsDone = destinationColumn?.label.toLowerCase() === "done";
+      const currentColumn = await prisma.column.findUnique({
+        where: { id: current.column },
+      });
+      const currentIsDone = currentColumn?.label.toLowerCase() === "done";
+
+      if (destinationIsDone && !currentIsDone) {
+        updateData.completedAt = new Date();
+      } else if (!destinationIsDone && currentIsDone) {
+        updateData.completedAt = null;
+      }
     }
   }
 

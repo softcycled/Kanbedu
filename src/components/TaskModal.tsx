@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Task, Comment } from "@/lib/types";
-import { isOverdue, formatDate, formatDateForInput } from "@/lib/utils";
+import {
+  isOverdue,
+  formatDateForInput,
+  formatDateTime,
+  formatTimeAgo,
+} from "@/lib/utils";
 
 interface Props {
   task: Task | null;
@@ -22,6 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComment }: Props) {
+  const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [assignee, setAssignee] = useState("");
@@ -85,6 +91,13 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     };
   }, []);
+
+  // Re-render every 30s so relative timestamps stay current
+  useEffect(() => {
+    if (!task) return;
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [task]);
 
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
@@ -225,8 +238,20 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
           <div className="flex flex-wrap items-center gap-3 mt-3">
             <span className="text-xs text-muted">
-              Created {formatDate(task.createdAt)}
+              Created {formatDateTime(task.createdAt)}
             </span>
+            <span className="text-xs text-muted">
+              Updated {formatTimeAgo(
+                task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
+                  ? task.updatedAt
+                  : task.createdAt
+              )}
+            </span>
+            {task.completedAt && (
+              <span className="text-xs text-muted">
+                Completed {formatDateTime(task.completedAt)}
+              </span>
+            )}
             {overdue && task.deadline && (
               <span className="text-xs text-accent font-medium flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />

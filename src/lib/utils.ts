@@ -46,3 +46,35 @@ export function formatDateForInput(date: Date | string | null): string {
   const d = new Date(date);
   return d.toISOString().split("T")[0];
 }
+
+export function formatDateTime(date: Date | string | null): string {
+  if (!date) return "";
+  return new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function formatTimeAgo(date: Date | string | null | undefined): string {
+  if (!date) return "just now";
+
+  const ts = new Date(date).getTime();
+  const now = Date.now();
+  const diffSeconds = Math.round((now - ts) / 1000);
+  const absSeconds = Math.abs(diffSeconds);
+
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  if (absSeconds < 60) return "just now";
+
+  const diffMinutes = Math.round(diffSeconds / 60);
+  if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute");
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) return rtf.format(-diffHours, "hour");
+
+  const diffDays = Math.round(diffHours / 24);
+  return rtf.format(-diffDays, "day");
+}
