@@ -52,10 +52,12 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const prevTask = useRef<string | null>(null);
   const originalTask = useRef<{ description?: string; assignee?: string; deadline?: string } | null>(null);
   const isMounted = useRef(false);
+  const userHasEdited = useRef(false);
 
   useEffect(() => {
     if (task && task.id !== prevTask.current) {
       prevTask.current = task.id;
+      userHasEdited.current = false;
       setDescription(task.description ?? "");
       setIsEditingDescription(false);
       setIsEditingTitle(false);
@@ -153,6 +155,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
+    if (!userHasEdited.current) return;
     // Only update if value actually changed from original
     if (debouncedDescription !== originalTask.current?.description) {
       handleUpdateWithFeedback(task.id, { description: debouncedDescription });
@@ -162,6 +165,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
+    if (!userHasEdited.current) return;
     // Only update if value actually changed from original
     if (debouncedAssignee !== originalTask.current?.assignee) {
       handleUpdateWithFeedback(task.id, { assignee: debouncedAssignee });
@@ -171,6 +175,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
+    if (!userHasEdited.current) return;
     // Only update if value actually changed from original
     const deadlineValue = debouncedDeadline ? new Date(debouncedDeadline).toISOString() : null;
     const originalDeadline = originalTask.current?.deadline 
@@ -184,7 +189,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
   // Flush any pending debounced updates before closing
   const flushUpdates = useCallback(async () => {
-    if (!task || !isMounted.current) return;
+    if (!task || !isMounted.current || !userHasEdited.current) return;
 
     const updates: Partial<Task> = {};
     if (description !== originalTask.current?.description) {
@@ -326,6 +331,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
                 ref={descriptionTextareaRef}
                 value={description}
                 onChange={(e) => {
+                  userHasEdited.current = true;
                   setDescription(e.target.value);
                   const el = e.target;
                   el.style.height = "auto";
@@ -376,7 +382,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
               </label>
               <input
                 value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
+                onChange={(e) => { userHasEdited.current = true; setAssignee(e.target.value); }}
                 placeholder="Name…"
                 className="
                   w-full bg-column-bg rounded-xl px-4 py-2.5
@@ -393,7 +399,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
               <input
                 type="date"
                 value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
+                onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
                 className="
                   w-full bg-column-bg rounded-xl px-4 py-2.5
                   text-sm text-ink
