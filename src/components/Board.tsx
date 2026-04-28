@@ -302,13 +302,18 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
   // ── Task actions ───────────────────────────────────────────────
 
   const handleAddTask = useCallback(async (title: string, column: Column) => {
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, column }),
-    });
-    const newTask: Task = await res.json();
-    setTasks((prev) => [...prev, newTask]);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, column }),
+      });
+      if (!res.ok) throw new Error(`Add task failed: ${res.status}`);
+      const newTask: Task = await res.json();
+      setTasks((prev) => [...prev, newTask]);
+    } catch (error) {
+      console.error("Failed to add task:", error);
+    }
   }, []);
 
   const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
@@ -346,8 +351,13 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
   }, [handleUpdateTask]);
 
   const handleDeleteTask = useCallback(async (id: string) => {
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    try {
+      const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`Delete task failed: ${res.status}`);
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    }
   }, []);
 
   const handleAddComment = useCallback(
@@ -357,6 +367,7 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, content }),
       });
+      if (!res.ok) throw new Error(`Add comment failed: ${res.status}`);
       const comment: Comment = await res.json();
       setTasks((prev) =>
         prev.map((t) =>
