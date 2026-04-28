@@ -117,6 +117,15 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
         }
 
         setColumns((prev) => prev.filter((col) => col.id !== columnToDelete.id));
+        if (moveToColumnId) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.column === columnToDelete.id ? { ...t, column: moveToColumnId } : t
+            )
+          );
+        } else {
+          setTasks((prev) => prev.filter((t) => t.column !== columnToDelete.id));
+        }
         setDeleteModalOpen(false);
         setColumnToDelete(null);
       } catch (error) {
