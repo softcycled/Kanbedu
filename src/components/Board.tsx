@@ -402,7 +402,6 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
                 columnIndex={index}
                 tasks={getTasksByColumn(col.id)}
                 onTaskClick={handleTaskClick}
-                onTaskTitleUpdate={handleUpdateTaskTitle}
                 onAddTask={handleAddTask}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleDeleteColumnClick}
@@ -428,7 +427,6 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
                 <TaskCard
                   task={activeTask}
                   onClick={() => {}}
-                  onTitleUpdate={handleUpdateTaskTitle}
                 />
               </div>
             )}

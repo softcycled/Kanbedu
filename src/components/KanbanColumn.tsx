@@ -15,7 +15,6 @@ interface Props {
   columnIndex: number;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
-  onTaskTitleUpdate: (id: string, title: string) => Promise<void>;
   onAddTask: (title: string, column: Column) => Promise<void>;
   onRenameColumn: (columnId: string, newLabel: string) => Promise<void>;
   onDeleteColumn: (columnId: string) => void;
@@ -28,7 +27,6 @@ export default function KanbanColumn({
   columnIndex,
   tasks,
   onTaskClick,
-  onTaskTitleUpdate,
   onAddTask,
   onRenameColumn,
   onDeleteColumn,
@@ -94,7 +92,6 @@ export default function KanbanColumn({
                 key={task.id}
                 task={task}
                 onClick={() => onTaskClick(task)}
-                onTitleUpdate={onTaskTitleUpdate}
               />
             ))}
           </div>

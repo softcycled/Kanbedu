@@ -30,6 +30,9 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [assignee, setAssignee] = useState("");
   const [deadline, setDeadline] = useState("");
   const [commentInput, setCommentInput] = useState("");
@@ -55,6 +58,8 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       prevTask.current = task.id;
       setDescription(task.description ?? "");
       setIsEditingDescription(false);
+      setIsEditingTitle(false);
+      setDraftTitle(task.title);
       setAssignee(task.assignee ?? "");
       setDeadline(formatDateForInput(task.deadline));
       setComments(task.comments ?? []);
@@ -66,6 +71,39 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       };
     }
   }, [task]);
+
+  // Auto-focus title input when editing
+  useEffect(() => {
+    if (!isEditingTitle) return;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
+  }, [isEditingTitle]);
+
+  const commitTitle = useCallback(async () => {
+    const trimmed = draftTitle.trim();
+    if (!trimmed || !task) {
+      setDraftTitle(task?.title ?? "");
+      setIsEditingTitle(false);
+      return;
+    }
+    if (trimmed !== task.title) {
+      await onUpdate(task.id, { title: trimmed });
+    }
+    setIsEditingTitle(false);
+  }, [draftTitle, task, onUpdate]);
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTitle();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setDraftTitle(task?.title ?? "");
+      setIsEditingTitle(false);
+    }
+  };
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -175,8 +213,8 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   }, [flushUpdates, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") handleClose();
-  }, [handleClose]);
+    if (e.key === "Escape" && !isEditingTitle && !isEditingDescription) handleClose();
+  }, [handleClose, isEditingTitle, isEditingDescription]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
@@ -212,9 +250,23 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-base font-semibold text-ink leading-snug flex-1">
-              {task.title}
-            </h2>
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                onBlur={commitTitle}
+                className="flex-1 text-base font-semibold text-ink leading-snug bg-black/[0.08] rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
+              />
+            ) : (
+              <h2
+                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-black/[0.05] transition-colors"
+                onClick={() => { setDraftTitle(task.title); setIsEditingTitle(true); }}
+              >
+                {task.title}
+              </h2>
+            )}
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => { onDelete(task.id); handleClose(); }}
