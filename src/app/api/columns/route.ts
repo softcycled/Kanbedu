@@ -11,9 +11,9 @@ export async function GET() {
     // If no columns exist, create default ones
     if (columns.length === 0) {
       const defaultColumns = [
-        { label: "To Do", order: 0 },
-        { label: "In Progress", order: 1 },
-        { label: "Done", order: 2 },
+        { label: "To Do", order: 0, isDone: false },
+        { label: "In Progress", order: 1, isDone: false },
+        { label: "Done", order: 2, isDone: true },
       ];
 
       const created = await Promise.all(

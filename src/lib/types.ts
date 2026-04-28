@@ -4,6 +4,7 @@ export interface ColumnData {
   id: string;
   label: string;
   order: number;
+  isDone: boolean;
 }
 
 export interface Comment {
