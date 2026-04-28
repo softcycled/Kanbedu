@@ -8,8 +8,15 @@ export async function PATCH(
   const body = await req.json();
   const { id } = params;
 
+  // Only bump updatedAt for meaningful field changes, not order/position changes
+  const MEANINGFUL_FIELDS = ["title", "description", "assignee", "deadline", "column"];
+  const hasMeaningfulChange = MEANINGFUL_FIELDS.some((f) => f in body);
+
   // If moving to a new column, update columnUpdatedAt
   const updateData: Record<string, unknown> = { ...body };
+  if (hasMeaningfulChange) {
+    updateData.updatedAt = new Date();
+  }
   if (body.column !== undefined) {
     const current = await prisma.task.findUnique({ where: { id } });
     if (current && current.column !== body.column) {
