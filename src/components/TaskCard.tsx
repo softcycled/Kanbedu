@@ -28,7 +28,9 @@ export default function TaskCard({ task, onClick }: Props) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    // Use dnd-kit's transition during sorting; our custom easing otherwise
+    transition: transition ?? "transform 300ms cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 300ms cubic-bezier(0.25,0.46,0.45,0.94), border-color 200ms ease",
+    willChange: "transform",
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,
   };
@@ -55,10 +57,9 @@ export default function TaskCard({ task, onClick }: Props) {
       {...listeners}
       onClick={onClick}
       className="
-        group relative bg-card-bg rounded-xl px-4 py-3.5
-        shadow-card hover:shadow-card-hover
+        group relative bg-card-bg rounded-2xl px-4 py-4
+        shadow-card hover:shadow-card-hover hover:-translate-y-1
         cursor-pointer select-none
-        transition-all duration-150
         border border-transparent hover:border-border
         animate-slide-up
       "
@@ -68,7 +69,7 @@ export default function TaskCard({ task, onClick }: Props) {
         <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-accent" />
       )}
 
-      <p className="text-sm font-medium text-ink leading-snug pr-3">
+      <p className="text-sm font-medium text-ink leading-snug tracking-[-0.01em] pr-3">
         {task.title}
       </p>
 

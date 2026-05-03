@@ -413,7 +413,7 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-5 h-full">
+            <div className="flex gap-7 h-full">
             {columns.map((col, index) => (
               <KanbanColumn
                 key={col.id}

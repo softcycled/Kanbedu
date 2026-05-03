@@ -13,8 +13,8 @@ module.exports = {
       },
       colors: {
         paper: "#F7F5F0",
-        ink: "#1A1814",
-        muted: "#8C8880",
+        ink: "#1C1917",
+        muted: "#78716C",
         accent: "#E8613A",
         "accent-light": "#FDF0EB",
         "column-bg": "#EFEDE8",
@@ -25,9 +25,12 @@ module.exports = {
         "done-dot": "#4ADE80",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(26,24,20,0.06), 0 1px 2px rgba(26,24,20,0.04)",
-        "card-hover": "0 4px 12px rgba(26,24,20,0.10), 0 2px 4px rgba(26,24,20,0.06)",
+        card: "0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04)",
+        "card-hover": "0 8px 24px rgba(26,24,20,0.10), 0 3px 8px rgba(26,24,20,0.06)",
         modal: "0 24px 64px rgba(26,24,20,0.18), 0 8px 24px rgba(26,24,20,0.10)",
+      },
+      transitionTimingFunction: {
+        "smooth-out": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
       },
       animation: {
         "modal-in": "modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)",

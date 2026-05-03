@@ -21,6 +21,15 @@ interface Props {
   isDynamic?: boolean;
 }
 
+const COLUMN_TINTS = [
+  "bg-blue-100",
+  "bg-amber-100",
+  "bg-green-100",
+  "bg-purple-100",
+  "bg-pink-100",
+  "bg-cyan-100",
+];
+
 export default function KanbanColumn({
   columnId,
   label,
@@ -77,16 +86,15 @@ export default function KanbanColumn({
       {/* Drop zone */}
       <div
         ref={setDropRef}
-        className={`
-          flex-1 rounded-2xl p-2 transition-colors duration-150 min-h-[120px]
-          ${isOver ? "bg-accent-light" : "bg-column-bg"}
-        `}
+        className={`flex-1 rounded-2xl p-3 transition-colors duration-150 min-h-[120px] ${
+          isOver ? "bg-accent-light" : "bg-column-bg"
+        }`}
       >
         <SortableContext
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}
