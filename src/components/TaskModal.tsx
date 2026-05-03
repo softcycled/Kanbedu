@@ -44,6 +44,9 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const overlayRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
+  const commentsRef = useRef<HTMLDivElement>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const descriptionOriginalRef = useRef<string>("");
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -111,7 +114,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     }
   };
 
-  // Auto-resize textarea height
+  // Auto-resize textarea to full content height while editing
   useEffect(() => {
     const el = descriptionTextareaRef.current;
     if (!el || !isEditingDescription) return;
@@ -244,6 +247,17 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     if (e.key === "Enter") handleAddComment();
   };
 
+  useEffect(() => {
+    const el = commentsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCommentsVisible(entry.isIntersecting),
+      { root: modalBodyRef.current, threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [task]);
+
   if (!task) return null;
 
   const overdue = isOverdue(task.deadline);
@@ -254,7 +268,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       onClick={(e) => e.target === overlayRef.current && handleClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
     >
-      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
+      <div className="relative bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
         
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
@@ -337,7 +351,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
         </div>
 
         {/* Body - scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div ref={modalBodyRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
           {/* Priority */}
           <div>
@@ -432,12 +446,12 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
                     setIsEditingDescription(false);
                   }
                 }}
-                rows={1}
+                rows={4}
                 className="
                   w-full bg-black/[0.08] rounded-lg px-2 py-1
                   text-sm text-ink leading-relaxed
                   border-none outline-none ring-0 shadow-none
-                  resize-none overflow-hidden transition-colors
+                  resize-none overflow-hidden transition-[height]
                 "
               />
             ) : (
@@ -446,12 +460,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
                   descriptionOriginalRef.current = description;
                   setIsEditingDescription(true);
                 }}
-                className="
-                  min-h-[2.25rem] px-2 py-1 rounded-lg
-                  text-sm leading-relaxed cursor-text
-                  bg-black/[0.05] hover:bg-black/[0.08] transition-colors
-                  text-ink
-                "
+                className="min-h-[2.25rem] px-2 py-1 rounded-lg text-sm leading-relaxed cursor-text bg-black/[0.05] hover:bg-black/[0.08] transition-colors text-ink"
               >
                 {description
                   ? <span className="whitespace-pre-wrap">{description}</span>
@@ -464,7 +473,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
           <div className="border-t border-border pt-8" />
 
           {/* Comments */}
-          <div>
+          <div ref={commentsRef}>
             <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-4">
               Notes & Comments {comments.length > 0 && <span className="normal-case font-normal text-muted">({comments.length})</span>}
             </label>
@@ -513,6 +522,30 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
             </div>
           </div>
         </div>
+
+        {/* Jump to comments floating button */}
+        {!commentsVisible && (
+          <div className="absolute bottom-[52px] left-0 right-0 flex justify-center pointer-events-none">
+            <button
+              onClick={() => {
+                const body = modalBodyRef.current;
+                const target = commentsRef.current;
+                if (body && target) {
+                  body.scrollTo({
+                    top: target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 16,
+                    behavior: "smooth",
+                  });
+                }
+              }}
+              className="pointer-events-auto flex items-center justify-center w-7 h-7 rounded-full bg-ink/80 text-paper shadow-md hover:bg-ink transition-colors"
+              title="Jump to comments"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2v8M2 7l4 4 4-4"/>
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Footer - Auto-save status */}
         <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
