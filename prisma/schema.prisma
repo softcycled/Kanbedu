@@ -26,6 +26,7 @@ model Task {
   columnUpdatedAt  DateTime  @default(now())
   assignee         String    @default("")
   order            Float     @default(0)
+  priority         String    @default("medium")
   comments         Comment[]
 }
 

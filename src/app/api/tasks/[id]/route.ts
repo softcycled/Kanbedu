@@ -9,7 +9,7 @@ export async function PATCH(
   const { id } = params;
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
-  const CONTENT_FIELDS = ["title", "description", "assignee", "deadline"];
+  const CONTENT_FIELDS = ["title", "description", "assignee", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
   let columnActuallyChanged = false;

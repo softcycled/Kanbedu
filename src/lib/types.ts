@@ -26,6 +26,7 @@ export interface Task {
   columnUpdatedAt: string | Date;
   assignee: string;
   order: number;
+  priority: string;
   comments: Comment[];
 }
 

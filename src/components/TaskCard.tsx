@@ -36,6 +36,17 @@ export default function TaskCard({ task, onClick }: Props) {
   const overdue = isOverdue(task.deadline);
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
+  const priorityDot: Record<string, string> = {
+    low:    "bg-blue-500",
+    medium: "bg-yellow-500",
+    high:   "bg-orange-500",
+    urgent: "bg-red-500",
+  };
+  const priorityLabel: Record<string, string> = {
+    low: "Low", medium: "Med", high: "High", urgent: "URGENT",
+  };
+  const p = task.priority ?? "medium";
+
   return (
     <div
       ref={setNodeRef}
@@ -62,6 +73,16 @@ export default function TaskCard({ task, onClick }: Props) {
       </p>
 
       <div className="flex items-center gap-2 mt-2.5">
+        <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${
+          p === "urgent" ? "bg-red-500/10 text-red-500" :
+          p === "high"   ? "bg-orange-500/10 text-orange-500" :
+          p === "low"    ? "bg-blue-500/10 text-blue-500" :
+                           "bg-yellow-500/10 text-yellow-600"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${priorityDot[p]}`} />
+          {priorityLabel[p]}
+        </span>
+
         <span className="text-xs text-muted font-mono">{timeStr}</span>
 
         {task.assignee && (

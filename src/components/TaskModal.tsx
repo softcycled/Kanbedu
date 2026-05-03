@@ -36,6 +36,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [assignee, setAssignee] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
   const [addingComment, setAddingComment] = useState(false);
@@ -66,6 +67,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       setDraftTitle(task.title);
       setAssignee(task.assignee ?? "");
       setDeadline(formatDateForInput(task.deadline));
+      setPriority(task.priority ?? "medium");
       setComments(task.comments ?? []);
       // Store original values for comparison
       originalTask.current = {
@@ -336,6 +338,38 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
         {/* Body - scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+          {/* Priority */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+              Priority
+            </label>
+            <div className="flex gap-2">
+              {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                const styles = {
+                  low:    { active: "bg-blue-500/25 text-blue-600 ring-1 ring-blue-500/60 font-semibold",    idle: "text-muted hover:bg-blue-500/10 hover:text-blue-500" },
+                  medium: { active: "bg-yellow-500/25 text-yellow-700 ring-1 ring-yellow-500/60 font-semibold", idle: "text-muted hover:bg-yellow-500/10 hover:text-yellow-600" },
+                  high:   { active: "bg-orange-500/25 text-orange-600 ring-1 ring-orange-500/60 font-semibold", idle: "text-muted hover:bg-orange-500/10 hover:text-orange-500" },
+                  urgent: { active: "bg-red-500/25 text-red-600 ring-1 ring-red-500/60 font-semibold",       idle: "text-muted hover:bg-red-500/10 hover:text-red-500" },
+                };
+                const isActive = priority === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      setPriority(p);
+                      handleUpdateWithFeedback(task.id, { priority: p });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                      isActive ? styles[p].active : styles[p].idle
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Assignee + Deadline row */}
           <div className="grid grid-cols-2 gap-4">
