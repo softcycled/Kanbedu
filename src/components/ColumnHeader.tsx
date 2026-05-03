@@ -12,6 +12,7 @@ interface Props {
   isDynamic: boolean; // true if user-created, false if default
   columnIndex?: number;
   isDragging?: boolean;
+  dragListeners?: Record<string, unknown>;
 }
 
 const getColorClasses = (index: number) => {
@@ -36,6 +37,7 @@ export default function ColumnHeader({
   isDynamic,
   columnIndex = 0,
   isDragging = false,
+  dragListeners,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
@@ -78,6 +80,7 @@ export default function ColumnHeader({
       } cursor-grab active:cursor-grabbing`}
       data-column
       data-column-id={columnId}
+      {...(dragListeners as React.HTMLAttributes<HTMLDivElement>)}
     >
       <span className={`w-2 h-2 rounded-full ${colors.dot} flex-shrink-0`} />
 

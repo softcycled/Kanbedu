@@ -69,7 +69,6 @@ export default function KanbanColumn({
       ref={setSortableRef}
       style={style}
       {...attributes}
-      {...listeners}
       className="flex flex-col min-w-0 flex-shrink-0 w-96"
     >
       <ColumnHeader
@@ -81,6 +80,7 @@ export default function KanbanColumn({
         onDelete={handleDelete}
         isDynamic={isDynamic}
         isDragging={isDragging}
+        dragListeners={listeners}
       />
 
       {/* Drop zone */}

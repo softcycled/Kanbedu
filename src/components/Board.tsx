@@ -154,6 +154,55 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     }
   }, []);
 
+  // ── Edge-scroll during dnd-kit drag ───────────────────────────
+  const edgeScrollFrame = useRef<number | null>(null);
+
+  const startEdgeScroll = useCallback((clientX: number) => {
+    if (!scrollRef.current) return;
+    const rect = scrollRef.current.getBoundingClientRect();
+    const ZONE = 120; // px from edge to activate
+    const MAX_SPEED = 20;
+
+    const distLeft = clientX - rect.left;
+    const distRight = rect.right - clientX;
+
+    let speed = 0;
+    if (distLeft < ZONE) speed = -MAX_SPEED * (1 - distLeft / ZONE);
+    else if (distRight < ZONE) speed = MAX_SPEED * (1 - distRight / ZONE);
+
+    if (speed !== 0) {
+      scrollRef.current.scrollLeft += speed;
+    }
+
+    edgeScrollFrame.current = requestAnimationFrame(() => startEdgeScroll(clientX));
+  }, []);
+
+  const stopEdgeScroll = useCallback(() => {
+    if (edgeScrollFrame.current !== null) {
+      cancelAnimationFrame(edgeScrollFrame.current);
+      edgeScrollFrame.current = null;
+    }
+  }, []);
+
+  // Start/stop edge-scroll loop when a dnd-kit drag is active
+  useEffect(() => {
+    if (!activeTask && !activeColumn) {
+      stopEdgeScroll();
+      return;
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      stopEdgeScroll();
+      startEdgeScroll(e.clientX);
+    };
+
+    document.addEventListener('pointermove', onPointerMove);
+    return () => {
+      document.removeEventListener('pointermove', onPointerMove);
+      stopEdgeScroll();
+    };
+  }, [activeTask, activeColumn, startEdgeScroll, stopEdgeScroll]);
+
   // ── Drag handlers ──────────────────────────────────────────────
 
   const handleDragStart = ({ active }: DragStartEvent) => {
@@ -393,6 +442,58 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     setSelectedTask(task);
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const panState = useRef({ active: false, activated: false, startX: 0, startScrollLeft: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      const s = panState.current;
+      if (!s.active || !scrollRef.current) return;
+      const dx = e.clientX - s.startX;
+      if (!s.activated && Math.abs(dx) < 5) return;
+      if (!s.activated) {
+        s.activated = true;
+        setIsPanning(true);
+      }
+      scrollRef.current.scrollLeft = s.startScrollLeft - dx;
+    };
+
+    const onMouseUp = () => {
+      if (panState.current.active) {
+        panState.current.active = false;
+        panState.current.activated = false;
+        setIsPanning(false);
+      }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const handlePanMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if (activeTask || activeColumn) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('[data-column]') ||
+      target.closest('[data-task]') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('textarea')
+    ) return;
+    panState.current = {
+      active: true,
+      activated: false,
+      startX: e.clientX,
+      startScrollLeft: scrollRef.current?.scrollLeft ?? 0,
+    };
+  };
+
   if (isLoadingColumns) {
     return <div className="text-muted text-sm">Loading board...</div>;
   }
@@ -403,32 +504,14 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     (col) => !defaultColumnLabels.includes(col.label)
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isDraggingScroll = useRef(false);
-  const dragStartX = useRef(0);
-  const dragStartScrollLeft = useRef(0);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only activate on the scroll container itself or empty areas, not on kanban cards/headers
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-column]') || target.closest('[data-task]') || target.closest('button') || target.closest('input') || target.closest('textarea')) return;
-    isDraggingScroll.current = true;
-    dragStartX.current = e.clientX;
-    dragStartScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
-    e.preventDefault();
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDraggingScroll.current || !scrollRef.current) return;
-    const dx = e.clientX - dragStartX.current;
-    scrollRef.current.scrollLeft = dragStartScrollLeft.current - dx;
-  };
-
-  const handleMouseUp = () => { isDraggingScroll.current = false; };
-
   return (
     <>
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-2">
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-2"
+        style={{ cursor: isPanning ? 'grabbing' : 'grab', userSelect: isPanning ? 'none' : undefined }}
+        onMouseDown={handlePanMouseDown}
+      >
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}

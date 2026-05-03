@@ -56,6 +56,7 @@ export default function TaskCard({ task, onClick }: Props) {
       {...attributes}
       {...listeners}
       onClick={onClick}
+      data-task
       className="
         group relative bg-card-bg rounded-2xl px-4 py-4
         shadow-card hover:shadow-card-hover hover:-translate-y-1
