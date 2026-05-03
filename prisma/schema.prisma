@@ -7,11 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Board {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  columns   Column[]
+}
+
 model Column {
-  id     String  @id @default(cuid())
-  label  String
-  order  Int     @default(0)
-  isDone Boolean @default(false)
+  id      String  @id @default(cuid())
+  label   String
+  order   Int     @default(0)
+  isDone  Boolean @default(false)
+  boardId String  @default("cldefaultboard0000")
+  board   Board   @relation(fields: [boardId], references: [id])
 }
 
 model Task {

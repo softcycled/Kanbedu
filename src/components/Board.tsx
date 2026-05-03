@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -21,11 +21,12 @@ import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 
 interface Props {
+  boardId: string;
   initialTasks: Task[];
   onTasksUpdate?: (tasks: Task[]) => void;
 }
 
-export default function Board({ initialTasks, onTasksUpdate }: Props) {
+export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [columns, setColumns] = useState<ColumnData[]>([]);
   const [isLoadingColumns, setIsLoadingColumns] = useState(true);
@@ -39,7 +40,7 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
   useEffect(() => {
     const fetchColumns = async () => {
       try {
-        const res = await fetch("/api/columns");
+        const res = await fetch(`/api/columns?boardId=${boardId}`);
         if (res.ok) {
           const data = await res.json();
           setColumns(data);
@@ -141,7 +142,7 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
       const res = await fetch("/api/columns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: "New column" }),
+        body: JSON.stringify({ label: "New column", boardId }),
       });
 
       if (res.ok) {
@@ -401,6 +402,29 @@ export default function Board({ initialTasks, onTasksUpdate }: Props) {
   const userCreatedColumns = columns.filter(
     (col) => !defaultColumnLabels.includes(col.label)
   );
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDraggingScroll = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only activate on the scroll container itself or empty areas, not on kanban cards/headers
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-column]') || target.closest('[data-task]') || target.closest('button') || target.closest('input') || target.closest('textarea')) return;
+    isDraggingScroll.current = true;
+    dragStartX.current = e.clientX;
+    dragStartScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingScroll.current || !scrollRef.current) return;
+    const dx = e.clientX - dragStartX.current;
+    scrollRef.current.scrollLeft = dragStartScrollLeft.current - dx;
+  };
+
+  const handleMouseUp = () => { isDraggingScroll.current = false; };
 
   return (
     <>

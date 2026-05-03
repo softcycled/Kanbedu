@@ -1,8 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const boardId = searchParams.get("boardId");
+
+  let where = {};
+  if (boardId) {
+    const cols = await prisma.column.findMany({
+      where: { boardId },
+      select: { id: true },
+    });
+    where = { column: { in: cols.map((c) => c.id) } };
+  }
+
   const tasks = await prisma.task.findMany({
+    where,
     include: { comments: { orderBy: { createdAt: "asc" } } },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });

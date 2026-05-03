@@ -1,10 +1,17 @@
 export type Column = string; // Now dynamic, any string is valid
 
+export interface Board {
+  id: string;
+  name: string;
+  createdAt: string | Date;
+}
+
 export interface ColumnData {
   id: string;
   label: string;
   order: number;
   isDone: boolean;
+  boardId: string;
 }
 
 export interface Comment {
