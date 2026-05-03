@@ -154,9 +154,12 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     }
   }, []);
 
-  // ── Edge-scroll during dnd-kit drag ───────────────────────────
+  // ── Scroll refs ───────────────────────────────────────────────
+  const scrollRef = useRef<HTMLDivElement>(null);
   const edgeScrollFrame = useRef<number | null>(null);
+  const panState = useRef({ active: false, activated: false, startX: 0, startScrollLeft: 0 });
 
+  // ── Edge-scroll during dnd-kit drag ───────────────────────────
   const startEdgeScroll = useCallback((clientX: number) => {
     if (!scrollRef.current) return;
     const rect = scrollRef.current.getBoundingClientRect();
@@ -442,8 +445,6 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     setSelectedTask(task);
   }, []);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const panState = useRef({ active: false, activated: false, startX: 0, startScrollLeft: 0 });
   const [isPanning, setIsPanning] = useState(false);
 
   useEffect(() => {
