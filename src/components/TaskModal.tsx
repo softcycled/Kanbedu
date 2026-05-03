@@ -32,6 +32,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+  const [showInfo, setShowInfo] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [assignee, setAssignee] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -61,6 +62,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       setDescription(task.description ?? "");
       setIsEditingDescription(false);
       setIsEditingTitle(false);
+      setShowInfo(false);
       setDraftTitle(task.title);
       setAssignee(task.assignee ?? "");
       setDeadline(formatDateForInput(task.deadline));
@@ -274,6 +276,18 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
             )}
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
+                onClick={() => setShowInfo((v) => !v)}
+                className={`p-2 rounded-lg transition-colors text-xs ${
+                  showInfo ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"
+                }`}
+                title="Task info"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="7" cy="7" r="6"/>
+                  <path d="M7 6.5v4M7 4.5v.5"/>
+                </svg>
+              </button>
+              <button
                 onClick={() => { onDelete(task.id); handleClose(); }}
                 className="p-2 rounded-lg text-muted hover:text-accent hover:bg-accent-light transition-colors text-xs"
                 title="Delete task"
@@ -293,34 +307,72 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 mt-3">
-            <span className="text-xs text-muted">
-              Created {formatDateTime(task.createdAt)}
-            </span>
-            <span className="text-xs text-muted">
-              Updated {formatTimeAgo(
-                task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
-                  ? task.updatedAt
-                  : task.createdAt
-              )}
-            </span>
-            {task.completedAt && (
+          {showInfo && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <span className="text-xs text-muted">
-                Completed {formatDateTime(task.completedAt)}
+                Created {formatDateTime(task.createdAt)}
               </span>
-            )}
-            {overdue && task.deadline && (
-              <span className="text-xs text-accent font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
-                Overdue
+              <span className="text-xs text-muted">
+                Updated {formatTimeAgo(
+                  task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
+                    ? task.updatedAt
+                    : task.createdAt
+                )}
               </span>
-            )}
-          </div>
+              {task.completedAt && (
+                <span className="text-xs text-muted">
+                  Completed {formatDateTime(task.completedAt)}
+                </span>
+              )}
+              {overdue && task.deadline && (
+                <span className="text-xs text-accent font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+                  Overdue
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Body - scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          
+
+          {/* Assignee + Deadline row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+                Assignee
+              </label>
+              <input
+                value={assignee}
+                onChange={(e) => { userHasEdited.current = true; setAssignee(e.target.value); }}
+                placeholder="Name…"
+                className="
+                  w-full bg-column-bg rounded-xl px-4 py-2.5
+                  text-sm text-ink placeholder:text-muted
+                  border border-transparent focus:border-border focus:outline-none
+                  transition-colors
+                "
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+                Deadline
+              </label>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                className="
+                  w-full bg-column-bg rounded-xl px-4 py-2.5
+                  text-sm text-ink
+                  border border-transparent focus:border-border focus:outline-none
+                  transition-colors
+                "
+              />
+            </div>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
@@ -372,42 +424,6 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
                   : <span className="text-muted">Add a description…</span>}
               </div>
             )}
-          </div>
-
-          {/* Assignee + Deadline row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-                Assignee
-              </label>
-              <input
-                value={assignee}
-                onChange={(e) => { userHasEdited.current = true; setAssignee(e.target.value); }}
-                placeholder="Name…"
-                className="
-                  w-full bg-column-bg rounded-xl px-4 py-2.5
-                  text-sm text-ink placeholder:text-muted
-                  border border-transparent focus:border-border focus:outline-none
-                  transition-colors
-                "
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-                Deadline
-              </label>
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-                className="
-                  w-full bg-column-bg rounded-xl px-4 py-2.5
-                  text-sm text-ink
-                  border border-transparent focus:border-border focus:outline-none
-                  transition-colors
-                "
-              />
-            </div>
           </div>
 
           {/* Comments Section Divider */}
