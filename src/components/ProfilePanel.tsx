@@ -38,6 +38,14 @@ const AVATAR_COLORS: AvatarColor[] = [
 // Add special/developer colors here without modifying the list above
 const EXTRA_COLORS: AvatarColor[] = [];
 
+interface LockedColor extends AvatarColor {
+  unlockedBy: string; // exact name that unlocks it
+}
+
+const LOCKED_COLORS: LockedColor[] = [
+  { name: "Channel Orange", hex: "#F37521", unlockedBy: "jorge" },
+];
+
 const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];
 
 const DEFAULT_COLOR = AVATAR_COLORS[0].hex;
@@ -48,7 +56,7 @@ function getTextColor(hex: string): string {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.55 ? "#1C1917" : "#FAFAF9";
+  return luminance > 0.57 ? "#1C1917" : "#FAFAF9";
 }
 
 function getInitials(name: string) {
@@ -150,6 +158,50 @@ export default function ProfilePanel() {
                   aria-label={c.name}
                   aria-pressed={isSelected}
                 />
+              );
+            })}
+
+            {/* Easter egg / locked colors */}
+            {LOCKED_COLORS.map((c) => {
+              const isUnlocked = profile.name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
+              const isSelected = profile.color === c.hex;
+              const isHovered = hoverColor?.hex === c.hex;
+              if (isUnlocked) {
+                return (
+                  <button
+                    key={c.hex}
+                    onClick={() => setProfile((p) => ({ ...p, color: c.hex }))}
+                    onMouseEnter={() => setHoverColor(c)}
+                    onMouseLeave={() => setHoverColor(null)}
+                    className={`w-7 h-7 rounded-full transition-all duration-150 ${
+                      isSelected
+                        ? "ring-2 ring-offset-2 ring-ink scale-110"
+                        : isHovered
+                        ? "scale-105 ring-1 ring-black/20"
+                        : "ring-1 ring-black/10"
+                    }`}
+                    style={{
+                      backgroundColor: c.hex,
+                      boxShadow: isHovered && !isSelected ? `0 2px 8px ${c.hex}80` : undefined,
+                    }}
+                    aria-label={c.name}
+                    aria-pressed={isSelected}
+                  />
+                );
+              }
+              return (
+                <div
+                  key={c.hex}
+                  onMouseEnter={() => setHoverColor({ name: "???", hex: "#9E9E9E" })}
+                  onMouseLeave={() => setHoverColor(null)}
+                  className="w-7 h-7 rounded-full ring-1 ring-black/10 bg-[#D4D0CB] flex items-center justify-center cursor-not-allowed"
+                  aria-label="Locked color"
+                >
+                  <svg width="10" height="12" viewBox="0 0 10 12" fill="none" className="opacity-40">
+                    <rect x="2" y="5" width="6" height="6" rx="1" fill="#1C1917"/>
+                    <path d="M3 5V3.5a2 2 0 0 1 4 0V5" stroke="#1C1917" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </div>
               );
             })}
           </div>
