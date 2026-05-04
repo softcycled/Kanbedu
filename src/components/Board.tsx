@@ -92,6 +92,34 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     }
   }, []);
 
+  const handleSetDoneColumn = useCallback(async (columnId: string) => {
+    const col = columns.find((c) => c.id === columnId);
+    if (!col) return;
+    // Toggle: if already done, un-mark it; otherwise set it as done.
+    const newIsDone = !col.isDone;
+    try {
+      const res = await fetch(`/api/columns/${columnId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDone: newIsDone }),
+      });
+      if (res.ok) {
+        // Server enforces single-done: clear all then set this one.
+        setColumns((prev) =>
+          prev.map((c) =>
+            c.id === columnId
+              ? { ...c, isDone: newIsDone }
+              : newIsDone
+              ? { ...c, isDone: false }
+              : c
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to set done column:", error);
+    }
+  }, [columns]);
+
   const handleDeleteColumnClick = (columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
     if (columnData) {
@@ -498,11 +526,8 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     return <div className="text-muted text-sm">Loading board...</div>;
   }
 
-  // Check if any columns are user-created (not default)
-  const defaultColumnLabels = ["To Do", "In Progress", "Done"];
-  const userCreatedColumns = columns.filter(
-    (col) => !defaultColumnLabels.includes(col.label)
-  );
+  // All columns are deletable as long as more than one remains.
+  // (Label-based "default" detection was fragile and broke on rename.)
 
   return (
     <>
@@ -527,12 +552,14 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
                 columnId={col.id}
                 label={col.label}
                 columnIndex={index}
+                isDone={col.isDone}
                 tasks={getTasksByColumn(col.id)}
                 onTaskClick={handleTaskClick}
                 onAddTask={handleAddTask}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleDeleteColumnClick}
-                isDynamic={userCreatedColumns.some((c) => c.id === col.id)}
+                onSetDoneColumn={handleSetDoneColumn}
+                isDynamic={columns.length > 1}
               />
             ))}
 

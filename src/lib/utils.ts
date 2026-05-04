@@ -17,8 +17,8 @@ export function timeInColumn(columnUpdatedAt: Date | string): string {
   return `${days}d ${remainingHours}h`;
 }
 
-export function isOverdue(deadline: Date | string | null): boolean {
-  if (!deadline) return false;
+export function isOverdue(deadline: Date | string | null, completedAt?: Date | string | null): boolean {
+  if (!deadline || completedAt) return false;
 
   // Compare only dates (ignoring time)
   // A task is overdue only after the entire deadline day has passed

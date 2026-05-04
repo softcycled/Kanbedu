@@ -25,19 +25,27 @@ export async function GET(request: NextRequest) {
 export async function POST(req: Request) {
   const { title, column } = await req.json();
 
-  const lastTask = await prisma.task.findFirst({
-    where: { column },
-    orderBy: { order: "desc" },
-  });
+  const [lastTask, destinationColumn] = await Promise.all([
+    prisma.task.findFirst({ where: { column }, orderBy: { order: "desc" } }),
+    prisma.column.findUnique({ where: { id: column } }),
+  ]);
 
+  const now = new Date();
   const task = await prisma.task.create({
     data: {
       title: title.trim(),
       column,
       order: (lastTask?.order ?? 0) + 1,
-      columnUpdatedAt: new Date(),
+      columnUpdatedAt: now,
+      // If creating directly in the Done column, mark as completed immediately.
+      completedAt: destinationColumn?.isDone ? now : null,
     },
     include: { comments: true },
+  });
+
+  // Record initial column history entry
+  await prisma.taskColumnHistory.create({
+    data: { taskId: task.id, columnId: column, enteredAt: now },
   });
 
   return NextResponse.json(task);

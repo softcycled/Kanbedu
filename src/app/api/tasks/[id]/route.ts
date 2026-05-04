@@ -20,6 +20,16 @@ export async function PATCH(
       columnActuallyChanged = true;
       updateData.columnUpdatedAt = new Date();
 
+      // Close the current open history entry, open a new one
+      const now = new Date();
+      await prisma.taskColumnHistory.updateMany({
+        where: { taskId: id, exitedAt: null },
+        data: { exitedAt: now },
+      });
+      await prisma.taskColumnHistory.create({
+        data: { taskId: id, columnId: body.column, enteredAt: now },
+      });
+
       // Set completion metadata when entering or leaving the Done column.
       const destinationColumn = await prisma.column.findUnique({
         where: { id: body.column },
@@ -31,7 +41,21 @@ export async function PATCH(
       const currentIsDone = currentColumn?.isDone ?? false;
 
       if (destinationIsDone && !currentIsDone) {
-        updateData.completedAt = new Date();
+        // If this task was previously completed (has prior history in a done column),
+        // reuse the original completedAt so a misclick-and-restore doesn't corrupt
+        // deadline adherence by overwriting with today's timestamp.
+        const doneColumns = await prisma.column.findMany({
+          where: { boardId: destinationColumn!.boardId, isDone: true },
+          select: { id: true },
+        });
+        const doneColumnIds = doneColumns.map((c) => c.id);
+        const firstDoneEntry = await prisma.taskColumnHistory.findFirst({
+          where: { taskId: id, columnId: { in: doneColumnIds } },
+          orderBy: { enteredAt: "asc" },
+        });
+        // firstDoneEntry will be the newly-created entry (enteredAt = now) if this
+        // is the first time in Done, or the original entry if the task was here before.
+        updateData.completedAt = firstDoneEntry?.enteredAt ?? now;
       } else if (!destinationIsDone && currentIsDone) {
         updateData.completedAt = null;
       }

@@ -24,19 +24,29 @@ model Column {
 }
 
 model Task {
-  id               String    @id @default(cuid())
+  id               String               @id @default(cuid())
   title            String
-  description      String    @default("")
+  description      String               @default("")
   deadline         DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @default(now())
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @default(now())
   completedAt      DateTime?
-  column           String    @default("todo")
-  columnUpdatedAt  DateTime  @default(now())
-  assignee         String    @default("")
-  order            Float     @default(0)
-  priority         String    @default("medium")
+  column           String               @default("todo")
+  columnUpdatedAt  DateTime             @default(now())
+  assignee         String               @default("")
+  order            Float                @default(0)
+  priority         String               @default("medium")
   comments         Comment[]
+  columnHistory    TaskColumnHistory[]
+}
+
+model TaskColumnHistory {
+  id        String    @id @default(cuid())
+  taskId    String
+  columnId  String
+  enteredAt DateTime  @default(now())
+  exitedAt  DateTime?
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model Comment {

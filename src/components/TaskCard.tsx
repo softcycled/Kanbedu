@@ -35,7 +35,7 @@ export default function TaskCard({ task, onClick }: Props) {
     zIndex: isDragging ? 999 : undefined,
   };
 
-  const overdue = isOverdue(task.deadline);
+  const overdue = isOverdue(task.deadline, task.completedAt);
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
   const priorityDot: Record<string, string> = {
@@ -85,7 +85,7 @@ export default function TaskCard({ task, onClick }: Props) {
           {priorityLabel[p]}
         </span>
 
-        <span className="text-xs text-muted font-mono">{timeStr}</span>
+        <span className="text-xs text-muted">{timeStr}</span>
 
         {task.assignee && (
           <>

@@ -6,8 +6,10 @@ interface Props {
   columnId: string;
   label: string;
   taskCount: number;
+  isDone: boolean;
   onRename: (newLabel: string) => Promise<void>;
   onDelete: () => void;
+  onSetDone: () => void;
   isDynamic: boolean; // true if user-created, false if default
   columnIndex?: number;
   isDragging?: boolean;
@@ -31,8 +33,10 @@ export default function ColumnHeader({
   columnId,
   label,
   taskCount,
+  isDone,
   onRename,
   onDelete,
+  onSetDone,
   isDynamic,
   columnIndex = 0,
   isDragging = false,
@@ -108,6 +112,27 @@ export default function ColumnHeader({
       <span className="ml-auto text-xs text-muted font-mono bg-black/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
         {taskCount}
       </span>
+
+      {/* Done-column badge / toggle */}
+      {isDone ? (
+        <span
+          title="This is the Done column — click to unmark"
+          onClick={(e) => { e.stopPropagation(); onSetDone(); }}
+          className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 cursor-pointer hover:bg-green-200 transition-colors select-none"
+        >
+          ✓ Done
+        </span>
+      ) : (
+        <button
+          onClick={onSetDone}
+          title="Mark as Done column"
+          aria-label="Mark as Done column"
+          draggable={false}
+          className="flex-shrink-0 text-xs text-muted hover:text-green-700 transition-colors px-1 py-0.5 rounded hover:bg-green-50"
+        >
+          ✓
+        </button>
+      )}
 
       {isDynamic && (
         <button

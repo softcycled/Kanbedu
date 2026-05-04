@@ -13,32 +13,27 @@ interface Props {
   columnId: string;
   label: string;
   columnIndex: number;
+  isDone: boolean;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onAddTask: (title: string, column: string) => Promise<void>;
   onRenameColumn: (columnId: string, newLabel: string) => Promise<void>;
   onDeleteColumn: (columnId: string) => void;
+  onSetDoneColumn: (columnId: string) => void;
   isDynamic?: boolean;
 }
-
-const COLUMN_TINTS = [
-  "bg-blue-100",
-  "bg-amber-100",
-  "bg-green-100",
-  "bg-purple-100",
-  "bg-pink-100",
-  "bg-cyan-100",
-];
 
 export default function KanbanColumn({
   columnId,
   label,
   columnIndex,
+  isDone,
   tasks,
   onTaskClick,
   onAddTask,
   onRenameColumn,
   onDeleteColumn,
+  onSetDoneColumn,
   isDynamic = false,
 }: Props) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: columnId });
@@ -75,9 +70,11 @@ export default function KanbanColumn({
         columnId={columnId}
         label={label}
         columnIndex={columnIndex}
+        isDone={isDone}
         taskCount={tasks.length}
         onRename={handleRename}
         onDelete={handleDelete}
+        onSetDone={() => onSetDoneColumn(columnId)}
         isDynamic={isDynamic}
         isDragging={isDragging}
         dragListeners={listeners}

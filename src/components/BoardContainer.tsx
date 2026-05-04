@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Task, Board } from "@/lib/types";
 import BoardComp from "./Board";
 import Sidebar, { Panel } from "./Sidebar";
@@ -24,6 +24,17 @@ export default function BoardContainer({
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId);
   const [activePanel, setActivePanel] = useState<Panel>("board");
+  // Incremented every time the user navigates to the analytics panel so it always fetches fresh data.
+  const analyticsKey = useRef(0);
+  const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
+
+  const handlePanelChange = useCallback((panel: Panel) => {
+    if (panel === "analytics") {
+      analyticsKey.current += 1;
+      setAnalyticsRenderKey(analyticsKey.current);
+    }
+    setActivePanel(panel);
+  }, []);
 
   const handleBoardSwitch = useCallback(async (boardId: string) => {
     // Fetch tasks for the new board before switching
@@ -77,7 +88,7 @@ export default function BoardContainer({
         boards={boards}
         activeBoardId={activeBoardId}
         activePanel={activePanel}
-        onPanelChange={setActivePanel}
+        onPanelChange={handlePanelChange}
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
       />
@@ -97,7 +108,7 @@ export default function BoardContainer({
           </>
         )}
         {activePanel === "analytics" && (
-          <AnalyticsPanel tasks={tasks} boardName={activeBoard?.name ?? ""} />
+          <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} />
         )}
         {activePanel === "settings" && (
           <SettingsPanel
