@@ -509,7 +509,7 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     <>
       <div
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-2"
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
         style={{ cursor: isPanning ? 'grabbing' : 'grab', userSelect: isPanning ? 'none' : undefined }}
         onMouseDown={handlePanMouseDown}
       >

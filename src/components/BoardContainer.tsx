@@ -86,7 +86,7 @@ export default function BoardContainer({
         {activePanel === "board" && (
           <>
             <Header tasks={tasks} boardName={activeBoard?.name ?? ""} />
-            <main className="flex-1 px-8 py-8 overflow-hidden flex flex-col">
+            <main className="flex-1 px-8 pt-8 overflow-hidden flex flex-col">
               <BoardComp
                 key={activeBoardId}
                 boardId={activeBoardId}
