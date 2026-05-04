@@ -1,5 +1,3 @@
-export type Column = string; // Now dynamic, any string is valid
-
 export interface Board {
   id: string;
   name: string;
@@ -29,16 +27,10 @@ export interface Task {
   createdAt: string | Date;
   updatedAt: string | Date;
   completedAt: string | Date | null;
-  column: Column;
+  column: string;
   columnUpdatedAt: string | Date;
   assignee: string;
   order: number;
   priority: string;
   comments: Comment[];
 }
-
-export const COLUMNS: { id: Column; label: string }[] = [
-  { id: "todo", label: "To Do" },
-  { id: "doing", label: "In Progress" },
-  { id: "done", label: "Done" },
-];

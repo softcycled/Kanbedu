@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Column as ColumnType } from "@/lib/types";
 
 interface Props {
   columnId: string;

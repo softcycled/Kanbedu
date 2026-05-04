@@ -4,7 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Task, Column } from "@/lib/types";
+import { Task, ColumnData } from "@/lib/types";
 import TaskCard from "./TaskCard";
 import AddTask from "./AddTask";
 import ColumnHeader from "./ColumnHeader";
@@ -15,7 +15,7 @@ interface Props {
   columnIndex: number;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
-  onAddTask: (title: string, column: Column) => Promise<void>;
+  onAddTask: (title: string, column: string) => Promise<void>;
   onRenameColumn: (columnId: string, newLabel: string) => Promise<void>;
   onDeleteColumn: (columnId: string) => void;
   isDynamic?: boolean;

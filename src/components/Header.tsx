@@ -1,9 +1,6 @@
 "use client";
 
-import { Task } from "@/lib/types";
-
 interface Props {
-  tasks: Task[];
   boardName: string;
 }
 

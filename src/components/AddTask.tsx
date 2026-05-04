@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Column } from "@/lib/types";
 
 interface Props {
-  column: Column;
-  onAdd: (title: string, column: Column) => Promise<void>;
+  column: string;
+  onAdd: (title: string, column: string) => Promise<void>;
 }
 
 export default function AddTask({ column, onAdd }: Props) {

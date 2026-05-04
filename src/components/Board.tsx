@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { arrayMove } from "@dnd-kit/sortable";
-import { Task, Column, Comment, ColumnData } from "@/lib/types";
+import { Task, Comment, ColumnData } from "@/lib/types";
 import KanbanColumn from "./KanbanColumn";
 import TaskModal from "./TaskModal";
 import TaskCard from "./TaskCard";
@@ -55,7 +55,7 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     };
 
     fetchColumns();
-  }, []);
+  }, [boardId]);
 
   // Notify parent when tasks change
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     } catch (error) {
       console.error("Failed to create column:", error);
     }
-  }, []);
+  }, [boardId]);
 
   // ── Scroll refs ───────────────────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -228,8 +228,8 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
     const overId = over.id as string;
 
     // Check if dragging a column
-    const activeColumn = columns.find((c) => c.id === activeId);
-    if (activeColumn) {
+    const isDraggingColumn = columns.some((c) => c.id === activeId);
+    if (isDraggingColumn) {
       // Column dragging doesn't need live updates like task dragging
       return;
     }
@@ -240,9 +240,9 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
 
     // Determine destination column
     const overTask = tasks.find((t) => t.id === overId);
-    const destColumn = overTask
-      ? (overTask.column as Column)
-      : (columns.find((c) => c.id === overId)?.id as Column | undefined);
+    const destColumn: string | undefined = overTask
+      ? overTask.column
+      : columns.find((c) => c.id === overId)?.id;
 
     if (!destColumn || activeTask.column === destColumn) return;
 
@@ -304,10 +304,9 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
 
     // Determine destination column
     const overTask = tasks.find((t) => t.id === overId);
-    const destColumn = overTask
-      ? (overTask.column as Column)
-      : (columns.find((c) => c.id === overId)?.id as Column | undefined);
-
+    const destColumn: string | undefined = overTask
+      ? overTask.column
+      : columns.find((c) => c.id === overId)?.id;
     if (!destColumn) return;
 
     // Reorder within column
@@ -363,7 +362,7 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
 
   // ── Task actions ───────────────────────────────────────────────
 
-  const handleAddTask = useCallback(async (title: string, column: Column) => {
+  const handleAddTask = useCallback(async (title: string, column: string) => {
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
