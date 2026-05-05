@@ -333,9 +333,9 @@ async function main() {
       priority: "low",
       deadline: daysFromNow(5),
       journey: [
-        { columnId: colTodo.id,       durationDays: 0.005 }, // ~7 min
-        { columnId: colInProgress.id, durationDays: 0.012 }, // ~17 min
-        { columnId: colReview.id,     durationDays: 0.007 }, // ~10 min
+        { columnId: colTodo.id,       durationDays: 0.003 }, // ~4 min
+        { columnId: colInProgress.id, durationDays: 0.008 }, // ~12 min
+        { columnId: colReview.id,     durationDays: 0.004 }, // ~6 min
         { columnId: colDone.id,       durationDays: 1 },
       ],
       comments: [

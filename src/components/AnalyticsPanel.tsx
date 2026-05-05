@@ -116,27 +116,22 @@ function phaseHealthColor(avgMs: number | null): string {
   if (avgMs === null) return "text-muted";
   const days = avgMs / MS_DAY;
   if (days < 2) return "text-green-600";
-  if (days < 5) return "text-yellow-600";
+  if (days < 4) return "text-yellow-600";
+  if (days < 7) return "text-orange-500";
   return "text-red-500";
 }
 
 function phaseHealthBadge(
   avgMs: number | null,
-  longestStagnantMs: number | null,
   isDone: boolean
 ): { label: string; cls: string } {
-  // Done column: tasks are meant to accumulate here — health scoring is meaningless
   if (isDone) return { label: "Done", cls: "bg-green-100 text-green-700" };
-  // At Risk: any task stuck > 3 days in an active column
-  const THREE_DAYS = 3 * MS_DAY;
-  if (longestStagnantMs !== null && longestStagnantMs > THREE_DAYS) {
-    return { label: "At Risk", cls: "bg-red-100 text-red-600" };
-  }
   if (avgMs === null) return { label: "No data", cls: "bg-border text-muted" };
   const days = avgMs / MS_DAY;
-  if (days < 2) return { label: "Healthy", cls: "bg-green-100 text-green-700" };
-  if (days <= 5) return { label: "Moderate", cls: "bg-yellow-100 text-yellow-700" };
-  return { label: "Slow", cls: "bg-orange-100 text-orange-600" };
+  if (days < 2) return { label: "Healthy",  cls: "bg-green-100 text-green-700" };
+  if (days < 4) return { label: "Moderate", cls: "bg-yellow-100 text-yellow-700" };
+  if (days < 7) return { label: "Slow",     cls: "bg-orange-100 text-orange-600" };
+  return { label: "At Risk", cls: "bg-red-100 text-red-600" };
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -252,7 +247,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
             </thead>
             <tbody className="divide-y divide-border">
               {columns.map((col) => {
-                const badge = phaseHealthBadge(col.avgPhaseTimeMs, col.longestStagnantMs, col.isDone);
+                const badge = phaseHealthBadge(col.avgPhaseTimeMs, col.isDone);
                 return (
                   <tr key={col.id} className="hover:bg-border/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-ink">{col.label}</td>
