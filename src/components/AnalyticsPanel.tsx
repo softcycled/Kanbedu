@@ -35,6 +35,17 @@ interface TaskDetail {
   cycleTimeMs: number | null;
   currentPhaseMs: number;
   totalAgeMs: number;
+  visitedColumnCount: number;
+}
+
+interface SuspiciousTask {
+  id: string;
+  title: string;
+  assignee: string;
+  cycleTimeMs: number;
+  visitedColumnCount: number;
+  isSpeedRun: boolean;
+  isColumnSkip: boolean;
 }
 
 interface AssigneeRow {
@@ -59,6 +70,7 @@ interface AnalyticsData {
     stagnantRate: number;
     commentDensity: number;
     deadlineAdherence: { onTime: number; total: number } | null;
+    suspiciousTasks: SuspiciousTask[];
   };
 }
 
@@ -294,6 +306,73 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
             color={!summary.deadlineAdherence ? "text-muted" : summary.deadlineAdherence.onTime / summary.deadlineAdherence.total >= 0.7 ? "text-green-600" : "text-red-500"}
           />
         </div>
+      </Section>
+
+      {/* Integrity Check */}
+      <Section title="Integrity Check">
+        {summary.suspiciousTasks.length === 0 ? (
+          <div className="bg-card-bg rounded-xl border border-border px-5 py-4 flex items-center gap-3">
+            <span className="text-green-500 text-lg">✓</span>
+            <span className="text-sm text-muted">No suspicious activity detected across completed tasks.</span>
+          </div>
+        ) : (
+          <>
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3 flex items-start gap-3">
+              <span className="text-red-500 mt-0.5">⚠</span>
+              <div>
+                <p className="text-sm font-medium text-red-700">
+                  {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
+                </p>
+                <p className="text-xs text-red-500 mt-0.5">
+                  Flags indicate tasks completed unusually fast (&lt; 1 h) or that bypassed intermediate columns.
+                </p>
+              </div>
+            </div>
+            <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <Th align="left">Task</Th>
+                    <Th align="left">Assignee</Th>
+                    <Th align="right">Cycle time</Th>
+                    <Th align="right">Columns visited</Th>
+                    <Th align="left">Flags</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {summary.suspiciousTasks.map((t) => (
+                    <tr key={t.id} className="hover:bg-border/30 transition-colors">
+                      <td className="px-4 py-3 max-w-[200px]">
+                        <span className="truncate block font-medium text-ink" title={t.title}>{t.title}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted">{t.assignee || <span className="italic">none</span>}</td>
+                      <td className="px-4 py-3 text-right text-xs font-mono text-red-500 font-semibold">
+                        {formatDuration(t.cycleTimeMs)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-muted">
+                        {t.visitedColumnCount}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {t.isSpeedRun && (
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                              Speed-run
+                            </span>
+                          )}
+                          {t.isColumnSkip && (
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                              Skipped column
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Section>
 
       {/* Tasks table */}

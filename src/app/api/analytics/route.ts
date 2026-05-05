@@ -113,6 +113,8 @@ export async function GET(request: NextRequest) {
   });
 
   // ── Task details ──────────────────────────────────────────────
+  const nonDoneColumnIdSet = new Set(columns.filter((c) => !c.isDone).map((c) => c.id));
+
   const taskDetails = tasks.map((t) => {
     const col = columnMap.get(t.column);
     const isDone = col?.isDone ?? false;
@@ -127,6 +129,11 @@ export async function GET(request: NextRequest) {
     const totalAgeMs = isDone && t.completedAt
       ? t.completedAt.getTime() - t.createdAt.getTime()
       : now.getTime() - t.createdAt.getTime();
+
+    // Count distinct non-done columns this task has visited (via history)
+    const visitedColumnCount = new Set(
+      t.columnHistory.map((h) => h.columnId).filter((cid) => nonDoneColumnIdSet.has(cid))
+    ).size;
 
     return {
       id: t.id,
@@ -144,6 +151,7 @@ export async function GET(request: NextRequest) {
       cycleTimeMs,
       currentPhaseMs,
       totalAgeMs,
+      visitedColumnCount,
     };
   });
 
@@ -173,6 +181,24 @@ export async function GET(request: NextRequest) {
   // Comment density: avg comments per task
   const totalComments = tasks.reduce((sum, t) => sum + t.comments.length, 0);
   const commentDensity = tasks.length > 0 ? totalComments / tasks.length : 0;
+
+  // Integrity check: flag completed tasks that look like last-minute fabrication.
+  // A task is suspicious if it was completed extremely quickly (speed-run) or if it
+  // bypassed intermediate columns without passing through them (column-skipping).
+  const SPEED_RUN_MS = 60 * 60 * 1000; // 1 hour
+  const totalNonDoneColumns = columns.filter((c) => !c.isDone).length;
+  const suspiciousTasks = taskDetails
+    .filter((t) => t.columnIsDone && t.cycleTimeMs !== null)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      assignee: t.assignee,
+      cycleTimeMs: t.cycleTimeMs!,
+      visitedColumnCount: t.visitedColumnCount,
+      isSpeedRun: t.cycleTimeMs! < SPEED_RUN_MS,
+      isColumnSkip: totalNonDoneColumns > 1 && t.visitedColumnCount < totalNonDoneColumns,
+    }))
+    .filter((t) => t.isSpeedRun || t.isColumnSkip);
 
   // Deadline adherence: completed tasks with a deadline.
   // Use setUTCHours to extend to end-of-UTC-day — consistent regardless of server timezone.
@@ -231,6 +257,7 @@ export async function GET(request: NextRequest) {
         completedWithDeadline.length > 0
           ? { onTime, total: completedWithDeadline.length }
           : null,
+      suspiciousTasks,
     },
   });
 }
