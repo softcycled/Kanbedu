@@ -10,6 +10,7 @@ datasource db {
 model Board {
   id        String   @id @default(cuid())
   name      String
+  order     Int      @default(0)
   createdAt DateTime @default(now())
   columns   Column[]
 }

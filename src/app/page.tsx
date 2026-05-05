@@ -7,7 +7,7 @@ const DEFAULT_BOARD_ID = "cldefaultboard0000";
 
 export default async function Home() {
   // Load boards
-  let boards = await prisma.board.findMany({ orderBy: { createdAt: "asc" } });
+  let boards = await prisma.board.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
 
   if (boards.length === 0) {
     const board = await prisma.board.create({

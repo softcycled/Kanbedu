@@ -6,7 +6,7 @@ const DEFAULT_BOARD_ID = "cldefaultboard0000";
 // GET all boards
 export async function GET() {
   try {
-    let boards = await prisma.board.findMany({ orderBy: { createdAt: "asc" } });
+    let boards = await prisma.board.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
 
     if (boards.length === 0) {
       const board = await prisma.board.create({
@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    const board = await prisma.board.create({ data: { name: name.trim() } });
+    const existing = await prisma.board.findMany({ select: { id: true } });
+    const board = await prisma.board.create({
+      data: { name: name.trim(), order: existing.length },
+    });
 
     await prisma.column.createMany({
       data: [
@@ -45,5 +48,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to create board:", error);
     return NextResponse.json({ error: "Failed to create board" }, { status: 500 });
+  }
+}
+
+// PUT reorder boards — body: { ids: string[] } in desired order
+export async function PUT(request: NextRequest) {
+  try {
+    const { ids } = await request.json();
+    if (!Array.isArray(ids)) {
+      return NextResponse.json({ error: "ids must be an array" }, { status: 400 });
+    }
+    await Promise.all(
+      ids.map((id: string, index: number) =>
+        prisma.board.update({ where: { id }, data: { order: index } })
+      )
+    );
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to reorder boards:", error);
+    return NextResponse.json({ error: "Failed to reorder boards" }, { status: 500 });
   }
 }

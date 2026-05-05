@@ -80,6 +80,19 @@ export default function BoardContainer({
     }
   }, [boards, activeBoardId, handleBoardSwitch]);
 
+  const handleReorderBoards = useCallback(async (ids: string[]) => {
+    const res = await fetch("/api/boards", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) return;
+    setBoards((prev) => {
+      const map = new Map(prev.map((b) => [b.id, b]));
+      return ids.map((id, index) => ({ ...map.get(id)!, order: index }));
+    });
+  }, []);
+
   const activeBoard = boards.find((b) => b.id === activeBoardId);
 
   return (
@@ -116,6 +129,7 @@ export default function BoardContainer({
             activeBoardId={activeBoardId}
             onRename={handleRenameBoard}
             onDelete={handleDeleteBoard}
+            onReorder={handleReorderBoards}
           />
         )}
         {activePanel === "profile" && <ProfilePanel />}

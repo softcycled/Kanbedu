@@ -1,6 +1,7 @@
 export interface Board {
   id: string;
   name: string;
+  order: number;
   createdAt: string | Date;
 }
 
