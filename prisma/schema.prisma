@@ -53,6 +53,7 @@ model TaskColumnHistory {
 model Comment {
   id        String   @id @default(cuid())
   content   String
+  author    String   @default("")
   createdAt DateTime @default(now())
   taskId    String
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)

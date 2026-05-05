@@ -450,11 +450,11 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
   }, []);
 
   const handleAddComment = useCallback(
-    async (taskId: string, content: string): Promise<Comment> => {
+    async (taskId: string, content: string, author: string): Promise<Comment> => {
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, content }),
+        body: JSON.stringify({ taskId, content, author }),
       });
       if (!res.ok) throw new Error(`Add comment failed: ${res.status}`);
       const comment: Comment = await res.json();

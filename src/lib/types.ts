@@ -16,6 +16,7 @@ export interface ColumnData {
 export interface Comment {
   id: string;
   content: string;
+  author: string;
   createdAt: string | Date;
   taskId: string;
 }

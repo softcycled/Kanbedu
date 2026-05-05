@@ -14,7 +14,7 @@ interface Props {
   onClose: () => void;
   onUpdate: (id: string, data: Partial<Task>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onAddComment: (taskId: string, content: string) => Promise<Comment>;
+  onAddComment: (taskId: string, content: string, author: string) => Promise<Comment>;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -38,6 +38,19 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
+  const [commentAuthor, setCommentAuthor] = useState("");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("kanbedu-profile");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { name?: string };
+        if (parsed.name) setCommentAuthor(parsed.name);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
   const [comments, setComments] = useState<Comment[]>([]);
   const [addingComment, setAddingComment] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -238,7 +251,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     if (!trimmed || !task) return;
     setAddingComment(true);
     setCommentInput("");
-    const newComment = await onAddComment(task.id, trimmed);
+    const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
     setComments((prev) => [...prev, newComment]);
     setAddingComment(false);
   };
@@ -484,6 +497,9 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
                   <div key={c.id} className="bg-column-bg rounded-lg px-3.5 py-3 border border-border/50">
                     <p className="text-sm text-ink leading-relaxed">{c.content}</p>
                     <p className="text-xs text-muted mt-2">
+                      {c.author ? (
+                        <><span className="font-medium text-ink/70">{c.author}</span>{" · "}</>
+                      ) : null}
                       {new Date(c.createdAt).toLocaleDateString("en-US", {
                         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
                       })}
@@ -495,6 +511,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
 
             <div className="flex gap-2 bg-column-bg/40 rounded-lg p-2">
               <input
+
                 ref={commentInputRef}
                 value={commentInput}
                 onChange={(e) => setCommentInput(e.target.value)}
