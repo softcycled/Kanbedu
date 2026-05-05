@@ -72,12 +72,12 @@ async function main() {
       description: "Create GitHub org, init Next.js project, configure ESLint and Prettier.",
       assignee: "Alice",
       priority: "high",
-      deadline: daysFromNow(-15),  // on time: completed 18 days ago, deadline 15 days ago
+      deadline: daysFromNow(-15),
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 2 },
-        { columnId: colReview.id, durationDays: 1 },
-        { columnId: colDone.id, durationDays: 18 },
+        { columnId: colReview.id, durationDays: 4 },
+        { columnId: colDone.id, durationDays: 14 },
       ],
       comments: [
         { content: "I'll use the Next.js 14 App Router template.", daysAgoPosted: 21 },
@@ -89,12 +89,12 @@ async function main() {
       description: "ERD for users, boards, tasks, and comments. Review with team before implementation.",
       assignee: "Bob",
       priority: "high",
-      deadline: daysFromNow(-10),  // on time: completed 13 days ago, deadline 10 days ago
+      deadline: daysFromNow(-10),
       journey: [
-        { columnId: colTodo.id, durationDays: 2 },
+        { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 3 },
-        { columnId: colReview.id, durationDays: 2 },
-        { columnId: colDone.id, durationDays: 13 },
+        { columnId: colReview.id, durationDays: 5 },
+        { columnId: colDone.id, durationDays: 9 },
       ],
       comments: [
         { content: "Should we use Postgres or SQLite for now?", daysAgoPosted: 18 },
@@ -107,12 +107,12 @@ async function main() {
       description: "NextAuth with Google OAuth. Protect dashboard routes. Add session middleware.",
       assignee: "Alice",
       priority: "urgent",
-      deadline: daysFromNow(-8),   // on time: completed 10 days ago, deadline 8 days ago
+      deadline: daysFromNow(-8),
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
-        { columnId: colInProgress.id, durationDays: 5 },
-        { columnId: colReview.id, durationDays: 2 },
-        { columnId: colDone.id, durationDays: 10 },
+        { columnId: colInProgress.id, durationDays: 4 },
+        { columnId: colReview.id, durationDays: 6 },
+        { columnId: colDone.id, durationDays: 8 },
       ],
       comments: [
         { content: "OAuth callback URL needs to match prod domain eventually.", daysAgoPosted: 16 },
@@ -128,9 +128,9 @@ async function main() {
       priority: "medium",
       deadline: daysFromNow(-10),
       journey: [
-        { columnId: colTodo.id, durationDays: 3 },
-        { columnId: colInProgress.id, durationDays: 3 },
-        { columnId: colReview.id, durationDays: 1 },
+        { columnId: colTodo.id, durationDays: 1 },
+        { columnId: colInProgress.id, durationDays: 2 },
+        { columnId: colReview.id, durationDays: 4 },
         { columnId: colDone.id, durationDays: 9 },
       ],
       comments: [
@@ -147,8 +147,8 @@ async function main() {
       deadline: daysFromNow(-8),
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
-        { columnId: colInProgress.id, durationDays: 4 },
-        { columnId: colReview.id, durationDays: 1 },
+        { columnId: colInProgress.id, durationDays: 3 },
+        { columnId: colReview.id, durationDays: 5 },
         { columnId: colDone.id, durationDays: 7 },
       ],
       comments: [
@@ -164,9 +164,9 @@ async function main() {
       priority: "medium",
       deadline: daysFromNow(-5),
       journey: [
-        { columnId: colTodo.id, durationDays: 4 },
-        { columnId: colInProgress.id, durationDays: 6 },
-        { columnId: colReview.id, durationDays: 3 },
+        { columnId: colTodo.id, durationDays: 2 },
+        { columnId: colInProgress.id, durationDays: 3 },
+        { columnId: colReview.id, durationDays: 6 },
         { columnId: colDone.id, durationDays: 4 },
       ],
       comments: [
@@ -221,7 +221,7 @@ async function main() {
       priority: "medium",
       deadline: daysFromNow(7),
       journey: [
-        { columnId: colTodo.id, durationDays: 3 },
+        { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 4 },
       ],
       comments: [
@@ -236,7 +236,7 @@ async function main() {
       priority: "low",
       deadline: daysFromNow(14),
       journey: [
-        { columnId: colTodo.id, durationDays: 5 },
+        { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 3 },
       ],
       comments: [
@@ -250,7 +250,7 @@ async function main() {
       priority: "low",
       deadline: daysFromNow(18),
       journey: [
-        { columnId: colTodo.id, durationDays: 6 },
+        { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 2 },
       ],
       comments: [],
