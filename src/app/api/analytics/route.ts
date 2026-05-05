@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
   // Integrity check: flag completed tasks that look like last-minute fabrication.
   // A task is suspicious if it was completed extremely quickly (speed-run) or if it
   // bypassed intermediate columns without passing through them (column-skipping).
-  const SPEED_RUN_MS = 60 * 60 * 1000; // 1 hour
+  const SPEED_RUN_MS = 30 * 60 * 1000; // 30 minutes
   const totalNonDoneColumns = columns.filter((c) => !c.isDone).length;
   const suspiciousTasks = taskDetails
     .filter((t) => t.columnIsDone && t.cycleTimeMs !== null)

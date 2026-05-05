@@ -2,6 +2,7 @@
  * Seed script: "Web App Group Project" — simulates a realistic student project.
  * Run with: npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts
  * Or via:   npx tsx prisma/seed.ts
+ * This is a board with fake data for showcase and testing purposes. 
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -14,6 +15,10 @@ function daysAgo(n: number) {
   const d = new Date();
   d.setDate(d.getDate() - n);
   return d;
+}
+
+function hoursAgo(n: number) {
+  return new Date(Date.now() - n * 60 * 60 * 1000);
 }
 
 function daysFromNow(n: number) {
@@ -316,6 +321,42 @@ async function main() {
       ],
       comments: [
         { content: "This was supposed to be done by last week.", daysAgoPosted: 1 },
+      ],
+    },
+
+    // ── Suspicious: speed-run ─────────────────────────────────
+    // Went through all 4 columns in ~35 minutes — flagged as speed-run.
+    {
+      title: "Update README with setup instructions",
+      description: "Add local dev setup steps, env var list, and how to run the seed.",
+      assignee: "Dave",
+      priority: "low",
+      deadline: daysFromNow(5),
+      journey: [
+        { columnId: colTodo.id,       durationDays: 0.005 }, // ~7 min
+        { columnId: colInProgress.id, durationDays: 0.012 }, // ~17 min
+        { columnId: colReview.id,     durationDays: 0.007 }, // ~10 min
+        { columnId: colDone.id,       durationDays: 1 },
+      ],
+      comments: [
+        { content: "Done, just a quick README update.", daysAgoPosted: 1 },
+      ],
+    },
+
+    // ── Suspicious: column-skip ───────────────────────────────
+    // Jumped directly from To Do → Done, bypassing In Progress and Review.
+    {
+      title: "Add .env.example file",
+      description: "Template .env file listing all required environment variables with placeholder values.",
+      assignee: "Carol",
+      priority: "low",
+      deadline: daysFromNow(4),
+      journey: [
+        { columnId: colTodo.id,  durationDays: 1 },
+        { columnId: colDone.id,  durationDays: 2 },
+      ],
+      comments: [
+        { content: "It\'s just one file, marking as done.", daysAgoPosted: 2 },
       ],
     },
   ];
