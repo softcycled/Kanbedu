@@ -8,20 +8,45 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String        @id @default(cuid())
+  email     String        @unique
   password  String
-  name      String   @default("")
-  color     String   @default("#4A90A4")
-  createdAt DateTime @default(now())
+  name      String        @default("")
+  color     String        @default("#4A90A4")
+  createdAt DateTime      @default(now())
+  boards    BoardMember[]
+  invites   BoardInvite[]
 }
 
 model Board {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
   columns   Column[]
+  members   BoardMember[]
+  invites   BoardInvite[]
+}
+
+model BoardMember {
+  id      String @id @default(cuid())
+  userId  String
+  boardId String
+  role    String @default("member")
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boardId])
+}
+
+model BoardInvite {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  boardId   String
+  createdBy String
+  expiresAt DateTime
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  creator   User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 }
 
 model Column {

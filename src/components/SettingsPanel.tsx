@@ -41,6 +41,8 @@ function SortableBoardRow({
   onRenameKeyDown,
   onRenameBlur,
   onDeleteClick,
+  onInviteClick,
+  invitingId,
 }: {
   board: Board;
   activeBoardId: string;
@@ -53,6 +55,8 @@ function SortableBoardRow({
   onRenameKeyDown: (e: React.KeyboardEvent, boardId: string) => void;
   onRenameBlur: (boardId: string) => void;
   onDeleteClick: (board: Board) => void;
+  onInviteClick: (boardId: string) => void;
+  invitingId: string | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: board.id });
@@ -108,6 +112,13 @@ function SortableBoardRow({
 
       <div className="flex items-center gap-1">
         <button
+          onClick={() => onInviteClick(board.id)}
+          disabled={invitingId === board.id}
+          className="text-xs text-muted hover:text-ink transition-colors px-2 py-1 rounded hover:bg-ink/5 disabled:opacity-50"
+        >
+          {invitingId === board.id ? "Copied!" : "Invite"}
+        </button>
+        <button
           onClick={() => onStartRename(board)}
           className="text-xs text-muted hover:text-ink transition-colors px-2 py-1 rounded hover:bg-ink/5"
         >
@@ -145,6 +156,25 @@ export default function SettingsPanel({
   const [renameValue, setRenameValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
+
+  const handleInvite = async (boardId: string) => {
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ boardId }),
+      });
+      if (!res.ok) return;
+      const { token } = await res.json();
+      const url = `${window.location.origin}/invite/${token}`;
+      await navigator.clipboard.writeText(url);
+      setInvitingId(boardId);
+      setTimeout(() => setInvitingId(null), 2000);
+    } catch (error) {
+      console.error("Failed to create invite:", error);
+    }
+  };
 
   const startRename = (board: Board) => {
     setRenamingId(board.id);
@@ -203,6 +233,8 @@ export default function SettingsPanel({
                     }}
                     onRenameBlur={saveRename}
                     onDeleteClick={setDeletingBoard}
+                    onInviteClick={handleInvite}
+                    invitingId={invitingId}
                   />
                 ))}
               </div>

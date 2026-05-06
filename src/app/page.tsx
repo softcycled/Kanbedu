@@ -1,17 +1,37 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import BoardContainer from "@/components/BoardContainer";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_BOARD_ID = "cldefaultboard0000";
-
 export default async function Home() {
-  // Load boards
-  let boards = await prisma.board.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
+  const session = await getSession();
+  if (!session) redirect("/login");
 
+  // Load boards the user is a member of
+  const memberships = await prisma.boardMember.findMany({
+    where: { userId: session.userId },
+    include: { board: true },
+    orderBy: { board: { order: "asc" } },
+  });
+
+  let boards = memberships.map((m) => m.board);
+
+  // First-time user: create a default board
   if (boards.length === 0) {
     const board = await prisma.board.create({
-      data: { id: DEFAULT_BOARD_ID, name: "My Board" },
+      data: { name: "My Board" },
+    });
+    await prisma.boardMember.create({
+      data: { userId: session.userId, boardId: board.id, role: "owner" },
+    });
+    await prisma.column.createMany({
+      data: [
+        { label: "To Do", order: 0, isDone: false, boardId: board.id },
+        { label: "In Progress", order: 1, isDone: false, boardId: board.id },
+        { label: "Done", order: 2, isDone: true, boardId: board.id },
+      ],
     });
     boards = [board];
   }
@@ -61,4 +81,3 @@ export default async function Home() {
     />
   );
 }
-
