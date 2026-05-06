@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { createTaskSchema, parseBody } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -23,18 +24,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
-  const { title, column } = await req.json();
+  const raw = await req.json();
+  const { data, error } = parseBody(createTaskSchema, raw);
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
 
   const [lastTask, destinationColumn] = await Promise.all([
-    prisma.task.findFirst({ where: { column }, orderBy: { order: "desc" } }),
-    prisma.column.findUnique({ where: { id: column } }),
+    prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
+    prisma.column.findUnique({ where: { id: data.column } }),
   ]);
 
   const now = new Date();
   const task = await prisma.task.create({
     data: {
-      title: title.trim(),
-      column,
+      title: data.title,
+      column: data.column,
       order: (lastTask?.order ?? 0) + 1,
       columnUpdatedAt: now,
       // If creating directly in the Done column, mark as completed immediately.
@@ -45,7 +50,7 @@ export async function POST(req: Request) {
 
   // Record initial column history entry
   await prisma.taskColumnHistory.create({
-    data: { taskId: task.id, columnId: column, enteredAt: now },
+    data: { taskId: task.id, columnId: data.column, enteredAt: now },
   });
 
   return NextResponse.json(task);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { profileUpdateSchema, parseBody } from "@/lib/validations";
 
 export async function PATCH(req: Request) {
   const session = await getSession();
@@ -9,23 +10,19 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const data: Record<string, string> = {};
-
-    if (typeof body.name === "string") {
-      data.name = body.name.trim();
-    }
-    if (typeof body.color === "string" && /^#[0-9A-Fa-f]{6}$/.test(body.color)) {
-      data.color = body.color;
+    const raw = await req.json();
+    const { data, error } = parseBody(profileUpdateSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
-    }
+    const updateData: Record<string, string> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.color !== undefined) updateData.color = data.color;
 
     const user = await prisma.user.update({
       where: { id: session.userId },
-      data,
+      data: updateData,
       select: { id: true, email: true, name: true, color: true },
     });
 

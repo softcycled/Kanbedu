@@ -1,14 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { createCommentSchema, parseBody } from "@/lib/validations";
 
 export async function POST(req: Request) {
-  const { taskId, content, author } = await req.json();
+  const raw = await req.json();
+  const { data, error } = parseBody(createCommentSchema, raw);
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
 
   const comment = await prisma.comment.create({
     data: {
-      content: content.trim(),
-      author: (author ?? "").trim(),
-      taskId,
+      content: data.content,
+      author: data.author,
+      taskId: data.taskId,
     },
   });
 

@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-
-const DEFAULT_BOARD_ID = "cldefaultboard0000";
+import { createBoardSchema, reorderBoardsSchema, parseBody } from "@/lib/validations";
 
 // GET all boards the current user is a member of
 export async function GET() {
@@ -23,7 +22,7 @@ export async function GET() {
     // First-time user: create a default board and add them as owner
     if (boards.length === 0) {
       const board = await prisma.board.create({
-        data: { id: DEFAULT_BOARD_ID + session.userId.slice(-4), name: "My Board" },
+        data: { name: "My Board" },
       });
       await prisma.boardMember.create({
         data: { userId: session.userId, boardId: board.id, role: "owner" },
@@ -53,10 +52,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    const { name } = await request.json();
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const raw = await request.json();
+    const { data, error } = parseBody(createBoardSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const memberCount = await prisma.boardMember.count({
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
     const board = await prisma.board.create({
-      data: { name: name.trim(), order: memberCount },
+      data: { name: data.name, order: memberCount },
     });
 
     // Auto-add creator as owner
@@ -90,12 +89,14 @@ export async function POST(request: NextRequest) {
 // PUT reorder boards -- body: { ids: string[] } in desired order
 export async function PUT(request: NextRequest) {
   try {
-    const { ids } = await request.json();
-    if (!Array.isArray(ids)) {
-      return NextResponse.json({ error: "ids must be an array" }, { status: 400 });
+    const raw = await request.json();
+    const { data, error } = parseBody(reorderBoardsSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
+
     await Promise.all(
-      ids.map((id: string, index: number) =>
+      data.ids.map((id: string, index: number) =>
         prisma.board.update({ where: { id }, data: { order: index } })
       )
     );

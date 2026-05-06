@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { createInviteSchema, parseBody } from "@/lib/validations";
 
 // POST: create an invite link for a board
 export async function POST(req: NextRequest) {
@@ -10,14 +11,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    const { boardId } = await req.json();
-    if (!boardId) {
-      return NextResponse.json({ error: "boardId is required." }, { status: 400 });
+    const raw = await req.json();
+    const { data, error } = parseBody(createInviteSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     // Verify user is a member of this board
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId } },
+      where: { userId_boardId: { userId: session.userId, boardId: data.boardId } },
     });
     if (!membership) {
       return NextResponse.json({ error: "You are not a member of this board." }, { status: 403 });
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
     // Create invite with 7-day expiration
     const invite = await prisma.boardInvite.create({
       data: {
-        boardId,
+        boardId: data.boardId,
         createdBy: session.userId,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },

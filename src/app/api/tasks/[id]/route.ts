@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { updateTaskSchema, parseBody } from "@/lib/validations";
 
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const body = await req.json();
+  const raw = await req.json();
+  const { data: body, error } = parseBody(updateTaskSchema, raw);
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
   const { id } = params;
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
