@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
 
   const tasks = await prisma.task.findMany({
     where,
-    include: { comments: { orderBy: { createdAt: "asc" } } },
+    include: {
+      comments: { orderBy: { createdAt: "asc" } },
+      assigneeUser: { select: { id: true, name: true, color: true } },
+    },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });
   return NextResponse.json(tasks);
@@ -45,7 +48,10 @@ export async function POST(req: Request) {
       // If creating directly in the Done column, mark as completed immediately.
       completedAt: destinationColumn?.isDone ? now : null,
     },
-    include: { comments: true },
+    include: {
+      comments: true,
+      assigneeUser: { select: { id: true, name: true, color: true } },
+    },
   });
 
   // Record initial column history entry

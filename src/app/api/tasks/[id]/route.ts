@@ -14,7 +14,7 @@ export async function PATCH(
   const { id } = params;
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
-  const CONTENT_FIELDS = ["title", "description", "assignee", "deadline", "priority"];
+  const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
   let columnActuallyChanged = false;
@@ -75,7 +75,10 @@ export async function PATCH(
   const task = await prisma.task.update({
     where: { id },
     data: updateData,
-    include: { comments: { orderBy: { createdAt: "asc" } } },
+    include: {
+      comments: { orderBy: { createdAt: "asc" } },
+      assigneeUser: { select: { id: true, name: true, color: true } },
+    },
   });
 
   return NextResponse.json(task);

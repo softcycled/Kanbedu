@@ -31,8 +31,20 @@ export interface Task {
   completedAt: string | Date | null;
   column: string;
   columnUpdatedAt: string | Date;
-  assignee: string;
+  assigneeId: string | null;
+  assigneeUser?: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
   order: number;
   priority: string;
   comments: Comment[];
+}
+
+export interface BoardMemberData {
+  id: string;
+  name: string;
+  color: string;
+  email: string;
 }

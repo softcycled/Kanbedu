@@ -83,7 +83,7 @@ export const updateTaskSchema = z.object({
   description: z.string().optional(),
   column: z.string().min(1).optional(),
   order: z.number().optional(),
-  assignee: z.string().optional(),
+  assigneeId: z.string().nullable().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   deadline: z.string().nullable().optional(),
 });

@@ -29,6 +29,7 @@ interface Props {
 export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [columns, setColumns] = useState<ColumnData[]>([]);
+  const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
   const [isLoadingColumns, setIsLoadingColumns] = useState(true);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
@@ -36,25 +37,34 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
 
-  // Fetch columns on mount
+  // Fetch columns and members on mount
   useEffect(() => {
-    const fetchColumns = async () => {
+    const fetchBoardData = async () => {
       try {
-        const res = await fetch(`/api/columns?boardId=${boardId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setColumns(data);
+        const [colsRes, membersRes] = await Promise.all([
+          fetch(`/api/columns?boardId=${boardId}`),
+          fetch(`/api/boards/${boardId}/members`)
+        ]);
+
+        if (colsRes.ok) {
+          setColumns(await colsRes.json());
         } else {
-          console.error("Failed to fetch columns:", res.status, res.statusText);
+          console.error("Failed to fetch columns:", colsRes.status, colsRes.statusText);
+        }
+
+        if (membersRes.ok) {
+          setBoardMembers(await membersRes.json());
+        } else {
+          console.error("Failed to fetch members:", membersRes.status, membersRes.statusText);
         }
       } catch (error) {
-        console.error("Failed to fetch columns:", error);
+        console.error("Failed to fetch board data:", error);
       } finally {
         setIsLoadingColumns(false);
       }
     };
 
-    fetchColumns();
+    fetchBoardData();
   }, [boardId]);
 
   // Notify parent when tasks change
@@ -598,6 +608,7 @@ export default function Board({ boardId, initialTasks, onTasksUpdate }: Props) {
 
       <TaskModal
         task={selectedTask}
+        boardMembers={boardMembers}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}

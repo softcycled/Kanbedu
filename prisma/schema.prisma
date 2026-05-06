@@ -14,8 +14,9 @@ model User {
   name      String        @default("")
   color     String        @default("#4A90A4")
   createdAt DateTime      @default(now())
-  boards    BoardMember[]
-  invites   BoardInvite[]
+  boards        BoardMember[]
+  invites       BoardInvite[]
+  assignedTasks Task[]        @relation("TaskAssignees")
 }
 
 model Board {
@@ -68,7 +69,8 @@ model Task {
   completedAt      DateTime?
   column           String               @default("todo")
   columnUpdatedAt  DateTime             @default(now())
-  assignee         String               @default("")
+  assigneeId       String?
+  assigneeUser     User?                @relation("TaskAssignees", fields: [assigneeId], references: [id], onDelete: SetNull)
   order            Float                @default(0)
   priority         String               @default("medium")
   comments         Comment[]

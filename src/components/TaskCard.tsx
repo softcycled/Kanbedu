@@ -87,12 +87,16 @@ export default function TaskCard({ task, onClick }: Props) {
 
         <span className="text-xs text-muted">{timeStr}</span>
 
-        {task.assignee && (
+        {task.assigneeUser && (
           <>
             <span className="text-muted text-xs">·</span>
-            <span className="text-xs text-muted truncate max-w-[80px]">
-              {task.assignee}
-            </span>
+            <div
+              className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm"
+              style={{ backgroundColor: task.assigneeUser.color }}
+              title={task.assigneeUser.name}
+            >
+              {task.assigneeUser.name.charAt(0).toUpperCase()}
+            </div>
           </>
         )}
 

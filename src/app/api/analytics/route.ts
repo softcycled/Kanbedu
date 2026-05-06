@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     include: {
       comments: true,
       columnHistory: { orderBy: { enteredAt: "asc" } },
+      assigneeUser: { select: { id: true, name: true, color: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
     return {
       id: t.id,
       title: t.title,
-      assignee: t.assignee,
+      assignee: t.assigneeUser?.name || "(unassigned)",
       priority: t.priority,
       columnId: t.column,
       columnLabel: col?.label ?? t.column,
@@ -216,7 +217,7 @@ export async function GET(request: NextRequest) {
   >();
 
   for (const t of taskDetails) {
-    const name = t.assignee || "(unassigned)";
+    const name = t.assignee;
     if (!assigneeMap.has(name)) {
       assigneeMap.set(name, { total: 0, completed: 0, overdue: 0, cycleTimes: [] });
     }
