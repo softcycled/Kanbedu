@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
-const STORAGE_KEY = "kanbedu-profile";
-
-interface Profile {
+interface UserProfile {
+  id: string;
+  email: string;
   name: string;
-  initials: string;
-  color: string; // hex value
+  color: string;
 }
 
 interface AvatarColor {
@@ -15,7 +15,7 @@ interface AvatarColor {
   hex: string;
 }
 
-// Core palette — extend EXTRA_COLORS to add more without touching this list
+// Core palette
 const AVATAR_COLORS: AvatarColor[] = [
   { name: "Ocean Blue",      hex: "#4A90A4" },
   { name: "Ice Blue",        hex: "#A8CCE0" },
@@ -50,7 +50,7 @@ const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];
 
 const DEFAULT_COLOR = AVATAR_COLORS[0].hex;
 
-/** Returns #1C1917 (dark) or #FAFAF9 (light) depending on background luminance */
+/** Returns dark or light text color depending on background luminance */
 function getTextColor(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -69,40 +69,99 @@ function getInitials(name: string) {
 }
 
 export default function ProfilePanel() {
-  const [profile, setProfile] = useState<Profile>({
-    name: "",
-    initials: "",
-    color: DEFAULT_COLOR,
-  });
+  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(DEFAULT_COLOR);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hoverColor, setHoverColor] = useState<AvatarColor | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
+  // Fetch profile on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Profile;
-        // Migrate old Tailwind class format to hex
-        if (parsed.color && parsed.color.startsWith("bg-")) {
-          parsed.color = DEFAULT_COLOR;
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data: UserProfile = await res.json();
+          setProfile(data);
+          setName(data.name);
+          setColor(data.color || DEFAULT_COLOR);
         }
-        setProfile(parsed);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch {}
+    };
+    fetchProfile();
   }, []);
 
-  const handleSave = () => {
-    const updated = {
-      ...profile,
-      initials: getInitials(profile.name) || "?",
-    };
-    setProfile(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = useCallback(async () => {
+    if (!profile || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      });
+      if (res.ok) {
+        const updated: UserProfile = await res.json();
+        setProfile(updated);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+    } finally {
+      setSaving(false);
+    }
+  }, [profile, name, color, saving]);
+
+  const handleColorClick = useCallback(async (hex: string) => {
+    setColor(hex);
+    if (!profile) return;
+    // Save color immediately
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color: hex }),
+      });
+      if (res.ok) {
+        const updated: UserProfile = await res.json();
+        setProfile(updated);
+      }
+    } catch (error) {
+      console.error("Failed to save color:", error);
+    }
+  }, [profile]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setLoggingOut(false);
+    }
   };
 
-  const previewColor = hoverColor?.hex ?? profile.color;
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted text-sm">
+        Loading profile...
+      </div>
+    );
+  }
+
+  const initials = getInitials(name) || "?";
+  const previewColor = hoverColor?.hex ?? color;
   const textColor = getTextColor(previewColor);
 
   return (
@@ -117,14 +176,14 @@ export default function ProfilePanel() {
             className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold select-none flex-shrink-0 transition-colors duration-150"
             style={{ backgroundColor: previewColor, color: textColor }}
           >
-            {profile.initials || "?"}
+            {initials}
           </div>
           <div>
             <p className="text-sm font-medium text-ink">
-              {profile.name || "No name set"}
+              {name || "No name set"}
             </p>
             <p className="text-xs text-muted transition-all duration-100">
-              {hoverColor ? hoverColor.name : "Avatar color"}
+              {hoverColor ? hoverColor.name : profile?.email ?? "Avatar color"}
             </p>
           </div>
         </div>
@@ -136,12 +195,12 @@ export default function ProfilePanel() {
           </label>
           <div className="flex flex-wrap gap-2">
             {ALL_COLORS.map((c) => {
-              const isSelected = profile.color === c.hex;
+              const isSelected = color === c.hex;
               const isHovered = hoverColor?.hex === c.hex;
               return (
                 <button
                   key={c.hex}
-                  onClick={() => setProfile((p) => ({ ...p, color: c.hex }))}
+                  onClick={() => handleColorClick(c.hex)}
                   onMouseEnter={() => setHoverColor(c)}
                   onMouseLeave={() => setHoverColor(null)}
                   className={`w-7 h-7 rounded-full transition-all duration-150 ${
@@ -163,14 +222,14 @@ export default function ProfilePanel() {
 
             {/* Easter egg / locked colors */}
             {LOCKED_COLORS.map((c) => {
-              const isUnlocked = profile.name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
-              const isSelected = profile.color === c.hex;
+              const isUnlocked = name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
+              const isSelected = color === c.hex;
               const isHovered = hoverColor?.hex === c.hex;
               if (isUnlocked) {
                 return (
                   <button
                     key={c.hex}
-                    onClick={() => setProfile((p) => ({ ...p, color: c.hex }))}
+                    onClick={() => handleColorClick(c.hex)}
                     onMouseEnter={() => setHoverColor(c)}
                     onMouseLeave={() => setHoverColor(null)}
                     className={`w-7 h-7 rounded-full transition-all duration-150 ${
@@ -214,20 +273,41 @@ export default function ProfilePanel() {
           </label>
           <input
             type="text"
-            value={profile.name}
-            onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
             placeholder="Your name"
             className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-card-bg text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
           />
         </div>
 
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors"
-        >
-          {saved ? "Saved!" : "Save profile"}
-        </button>
+        {/* Email (read-only) */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+            Email
+          </label>
+          <p className="text-sm text-ink/70 px-3 py-2">
+            {profile?.email ?? "..."}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+          >
+            {saved ? "Saved!" : saving ? "Saving..." : "Save profile"}
+          </button>
+
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-muted hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+          >
+            {loggingOut ? "Signing out..." : "Sign out"}
+          </button>
+        </div>
       </div>
     </div>
   );
