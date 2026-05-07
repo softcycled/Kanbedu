@@ -5,8 +5,23 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// ── Demo users ────────────────────────────────────────────────
+// All share the password "demo1234" for easy testing.
+const DEMO_USERS = [
+  { id: "demo-user-alice", name: "Alice",  email: "alice@demo.kanbedu"  },
+  { id: "demo-user-bob",   name: "Bob",    email: "bob@demo.kanbedu"    },
+  { id: "demo-user-carol", name: "Carol",  email: "carol@demo.kanbedu"  },
+  { id: "demo-user-dave",  name: "Dave",   email: "dave@demo.kanbedu"   },
+  { id: "demo-user-jake",  name: "Jake",   email: "jake@demo.kanbedu"   },
+  { id: "demo-user-emma",  name: "Emma",   email: "emma@demo.kanbedu"   },
+  { id: "demo-user-priya", name: "Priya",  email: "priya@demo.kanbedu"  },
+  { id: "demo-user-sam",   name: "Sam",    email: "sam@demo.kanbedu"    },
+  { id: "demo-user-mia",   name: "Mia",    email: "mia@demo.kanbedu"    },
+];
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -39,7 +54,7 @@ type TaskDef = {
 
 // ── Shared write helper ────────────────────────────────────────
 
-async function writeTasks(tasks: TaskDef[], doneColumnId: string) {
+async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<string, string>) {
   for (let i = 0; i < tasks.length; i++) {
     const t = tasks[i];
 
@@ -69,7 +84,7 @@ async function writeTasks(tasks: TaskDef[], doneColumnId: string) {
       data: {
         title: t.title,
         description: t.description,
-        assignee: t.assignee,
+        assigneeId: userMap.get(t.assignee) ?? null,
         priority: t.priority,
         deadline: t.deadline,
         createdAt,
@@ -122,6 +137,21 @@ async function writeTasks(tasks: TaskDef[], doneColumnId: string) {
 // ── Main ──────────────────────────────────────────────────────
 
 async function main() {
+  // ── Demo users ────────────────────────────────────────────────
+  const hashed = await bcrypt.hash("demo1234", 10);
+  const users = await Promise.all(
+    DEMO_USERS.map((u) =>
+      prisma.user.upsert({
+        where: { email: u.email },
+        update: {},
+        create: { id: u.id, name: u.name, email: u.email, password: hashed },
+      })
+    )
+  );
+  // name → userId lookup for assigning tasks
+  const userMap = new Map(users.map((u) => [u.name, u.id]));
+  console.log(`✓ Upserted ${users.length} demo users.`);
+
   // ── Board ──────────────────────────────────────────────────
   const board = await prisma.board.create({
     data: {
@@ -444,7 +474,12 @@ async function main() {
     },
   ];
 
-  await writeTasks(tasks, colDone.id);
+  await writeTasks(tasks, colDone.id, userMap);
+  // Add all 4 web app members to board 1
+  for (const name of ["Alice", "Bob", "Carol", "Dave"]) {
+    const uid = userMap.get(name);
+    if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: board.id } }, update: {}, create: { userId: uid, boardId: board.id } });
+  }
   console.log(`✓ Seeded board "${board.name}" with ${tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${board.id}`);
 
@@ -727,7 +762,12 @@ async function main() {
     },
   ];
 
-  await writeTasks(b2Tasks, b2Done.id);
+  await writeTasks(b2Tasks, b2Done.id, userMap);
+  // Add mobile app members to board 2
+  for (const name of ["Jake", "Emma", "Priya"]) {
+    const uid = userMap.get(name);
+    if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: b2.id } }, update: {}, create: { userId: uid, boardId: b2.id } });
+  }
   console.log(`✓ Seeded board "${b2.name}" with ${b2Tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${b2.id}`);
 
@@ -963,7 +1003,12 @@ async function main() {
     },
   ];
 
-  await writeTasks(b3Tasks, b3Done.id);
+  await writeTasks(b3Tasks, b3Done.id, userMap);
+  // Add research paper members to board 3
+  for (const name of ["Sam", "Mia"]) {
+    const uid = userMap.get(name);
+    if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: b3.id } }, update: {}, create: { userId: uid, boardId: b3.id } });
+  }
   console.log(`✓ Seeded board "${b3.name}" with ${b3Tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${b3.id}`);
 }

@@ -6,6 +6,11 @@ const DEMO_BOARD_IDS = [
   "demo-board-seed-0002",
   "demo-board-seed-0003",
 ];
+const DEMO_USER_EMAILS = [
+  "alice@demo.kanbedu", "bob@demo.kanbedu", "carol@demo.kanbedu",
+  "dave@demo.kanbedu", "jake@demo.kanbedu", "emma@demo.kanbedu",
+  "priya@demo.kanbedu", "sam@demo.kanbedu", "mia@demo.kanbedu",
+];
 
 async function main() {
   for (const boardId of DEMO_BOARD_IDS) {
@@ -17,10 +22,12 @@ async function main() {
     await prisma.comment.deleteMany({ where: { taskId: { in: taskIds } } });
     await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
     await prisma.column.deleteMany({ where: { boardId } });
+    // BoardMember cascades with board deletion
     await prisma.board.deleteMany({ where: { id: boardId } });
     console.log(`Wiped demo board: ${boardId}`);
   }
-  console.log("All demo boards wiped.");
+  await prisma.user.deleteMany({ where: { email: { in: DEMO_USER_EMAILS } } });
+  console.log("All demo boards and users wiped.");
 }
 
 main()

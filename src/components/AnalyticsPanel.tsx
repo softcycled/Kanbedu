@@ -74,7 +74,7 @@ interface AnalyticsData {
   };
 }
 
-type SortKey = "currentPhaseMs" | "totalAgeMs" | "priority" | "commentCount" | "title";
+type SortKey = "currentPhaseMs" | "totalAgeMs" | "priority" | "commentCount" | "title" | "assignee";
 type FilterKey = "all" | "active" | "overdue" | "unassigned";
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -183,6 +183,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       else if (sortKey === "priority") diff = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
       else if (sortKey === "commentCount") diff = a.commentCount - b.commentCount;
       else if (sortKey === "title") diff = a.title.localeCompare(b.title);
+      else if (sortKey === "assignee") diff = (a.assignee ?? "").toLowerCase().localeCompare((b.assignee ?? "").toLowerCase());
+      if (diff === 0) diff = a.title.localeCompare(b.title); // stable tie-break
       return sortDir === "asc" ? diff : -diff;
     });
     return list;
@@ -390,7 +392,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
               <thead>
                 <tr className="border-b border-border">
                   <SortTh label="Title" k="title" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-                  <Th align="left">Assignee</Th>
+                  <SortTh label="Assignee" k="assignee" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
                   <SortTh label="Priority" k="priority" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
                   <Th align="left">Phase</Th>
                   <SortTh label="In phase" k="currentPhaseMs" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="right" />
