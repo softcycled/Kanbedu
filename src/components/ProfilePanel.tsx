@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
+// ── Types ─────────────────────────────────────────────────────
 
 interface UserProfile {
   id: string;
@@ -15,7 +17,16 @@ interface AvatarColor {
   hex: string;
 }
 
-// Core palette
+type SettingsTab =
+  | "account"
+  | "appearance"
+  | "notifications"
+  | "boards"
+  | "accessibility"
+  | "privacy";
+
+// ── Avatar palette ────────────────────────────────────────────
+
 const AVATAR_COLORS: AvatarColor[] = [
   { name: "Ocean Blue",      hex: "#4A90A4" },
   { name: "Ice Blue",        hex: "#A8CCE0" },
@@ -35,11 +46,10 @@ const AVATAR_COLORS: AvatarColor[] = [
   { name: "Violet Purple",   hex: "#7A5FAF" },
 ];
 
-// Add special/developer colors here without modifying the list above
 const EXTRA_COLORS: AvatarColor[] = [];
 
 interface LockedColor extends AvatarColor {
-  unlockedBy: string; // exact name that unlocks it
+  unlockedBy: string;
 }
 
 const LOCKED_COLORS: LockedColor[] = [
@@ -47,10 +57,10 @@ const LOCKED_COLORS: LockedColor[] = [
 ];
 
 const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];
-
 const DEFAULT_COLOR = AVATAR_COLORS[0].hex;
 
-/** Returns dark or light text color depending on background luminance */
+// ── Helpers ───────────────────────────────────────────────────
+
 function getTextColor(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -60,16 +70,154 @@ function getTextColor(hex: string): string {
 }
 
 function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .slice(0, 2)
-    .join("");
+  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
 }
+
+// ── Reusable primitives ───────────────────────────────────────
+
+function Toggle({ checked, onChange, disabled = false }: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+        disabled
+          ? "cursor-not-allowed opacity-40 bg-border"
+          : checked
+          ? "cursor-pointer bg-ink"
+          : "cursor-pointer bg-border"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
+          checked ? "translate-x-4" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
+function SettingRow({ label, description, children, disabled = false }: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <div className={`flex items-center justify-between py-3.5 ${disabled ? "opacity-40 pointer-events-none select-none" : ""}`}>
+      <div className="min-w-0 pr-8">
+        <p className="text-sm font-medium text-ink">{label}</p>
+        {description && <p className="text-xs text-muted mt-0.5">{description}</p>}
+      </div>
+      <div className="flex-shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function ComingSoonBadge() {
+  return (
+    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-border text-muted">
+      Coming soon
+    </span>
+  );
+}
+
+function SectionBlock({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="divide-y divide-border border border-border rounded-xl">
+      {children}
+    </div>
+  );
+}
+
+function SectionItem({ children }: { children: React.ReactNode }) {
+  return <div className="px-5">{children}</div>;
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">{children}</h3>;
+}
+
+// ── Nav icons ─────────────────────────────────────────────────
+
+function IconAccount() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <circle cx="7.5" cy="5" r="2.5" />
+      <path d="M2 13c0-2.8 2.5-5 5.5-5s5.5 2.2 5.5 5" />
+    </svg>
+  );
+}
+
+function IconAppearance() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <circle cx="7.5" cy="7.5" r="3" />
+      <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M3.2 11.8l1.1-1.1M10.7 4.3l1.1-1.1" />
+    </svg>
+  );
+}
+
+function IconNotifications() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <path d="M7.5 1.5a5 5 0 0 1 5 5v3l1 2H1.5l1-2v-3a5 5 0 0 1 5-5z" />
+      <path d="M6 11.5a1.5 1.5 0 0 0 3 0" />
+    </svg>
+  );
+}
+
+function IconBoards() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <rect x="1.5" y="1.5" width="5" height="5" rx="1" />
+      <rect x="8.5" y="1.5" width="5" height="5" rx="1" />
+      <rect x="1.5" y="8.5" width="5" height="5" rx="1" />
+      <rect x="8.5" y="8.5" width="5" height="5" rx="1" />
+    </svg>
+  );
+}
+
+function IconAccessibility() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <circle cx="7.5" cy="3" r="1.5" />
+      <path d="M2 6h11M7.5 6v7M5 13l2.5-4 2.5 4" />
+    </svg>
+  );
+}
+
+function IconPrivacy() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <path d="M7.5 1L2 3.5v4c0 3 2.5 5.5 5.5 6.5 3-1 5.5-3.5 5.5-6.5v-4L7.5 1z" />
+    </svg>
+  );
+}
+
+// ── Sidebar nav items ─────────────────────────────────────────
+
+const NAV_ITEMS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { id: "account",       label: "Account",           icon: <IconAccount /> },
+  { id: "appearance",    label: "Appearance",         icon: <IconAppearance /> },
+  { id: "notifications", label: "Notifications",      icon: <IconNotifications /> },
+  { id: "boards",        label: "Boards",             icon: <IconBoards /> },
+  { id: "accessibility", label: "Accessibility",      icon: <IconAccessibility /> },
+  { id: "privacy",       label: "Privacy & Security", icon: <IconPrivacy /> },
+];
+
+// ── Main component ────────────────────────────────────────────
 
 export default function ProfilePanel() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+
+  // Account state
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_COLOR);
@@ -78,8 +226,27 @@ export default function ProfilePanel() {
   const [saved, setSaved] = useState(false);
   const [hoverColor, setHoverColor] = useState<AvatarColor | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSaved, setPwSaved] = useState(false);
 
-  // Fetch profile on mount
+  // Boards state (localStorage-backed)
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("kanbedu-show-completed");
+    if (stored === "true") setShowCompleted(true);
+  }, []);
+
+  const handleShowCompletedToggle = (v: boolean) => {
+    setShowCompleted(v);
+    localStorage.setItem("kanbedu-show-completed", String(v));
+  };
+
+  // Fetch profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -124,7 +291,6 @@ export default function ProfilePanel() {
   const handleColorClick = useCallback(async (hex: string) => {
     setColor(hex);
     if (!profile) return;
-    // Save color immediately
     try {
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
@@ -140,6 +306,33 @@ export default function ProfilePanel() {
     }
   }, [profile]);
 
+  const handlePasswordChange = async () => {
+    setPwError(null);
+    if (!pwCurrent || !pwNew || !pwConfirm) { setPwError("All fields are required."); return; }
+    if (pwNew.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    if (pwNew !== pwConfirm) { setPwError("Passwords do not match."); return; }
+    setPwSaving(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+      });
+      if (res.ok) {
+        setPwCurrent(""); setPwNew(""); setPwConfirm("");
+        setPwSaved(true);
+        setTimeout(() => setPwSaved(false), 2500);
+      } else {
+        const d = await res.json();
+        setPwError(d.error ?? "Failed to update password.");
+      }
+    } catch {
+      setPwError("Something went wrong.");
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
@@ -153,11 +346,7 @@ export default function ProfilePanel() {
   };
 
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted text-sm">
-        Loading profile...
-      </div>
-    );
+    return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading…</div>;
   }
 
   const initials = getInitials(name) || "?";
@@ -165,149 +354,388 @@ export default function ProfilePanel() {
   const textColor = getTextColor(previewColor);
 
   return (
-    <div className="flex-1 px-10 py-8">
-      <h2 className="text-xl font-bold text-ink mb-1">Profile</h2>
-      <p className="text-sm text-muted mb-8">Your personal details</p>
+    <div className="flex-1 flex overflow-hidden">
 
-      <div className="max-w-sm">
-        {/* Avatar preview */}
-        <div className="flex items-center gap-4 mb-8">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold select-none flex-shrink-0 transition-colors duration-150"
-            style={{ backgroundColor: previewColor, color: textColor }}
-          >
-            {initials}
+      {/* ── Left nav ── */}
+      <nav className="w-52 flex-shrink-0 border-r border-border h-full overflow-y-auto py-7 px-3 no-scrollbar">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Settings</p>
+        <ul className="space-y-0.5">
+          {NAV_ITEMS.map((item) => (
+            <li key={item.id}>
+              <button
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeTab === item.id
+                    ? "bg-border text-ink font-medium"
+                    : "text-muted hover:text-ink hover:bg-border/50"
+                }`}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* ── Right content ── */}
+      <div className="flex-1 overflow-y-auto px-10 py-8 no-scrollbar">
+
+        {/* Account */}
+        {activeTab === "account" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Account</h2>
+              <p className="text-sm text-muted mt-0.5">Manage your personal details</p>
+            </div>
+
+            <div className="space-y-4">
+              <SectionTitle>Profile</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <div className="py-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold select-none flex-shrink-0 transition-colors duration-150"
+                        style={{ backgroundColor: previewColor, color: textColor }}
+                      >
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-ink">{name || "No name set"}</p>
+                        <p className="text-xs text-muted">{hoverColor ? hoverColor.name : profile?.email ?? ""}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs font-medium text-muted mb-2">Avatar color</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ALL_COLORS.map((c) => {
+                        const isSelected = color === c.hex;
+                        const isHovered = hoverColor?.hex === c.hex;
+                        return (
+                          <button
+                            key={c.hex}
+                            onClick={() => handleColorClick(c.hex)}
+                            onMouseEnter={() => setHoverColor(c)}
+                            onMouseLeave={() => setHoverColor(null)}
+                            className={`w-6 h-6 rounded-full transition-all duration-150 ${
+                              isSelected ? "ring-2 ring-offset-2 ring-ink scale-110" : isHovered ? "scale-105 ring-1 ring-black/20" : "ring-1 ring-black/10"
+                            }`}
+                            style={{ backgroundColor: c.hex, boxShadow: isHovered && !isSelected ? `0 2px 8px ${c.hex}80` : undefined }}
+                            aria-label={c.name}
+                            aria-pressed={isSelected}
+                          />
+                        );
+                      })}
+                      {LOCKED_COLORS.map((c) => {
+                        const isUnlocked = name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
+                        const isSelected = color === c.hex;
+                        const isHovered = hoverColor?.hex === c.hex;
+                        if (isUnlocked) {
+                          return (
+                            <button
+                              key={c.hex}
+                              onClick={() => handleColorClick(c.hex)}
+                              onMouseEnter={() => setHoverColor(c)}
+                              onMouseLeave={() => setHoverColor(null)}
+                              className={`w-6 h-6 rounded-full transition-all duration-150 ${
+                                isSelected ? "ring-2 ring-offset-2 ring-ink scale-110" : isHovered ? "scale-105 ring-1 ring-black/20" : "ring-1 ring-black/10"
+                              }`}
+                              style={{ backgroundColor: c.hex, boxShadow: isHovered && !isSelected ? `0 2px 8px ${c.hex}80` : undefined }}
+                              aria-label={c.name}
+                              aria-pressed={isSelected}
+                            />
+                          );
+                        }
+                        return (
+                          <div
+                            key={c.hex}
+                            onMouseEnter={() => setHoverColor({ name: "???", hex: "#9E9E9E" })}
+                            onMouseLeave={() => setHoverColor(null)}
+                            className="w-6 h-6 rounded-full ring-1 ring-black/10 bg-[#D4D0CB] flex items-center justify-center cursor-not-allowed"
+                          >
+                            <svg width="9" height="11" viewBox="0 0 10 12" fill="none" className="opacity-40">
+                              <rect x="2" y="5" width="6" height="6" rx="1" fill="#1C1917" />
+                              <path d="M3 5V3.5a2 2 0 0 1 4 0V5" stroke="#1C1917" strokeWidth="1.2" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </SectionItem>
+
+                <SectionItem>
+                  <div className="py-4">
+                    <label className="block text-xs font-medium text-muted mb-1.5">Display name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                      placeholder="Your name"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors mb-3"
+                    />
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                    >
+                      {saved ? "Saved!" : saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </SectionItem>
+
+                <SectionItem>
+                  <div className="py-4">
+                    <label className="block text-xs font-medium text-muted mb-1.5">Email address</label>
+                    <p className="text-sm text-ink/70 px-3 py-2 border border-border bg-border/30 rounded-lg">
+                      {profile?.email ?? "…"}
+                    </p>
+                  </div>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+
+            <div className="space-y-4">
+              <SectionTitle>Password</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <div className="py-4 space-y-2">
+                    <input
+                      type="password"
+                      value={pwCurrent}
+                      onChange={(e) => setPwCurrent(e.target.value)}
+                      placeholder="Current password"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
+                    />
+                    <input
+                      type="password"
+                      value={pwNew}
+                      onChange={(e) => setPwNew(e.target.value)}
+                      placeholder="New password"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
+                    />
+                    <input
+                      type="password"
+                      value={pwConfirm}
+                      onChange={(e) => setPwConfirm(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePasswordChange()}
+                      placeholder="Confirm new password"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
+                    />
+                    {pwError && <p className="text-xs text-red-500 pt-1">{pwError}</p>}
+                    <div className="pt-1">
+                      <button
+                        onClick={handlePasswordChange}
+                        disabled={pwSaving}
+                        className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                      >
+                        {pwSaved ? "Password updated!" : pwSaving ? "Updating…" : "Update password"}
+                      </button>
+                    </div>
+                  </div>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+
+            <div className="space-y-4">
+              <SectionTitle>More</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Profile picture" description="Upload a custom avatar" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Connected accounts" description="Link third-party services" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Delete account" description="Permanently remove your data" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+
+            <div className="pt-2 pb-6">
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-muted hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
+              >
+                {loggingOut ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-ink">
-              {name || "No name set"}
-            </p>
-            <p className="text-xs text-muted transition-all duration-100">
-              {hoverColor ? hoverColor.name : profile?.email ?? "Avatar color"}
-            </p>
+        )}
+
+        {/* Appearance */}
+        {activeTab === "appearance" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Appearance</h2>
+              <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>UI Preferences</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Light / Dark mode" description="Switch between light and dark themes" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Compact mode" description="Reduce spacing for a denser layout" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Reduced motion" description="Minimize animations and transitions" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Color picker */}
-        <div className="mb-6">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-            Color
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {ALL_COLORS.map((c) => {
-              const isSelected = color === c.hex;
-              const isHovered = hoverColor?.hex === c.hex;
-              return (
-                <button
-                  key={c.hex}
-                  onClick={() => handleColorClick(c.hex)}
-                  onMouseEnter={() => setHoverColor(c)}
-                  onMouseLeave={() => setHoverColor(null)}
-                  className={`w-7 h-7 rounded-full transition-all duration-150 ${
-                    isSelected
-                      ? "ring-2 ring-offset-2 ring-ink scale-110"
-                      : isHovered
-                      ? "scale-105 ring-1 ring-black/20"
-                      : "ring-1 ring-black/10"
-                  }`}
-                  style={{
-                    backgroundColor: c.hex,
-                    boxShadow: isHovered && !isSelected ? `0 2px 8px ${c.hex}80` : undefined,
-                  }}
-                  aria-label={c.name}
-                  aria-pressed={isSelected}
-                />
-              );
-            })}
-
-            {/* Easter egg / locked colors */}
-            {LOCKED_COLORS.map((c) => {
-              const isUnlocked = name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
-              const isSelected = color === c.hex;
-              const isHovered = hoverColor?.hex === c.hex;
-              if (isUnlocked) {
-                return (
-                  <button
-                    key={c.hex}
-                    onClick={() => handleColorClick(c.hex)}
-                    onMouseEnter={() => setHoverColor(c)}
-                    onMouseLeave={() => setHoverColor(null)}
-                    className={`w-7 h-7 rounded-full transition-all duration-150 ${
-                      isSelected
-                        ? "ring-2 ring-offset-2 ring-ink scale-110"
-                        : isHovered
-                        ? "scale-105 ring-1 ring-black/20"
-                        : "ring-1 ring-black/10"
-                    }`}
-                    style={{
-                      backgroundColor: c.hex,
-                      boxShadow: isHovered && !isSelected ? `0 2px 8px ${c.hex}80` : undefined,
-                    }}
-                    aria-label={c.name}
-                    aria-pressed={isSelected}
-                  />
-                );
-              }
-              return (
-                <div
-                  key={c.hex}
-                  onMouseEnter={() => setHoverColor({ name: "???", hex: "#9E9E9E" })}
-                  onMouseLeave={() => setHoverColor(null)}
-                  className="w-7 h-7 rounded-full ring-1 ring-black/10 bg-[#D4D0CB] flex items-center justify-center cursor-not-allowed"
-                  aria-label="Locked color"
-                >
-                  <svg width="10" height="12" viewBox="0 0 10 12" fill="none" className="opacity-40">
-                    <rect x="2" y="5" width="6" height="6" rx="1" fill="#1C1917"/>
-                    <path d="M3 5V3.5a2 2 0 0 1 4 0V5" stroke="#1C1917" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              );
-            })}
+        {/* Notifications */}
+        {activeTab === "notifications" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Notifications</h2>
+              <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Alerts & Updates</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Task assigned" description="Notify when a task is assigned to you" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Comments & mentions" description="Notify when someone comments or mentions you" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Deadline reminders" description="Get reminded before tasks are due" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Board invitations" description="Notify when you are invited to a board" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Push notifications" description="Mobile push notifications (coming later)" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Name field */}
-        <div className="mb-6">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            placeholder="Your name"
-            className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-card-bg text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
-          />
-        </div>
+        {/* Boards */}
+        {activeTab === "boards" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Boards</h2>
+              <p className="text-sm text-muted mt-0.5">Defaults and display preferences for your boards</p>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Display</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Show completed tasks" description="Display tasks in the Done column on the board" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Default board" description="Board to open on login" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+          </div>
+        )}
 
-        {/* Email (read-only) */}
-        <div className="mb-6">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-            Email
-          </label>
-          <p className="text-sm text-ink/70 px-3 py-2">
-            {profile?.email ?? "..."}
-          </p>
-        </div>
+        {/* Accessibility */}
+        {activeTab === "accessibility" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Accessibility</h2>
+              <p className="text-sm text-muted mt-0.5">Make Kanbedu work better for you</p>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Display & Interaction</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="High contrast mode" description="Increase color contrast for readability" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Keyboard shortcuts" description="Enable and customize keyboard navigation" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Screen reader support" description="Optimizations for assistive technologies" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+          </div>
+        )}
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
-          >
-            {saved ? "Saved!" : saving ? "Saving..." : "Save profile"}
-          </button>
+        {/* Privacy & Security */}
+        {activeTab === "privacy" && (
+          <div className="max-w-lg space-y-8">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Privacy & Security</h2>
+              <p className="text-sm text-muted mt-0.5">Control your data and account security</p>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Security</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Two-factor authentication" description="Add an extra layer of security to your account" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Active sessions" description="View and revoke active login sessions" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Privacy</SectionTitle>
+              <SectionBlock>
+                <SectionItem>
+                  <SettingRow label="Activity visibility" description="Control who can see your activity on boards" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Data export" description="Download a copy of your data" disabled>
+                    <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+              </SectionBlock>
+            </div>
+          </div>
+        )}
 
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-muted hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
-          >
-            {loggingOut ? "Signing out..." : "Sign out"}
-          </button>
-        </div>
       </div>
     </div>
   );

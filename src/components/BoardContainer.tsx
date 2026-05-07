@@ -98,7 +98,7 @@ export default function BoardContainer({
   const activeBoard = boards.find((b) => b.id === activeBoardId);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar
         boards={boards}
         activeBoardId={activeBoardId}
@@ -108,7 +108,7 @@ export default function BoardContainer({
         onCreateBoard={handleCreateBoard}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activePanel === "board" && (
           <>
             <Header boardName={activeBoard?.name ?? ""} />

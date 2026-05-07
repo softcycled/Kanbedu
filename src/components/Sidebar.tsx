@@ -90,8 +90,8 @@ export default function Sidebar({
 
   const navItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    { id: "settings", label: "Settings", icon: <IconSettings /> },
-    { id: "profile", label: "Profile", icon: <IconUser /> },
+    { id: "settings", label: "Boards", icon: <IconLayout /> },
+    { id: "profile", label: "Settings", icon: <IconSettings /> },
   ];
 
   return (
