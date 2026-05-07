@@ -15,9 +15,11 @@ interface PhaseStats {
   order: number;
   isDone: boolean;
   currentTaskCount: number;
+  throughput: number;
   avgPhaseTimeMs: number | null;
   longestStagnantMs: number | null;
   longestStagnantTitle: string | null;
+  isBottleneck: boolean;
 }
 
 interface TaskDetail {
@@ -112,28 +114,6 @@ const PRIORITY_DOT: Record<string, string> = {
 const PRIORITY_LABEL: Record<string, string> = {
   urgent: "Urgent", high: "High", medium: "Med", low: "Low",
 };
-
-function phaseHealthColor(avgMs: number | null): string {
-  if (avgMs === null) return "text-muted";
-  const days = avgMs / MS_DAY;
-  if (days < 2) return "text-green-600";
-  if (days < 4) return "text-yellow-600";
-  if (days < 7) return "text-orange-500";
-  return "text-red-500";
-}
-
-function phaseHealthBadge(
-  avgMs: number | null,
-  isDone: boolean
-): { label: string; cls: string } {
-  if (isDone) return { label: "Done", cls: "bg-green-100 text-green-700" };
-  if (avgMs === null) return { label: "No data", cls: "bg-border text-muted" };
-  const days = avgMs / MS_DAY;
-  if (days < 2) return { label: "Healthy",  cls: "bg-green-100 text-green-700" };
-  if (days < 4) return { label: "Moderate", cls: "bg-yellow-100 text-yellow-700" };
-  if (days < 7) return { label: "Slow",     cls: "bg-orange-100 text-orange-600" };
-  return { label: "At Risk", cls: "bg-red-100 text-red-600" };
-}
 
 // ── Component ─────────────────────────────────────────────────
 
@@ -236,50 +216,124 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       </div>
 
       {/* Phase Health */}
-      <Section title="Phase Health">
-        <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <Th align="left">Phase</Th>
-                <Th align="right">Tasks</Th>
-                <Th align="right">Avg time here</Th>
-                <Th align="left">Longest in column</Th>
-                <Th align="right">Health</Th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {columns.map((col) => {
-                const badge = phaseHealthBadge(col.avgPhaseTimeMs, col.isDone);
-                return (
-                  <tr key={col.id} className="hover:bg-border/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-ink">{col.label}</td>
-                    <td className="px-4 py-3 text-right text-muted">{col.currentTaskCount}</td>
-                    <td className={`px-4 py-3 text-right text-xs font-mono ${col.isDone ? "text-muted" : phaseHealthColor(col.avgPhaseTimeMs)}`}>
-                      {col.avgPhaseTimeMs === null ? <span className="text-muted font-sans">—</span> : formatDuration(col.avgPhaseTimeMs)}
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {!col.longestStagnantTitle ? "—" : (
-                        <span>
-                          <span className={`${!col.isDone && (col.longestStagnantMs ?? 0) > 7 * MS_DAY ? "text-red-500" : "text-ink"} truncate max-w-[160px] inline-block align-bottom`}>
-                            {col.longestStagnantTitle}
+      <Section title="Workflow Overview">
+        {(() => {
+          const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
+          const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
+          return (
+            <div className="flex items-stretch gap-0 w-full">
+              {columns.map((col, i) => (
+                <div key={col.id} className="flex items-stretch min-w-0" style={{ flex: "1 1 0" }}>
+                  {/* Column card */}
+                  <div className={`w-full rounded-xl border p-4 flex flex-col gap-3 h-full ${
+                    col.isBottleneck
+                      ? "border-orange-300 bg-orange-50/50"
+                      : col.isDone
+                      ? "border-green-300 bg-green-100/60"
+                      : "border-border bg-card-bg"
+                  }`}>
+                    {/* Header */}
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm text-ink">{col.label}</span>
+                        {col.isBottleneck && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                            ⚠ Bottleneck
                           </span>
-                          <span className="text-muted ml-1.5 text-xs">{formatDuration(col.longestStagnantMs!)}</span>
-                        </span>
+                        )}
+                        {col.isDone && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                            ✓ Done
+                          </span>
+                        )}
+                      </div>
+                      {/* Task count + load bar */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-2xl font-bold text-ink leading-none">{col.currentTaskCount}</span>
+                        <span className="text-xs text-muted leading-none mt-1">task{col.currentTaskCount !== 1 ? "s" : ""}</span>
+                      </div>
+                      {!col.isDone && (
+                        <div className="mt-1.5 h-1.5 w-full bg-border rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${col.isBottleneck ? "bg-orange-400" : "bg-blue-400"}`}
+                            style={{ width: `${Math.max(4, Math.round((col.currentTaskCount / maxTasks) * 100))}%` }}
+                          />
+                        </div>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-muted mt-2">
-          "Avg time here" reflects completed phase transitions. Data accumulates as tasks move between phases.
-        </p>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex flex-col gap-1.5 text-xs">
+                      {col.isDone ? (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted">Completed</span>
+                            <span className="font-semibold text-green-700">{summary.completed} / {summary.total}</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-green-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${completionPct}%` }} />
+                          </div>
+                          <div className="flex justify-between items-center pt-0.5">
+                            <span className="text-muted">{completionPct}% done</span>
+                          </div>
+                          {summary.avgCycleTimeMs !== null && (
+                            <div className="flex justify-between items-center pt-1 border-t border-green-200">
+                              <span className="text-muted">Avg cycle time</span>
+                              <span className="font-medium text-ink">{formatDuration(summary.avgCycleTimeMs)}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {(() => {
+                            const stagnant = data.tasks.filter(
+                              (t) => t.columnId === col.id && t.currentPhaseMs > 3 * MS_DAY
+                            ).length;
+                            return (
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted">Stagnant here</span>
+                                <span className={`font-medium ${stagnant > 0 ? "text-yellow-600" : "text-ink"}`}>
+                                  {stagnant > 0 ? `${stagnant} task${stagnant !== 1 ? "s" : ""}` : "None"}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted">Avg stay</span>
+                            <span className={`font-medium ${col.isBottleneck ? "text-orange-500" : "text-ink"}`}>
+                              {col.avgPhaseTimeMs !== null ? formatDuration(col.avgPhaseTimeMs) : "—"}
+                            </span>
+                          </div>
+                          {col.longestStagnantTitle && (
+                            <div className="pt-1 border-t border-border">
+                              <p className="text-muted mb-0.5">Longest stuck</p>
+                              <p
+                                className={`font-medium truncate ${(col.longestStagnantMs ?? 0) > 3 * MS_DAY ? "text-red-500" : "text-ink"}`}
+                                title={col.longestStagnantTitle}
+                              >
+                                {col.longestStagnantTitle}
+                              </p>
+                              <p className="text-muted">{formatDuration(col.longestStagnantMs!)}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Arrow between columns */}
+                  {i < columns.length - 1 && (
+                    <div className="flex items-center px-2 flex-shrink-0">
+                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40">
+                        <path d="M0 8 H16 M10 2 L18 8 L10 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </Section>
 
       {/* Project Health */}

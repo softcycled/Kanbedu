@@ -101,17 +101,46 @@ export async function GET(request: NextRequest) {
       longestStagnantTitle = oldest.title;
     }
 
+    // Throughput: tasks that have fully exited this column (closed history entries)
+    const throughput = new Set(
+      tasks
+        .flatMap((t) => t.columnHistory.filter((h) => h.columnId === col.id && h.exitedAt !== null))
+        .map((h) => h.taskId)
+    ).size;
+
     return {
       id: col.id,
       label: col.label,
       order: col.order,
       isDone: col.isDone,
       currentTaskCount: currentTasks.length,
+      throughput,
       avgPhaseTimeMs,
       longestStagnantMs,
       longestStagnantTitle,
     };
   });
+
+  // ── Bottleneck detection ──────────────────────────────────────
+  // Score = currentTaskCount × avgPhaseTimeMs (or currentPhaseMs proxy if no avg).
+  // Only non-done columns with at least 1 task are candidates.
+  // Exactly one column gets the bottleneck flag — the one with the highest score.
+  const nonDonePhases = phaseStats.filter((p) => !p.isDone && p.currentTaskCount > 0);
+  let bottleneckId: string | null = null;
+  if (nonDonePhases.length > 0) {
+    const scored = nonDonePhases.map((p) => ({
+      id: p.id,
+      score: p.currentTaskCount * (p.avgPhaseTimeMs ?? 0),
+    }));
+    scored.sort((a, b) => b.score - a.score);
+    // Only flag if the score is non-zero (need both tasks and time data)
+    if (scored[0].score > 0) bottleneckId = scored[0].id;
+  }
+
+  const phaseStatsWithBottleneck = phaseStats.map((p) => ({
+    ...p,
+    isBottleneck: p.id === bottleneckId,
+  }));
 
   // ── Task details ──────────────────────────────────────────────
   const nonDoneColumnIdSet = new Set(columns.filter((c) => !c.isDone).map((c) => c.id));
@@ -250,7 +279,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.total - a.total);
 
   return NextResponse.json({
-    columns: phaseStats,
+    columns: phaseStatsWithBottleneck,
     tasks: taskDetails,
     assignees,
     summary: {
