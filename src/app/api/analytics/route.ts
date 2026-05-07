@@ -189,17 +189,25 @@ export async function GET(request: NextRequest) {
   const SPEED_RUN_MS = 30 * 60 * 1000; // 30 minutes
   const totalNonDoneColumns = columns.filter((c) => !c.isDone).length;
   const suspiciousTasks = taskDetails
-    .filter((t) => t.columnIsDone && t.cycleTimeMs !== null)
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      assignee: t.assignee,
-      cycleTimeMs: t.cycleTimeMs!,
-      visitedColumnCount: t.visitedColumnCount,
-      isSpeedRun: t.cycleTimeMs! < SPEED_RUN_MS,
-      isColumnSkip: totalNonDoneColumns > 1 && t.visitedColumnCount < totalNonDoneColumns,
-    }))
-    .filter((t) => t.isSpeedRun || t.isColumnSkip);
+    .filter((t) => {
+      const rawTask = tasks.find((r) => r.id === t.id);
+      const isMovedByOther = rawTask?.movedByNonAssignee ?? false;
+      return (t.columnIsDone && t.cycleTimeMs !== null) || isMovedByOther;
+    })
+    .map((t) => {
+      const rawTask = tasks.find((r) => r.id === t.id)!;
+      return {
+        id: t.id,
+        title: t.title,
+        assignee: t.assignee,
+        cycleTimeMs: t.cycleTimeMs ?? 0,
+        visitedColumnCount: t.visitedColumnCount,
+        isSpeedRun: t.columnIsDone && t.cycleTimeMs !== null && t.cycleTimeMs < SPEED_RUN_MS,
+        isColumnSkip: t.columnIsDone && totalNonDoneColumns > 1 && t.visitedColumnCount < totalNonDoneColumns,
+        isMovedByOther: rawTask.movedByNonAssignee,
+      };
+    })
+    .filter((t) => t.isSpeedRun || t.isColumnSkip || t.isMovedByOther);
 
   // Deadline adherence: completed tasks with a deadline.
   // Use setUTCHours to extend to end-of-UTC-day — consistent regardless of server timezone.

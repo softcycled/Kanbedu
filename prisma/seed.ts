@@ -49,8 +49,9 @@ type TaskDef = {
   assignee: string;
   priority: string;
   deadline: Date | null;
+  movedByNonAssignee?: boolean;
   journey: Array<{ columnId: string; durationDays: number }>;
-  comments: Array<{ content: string; daysAgoPosted: number; author?: string }>;};
+  comments: Array<{ content: string; daysAgoPosted: number; author?: string }>;};;
 
 // ── Shared write helper ────────────────────────────────────────
 
@@ -93,6 +94,7 @@ async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<s
         column: currentColumnId,
         columnUpdatedAt: colUpdatedAt,
         order: i,
+        movedByNonAssignee: t.movedByNonAssignee ?? false,
       },
     });
 
@@ -472,6 +474,27 @@ async function main() {
         { content: "It\'s just one file, marking as done.", daysAgoPosted: 2 },
       ],
     },
+
+    // ── Suspicious: moved by non-assignee ─────────────────────
+    // Alice's task was moved to Done by a teammate while she was away.
+    {
+      title: "Configure ESLint and Prettier",
+      description: "Enforce consistent code style across the project. Add pre-commit hook via husky.",
+      assignee: "Alice",
+      priority: "low",
+      deadline: daysFromNow(-5),
+      movedByNonAssignee: true,
+      journey: [
+        { columnId: colTodo.id,       durationDays: 1 },
+        { columnId: colInProgress.id, durationDays: 3 },
+        { columnId: colReview.id,     durationDays: 2 },
+        { columnId: colDone.id,       durationDays: 4 },
+      ],
+      comments: [
+        { content: "Rules config is in .eslintrc.json. Prettier integrated.", daysAgoPosted: 6 },
+        { content: "Moving this to Done — Alice asked me to close it out.", daysAgoPosted: 4, author: "Bob" },
+      ],
+    },
   ];
 
   await writeTasks(tasks, colDone.id, userMap);
@@ -746,19 +769,22 @@ async function main() {
       comments: [{ content: "Icons updated across all required sizes.", daysAgoPosted: 1 }],
     },
 
-    // ── Suspicious: column-skip ───────────────────────────────
-    // Jumped from To Do directly to Done, skipping In Progress and Testing.
+    // ── Suspicious: column-skip + moved by non-assignee ─────────
+    // Jake moved Priya's spinner card directly to Done while she was heads-down elsewhere.
     {
       title: "Add loading spinner component",
       description: "Reusable loading spinner used across all async screens.",
       assignee: "Priya",
       priority: "low",
       deadline: daysFromNow(2),
+      movedByNonAssignee: true,
       journey: [
         { columnId: b2Todo.id,  durationDays: 1 },
         { columnId: b2Done.id,  durationDays: 2 },
       ],
-      comments: [{ content: "It's just a spinner, pushing straight to done.", daysAgoPosted: 2 }],
+      comments: [
+        { content: "It's just a spinner, pushing straight to done.", daysAgoPosted: 2, author: "Jake" },
+      ],
     },
   ];
 

@@ -13,12 +13,14 @@ interface Props {
   initialTasks: Task[];
   initialBoards: Board[];
   initialBoardId: string;
+  currentUserId: string;
 }
 
 export default function BoardContainer({
   initialTasks,
   initialBoards,
   initialBoardId,
+  currentUserId,
 }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [boards, setBoards] = useState<Board[]>(initialBoards);
@@ -116,6 +118,7 @@ export default function BoardContainer({
                 boardId={activeBoardId}
                 initialTasks={tasks}
                 onTasksUpdate={setTasks}
+                currentUserId={currentUserId}
               />
             </main>
           </>

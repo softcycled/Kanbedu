@@ -81,6 +81,7 @@ export default async function Home() {
       initialTasks={serializedTasks}
       initialBoards={serializedBoards}
       initialBoardId={firstBoard.id}
+      currentUserId={session.userId}
     />
   );
 }

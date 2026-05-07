@@ -46,6 +46,7 @@ interface SuspiciousTask {
   visitedColumnCount: number;
   isSpeedRun: boolean;
   isColumnSkip: boolean;
+  isMovedByOther: boolean;
 }
 
 interface AssigneeRow {
@@ -321,7 +322,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                   {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
                 </p>
                 <p className="text-xs text-red-500 mt-0.5">
-                  Flags indicate tasks completed suspiciously fast or that bypassed intermediate columns.
+                  Flags indicate tasks completed suspiciously fast, that bypassed intermediate columns, or moved by someone other than the assignee.
                 </p>
               </div>
             </div>
@@ -359,6 +360,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                           {t.isColumnSkip && (
                             <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600">
                               Skipped column
+                            </span>
+                          )}
+                          {t.isMovedByOther && (
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                              Moved by non-assignee
                             </span>
                           )}
                         </div>
