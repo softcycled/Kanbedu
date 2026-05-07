@@ -36,6 +36,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [showInfo, setShowInfo] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
+  const assigneeDropdownRef = useRef<HTMLDivElement>(null);
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
@@ -152,6 +154,18 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     };
   }, []);
+
+  // Close assignee dropdown on outside click
+  useEffect(() => {
+    if (!assigneeDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (assigneeDropdownRef.current && !assigneeDropdownRef.current.contains(e.target as Node)) {
+        setAssigneeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [assigneeDropdownOpen]);
 
   // Re-render every 30s so relative timestamps stay current
   useEffect(() => {
@@ -401,27 +415,88 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
 
           {/* Assignee + Deadline row */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div ref={assigneeDropdownRef} className="relative">
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
                 Assignee
               </label>
-              <select
-                value={assigneeId}
-                onChange={(e) => { userHasEdited.current = true; setAssigneeId(e.target.value); }}
+              {/* Custom assignee dropdown trigger */}
+              <button
+                type="button"
+                onClick={() => setAssigneeDropdownOpen((v) => !v)}
                 className="
-                  w-full bg-column-bg rounded-xl px-4 py-2.5
-                  text-sm text-ink placeholder:text-muted
-                  border border-transparent focus:border-border focus:outline-none
-                  transition-colors cursor-pointer appearance-none
+                  w-full bg-column-bg rounded-xl px-3 py-2.5
+                  text-sm text-ink
+                  border border-transparent hover:border-border
+                  transition-colors cursor-pointer text-left
+                  flex items-center gap-2
                 "
               >
-                <option value="">Unassigned</option>
-                {boardMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
+                {(() => {
+                  const m = boardMembers.find((bm) => bm.id === assigneeId);
+                  if (!m) return <span className="text-muted">Unassigned</span>;
+                  return (
+                    <>
+                      <span
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                        style={{ backgroundColor: m.color }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="truncate">{m.name}</span>
+                    </>
+                  );
+                })()}
+                <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 4l4 4 4-4"/>
+                </svg>
+              </button>
+
+              {/* Dropdown panel */}
+              {assigneeDropdownOpen && (
+                <div
+                  className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  {[{ id: "", name: "Unassigned", color: "" }, ...boardMembers].map((m) => {
+                    const isSelected = m.id === assigneeId;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          userHasEdited.current = true;
+                          setAssigneeId(m.id);
+                          setAssigneeDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                          isSelected
+                            ? "bg-column-bg text-ink font-medium"
+                            : "text-ink hover:bg-column-bg"
+                        }`}
+                      >
+                        {m.id === "" ? (
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                          </span>
+                        ) : (
+                          <span
+                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                            style={{ backgroundColor: m.color }}
+                          >
+                            {m.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="truncate">{m.name}</span>
+                        {isSelected && (
+                          <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M2 6l3 3 5-5"/>
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
