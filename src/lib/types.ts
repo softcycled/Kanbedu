@@ -39,6 +39,7 @@ export interface Task {
   } | null;
   order: number;
   priority: string;
+  movedByNonAssignee: boolean;
   comments: Comment[];
 }
 

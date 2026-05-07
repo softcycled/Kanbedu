@@ -27,6 +27,16 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const AVATAR_PALETTE = [
+  "#4A90A4", "#7B68EE", "#E8854A", "#5BAD6F", "#D4706A",
+  "#A078C8", "#4E9E8F", "#C4885A", "#6B8DD6", "#D4956A",
+];
+function nameToColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
 export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment }: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
@@ -576,16 +586,32 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
             {comments.length > 0 && (
               <div className="space-y-2 mb-4">
                 {comments.map((c) => (
-                  <div key={c.id} className="bg-column-bg rounded-lg px-3.5 py-3 border border-border/50">
-                    <p className="text-sm text-ink leading-relaxed">{c.content}</p>
-                    <p className="text-xs text-muted mt-2">
-                      {c.author ? (
-                        <><span className="font-medium text-ink/70">{c.author}</span>{" · "}</>
-                      ) : null}
-                      {new Date(c.createdAt).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                      })}
-                    </p>
+                  <div key={c.id} className="bg-column-bg rounded-lg px-3 pt-2 pb-2.5 border border-border/50">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        {c.author ? (
+                          <span
+                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                            style={{ backgroundColor: nameToColor(c.author) }}
+                          >
+                            {c.author.charAt(0).toUpperCase()}
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-border flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted/60" />
+                          </span>
+                        )}
+                        <span className="text-[0.919rem] font-semibold text-ink">
+                          {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
+                        </span>
+                      </div>
+                      <span className="text-[0.788rem] text-muted flex-shrink-0">
+                        {new Date(c.createdAt).toLocaleString("en-US", {
+                          month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
                   </div>
                 ))}
               </div>
