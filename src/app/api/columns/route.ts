@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
 
 // GET columns (optionally scoped by boardId)
 export async function GET(request: NextRequest) {
@@ -42,25 +43,22 @@ export async function GET(request: NextRequest) {
 // POST create new column
 export async function POST(request: NextRequest) {
   try {
-    const { label, boardId } = await request.json();
-
-    if (!label || typeof label !== "string" || !boardId) {
-      return NextResponse.json(
-        { error: "label and boardId are required" },
-        { status: 400 }
-      );
+    const raw = await request.json();
+    const { data, error } = parseBody(createColumnSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     // Get max order for this board
     const maxOrder = await prisma.column.aggregate({
-      where: { boardId },
+      where: { boardId: data.boardId },
       _max: { order: true },
     });
 
     const newOrder = (maxOrder._max.order || 0) + 1;
 
     const column = await prisma.column.create({
-      data: { label, order: newOrder, boardId },
+      data: { label: data.label, order: newOrder, boardId: data.boardId },
     });
 
     return NextResponse.json(column, { status: 201 });
@@ -76,18 +74,14 @@ export async function POST(request: NextRequest) {
 // PATCH reorder columns
 export async function PATCH(request: NextRequest) {
   try {
-    const { columns } = await request.json();
-
-    if (!Array.isArray(columns)) {
-      return NextResponse.json(
-        { error: "Columns array is required" },
-        { status: 400 }
-      );
+    const raw = await request.json();
+    const { data, error } = parseBody(reorderColumnsSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
-    // Update order for each column
     const updated = await Promise.all(
-      columns.map((col: { id: string; order: number }) =>
+      data.columns.map((col) =>
         prisma.column.update({
           where: { id: col.id },
           data: { order: col.order },

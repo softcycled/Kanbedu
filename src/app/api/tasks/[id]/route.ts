@@ -1,15 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { updateTaskSchema, parseBody } from "@/lib/validations";
 
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const body = await req.json();
+  const raw = await req.json();
+  const { data: body, error } = parseBody(updateTaskSchema, raw);
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
   const { id } = params;
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
-  const CONTENT_FIELDS = ["title", "description", "assignee", "deadline", "priority"];
+  const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
   let columnActuallyChanged = false;
@@ -70,7 +75,10 @@ export async function PATCH(
   const task = await prisma.task.update({
     where: { id },
     data: updateData,
-    include: { comments: { orderBy: { createdAt: "asc" } } },
+    include: {
+      comments: { orderBy: { createdAt: "asc" } },
+      assigneeUser: { select: { id: true, name: true, color: true } },
+    },
   });
 
   return NextResponse.json(task);

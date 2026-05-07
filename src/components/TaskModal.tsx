@@ -11,6 +11,7 @@ import {
 
 interface Props {
   task: Task | null;
+  boardMembers?: import("@/lib/types").BoardMemberData[];
   onClose: () => void;
   onUpdate: (id: string, data: Partial<Task>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -26,7 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComment }: Props) {
+export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment }: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -34,7 +35,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const [draftTitle, setDraftTitle] = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const [assignee, setAssignee] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
@@ -64,11 +65,11 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const debouncedDescription = useDebounce(description, 600);
-  const debouncedAssignee = useDebounce(assignee, 600);
+  const debouncedAssigneeId = useDebounce(assigneeId, 600);
   const debouncedDeadline = useDebounce(deadline, 600);
 
   const prevTask = useRef<string | null>(null);
-  const originalTask = useRef<{ description?: string; assignee?: string; deadline?: string } | null>(null);
+  const originalTask = useRef<{ description?: string; assigneeId?: string | null; deadline?: string } | null>(null);
   const isMounted = useRef(false);
   const userHasEdited = useRef(false);
 
@@ -81,14 +82,14 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
       setIsEditingTitle(false);
       setShowInfo(false);
       setDraftTitle(task.title);
-      setAssignee(task.assignee ?? "");
+      setAssigneeId(task.assigneeId ?? "");
       setDeadline(formatDateForInput(task.deadline));
       setPriority(task.priority ?? "medium");
       setComments(task.comments ?? []);
       // Store original values for comparison
       originalTask.current = {
         description: task.description ?? "",
-        assignee: task.assignee ?? "",
+        assigneeId: task.assigneeId,
         deadline: formatDateForInput(task.deadline),
       };
     }
@@ -187,11 +188,11 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
     // Only update if value actually changed from original
-    if (debouncedAssignee !== originalTask.current?.assignee) {
-      handleUpdateWithFeedback(task.id, { assignee: debouncedAssignee });
+    if (debouncedAssigneeId !== originalTask.current?.assigneeId) {
+      handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedAssignee]);
+  }, [debouncedAssigneeId]);
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
@@ -215,8 +216,8 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     if (description !== originalTask.current?.description) {
       updates.description = description;
     }
-    if (assignee !== originalTask.current?.assignee) {
-      updates.assignee = assignee;
+    if (assigneeId !== originalTask.current?.assigneeId) {
+      updates.assigneeId = assigneeId === "" ? null : assigneeId;
     }
     const deadlineValue = deadline ? new Date(deadline).toISOString() : null;
     const originalDeadline = originalTask.current?.deadline 
@@ -230,7 +231,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
     if (Object.keys(updates).length > 0) {
       await handleUpdateWithFeedback(task.id, updates);
     }
-  }, [task, description, assignee, deadline, handleUpdateWithFeedback]);
+  }, [task, description, assigneeId, deadline, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(async () => {
     await flushUpdates();
@@ -404,17 +405,23 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, onAddComm
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
                 Assignee
               </label>
-              <input
-                value={assignee}
-                onChange={(e) => { userHasEdited.current = true; setAssignee(e.target.value); }}
-                placeholder="Name…"
+              <select
+                value={assigneeId}
+                onChange={(e) => { userHasEdited.current = true; setAssigneeId(e.target.value); }}
                 className="
                   w-full bg-column-bg rounded-xl px-4 py-2.5
                   text-sm text-ink placeholder:text-muted
                   border border-transparent focus:border-border focus:outline-none
-                  transition-colors
+                  transition-colors cursor-pointer appearance-none
                 "
-              />
+              >
+                <option value="">Unassigned</option>
+                {boardMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">

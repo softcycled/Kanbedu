@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
 
 // PATCH update column (rename, set done)
 export async function PATCH(
@@ -7,19 +8,15 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await request.json();
-    const { label, isDone } = body;
-
-    if (label !== undefined && (typeof label !== "string" || !label.trim())) {
-      return NextResponse.json(
-        { error: "Label must be a non-empty string" },
-        { status: 400 }
-      );
+    const raw = await request.json();
+    const { data, error } = parseBody(updateColumnSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const updateData: { label?: string; isDone?: boolean } = {};
-    if (label !== undefined) updateData.label = label.trim();
-    if (isDone !== undefined) updateData.isDone = Boolean(isDone);
+    if (data.label !== undefined) updateData.label = data.label;
+    if (data.isDone !== undefined) updateData.isDone = data.isDone;
 
     // Enforce only one done column per board: clear isDone on all siblings first,
     // and clear completedAt on any tasks that were in those sibling "done" columns.
@@ -38,7 +35,7 @@ export async function PATCH(
           data: { isDone: false },
         });
 
-        // Tasks that were in the old done columns are now "active" — clear completedAt
+        // Tasks that were in the old done columns are now "active" -- clear completedAt
         if (siblingIds.length > 0) {
           await prisma.task.updateMany({
             where: { column: { in: siblingIds } },
@@ -86,8 +83,11 @@ export async function DELETE(
     // Parse request body, handle empty body
     let moveToColumnId: string | null = null;
     try {
-      const body = await request.json();
-      moveToColumnId = body.moveToColumnId || null;
+      const raw = await request.json();
+      const { data } = parseBody(deleteColumnSchema, raw);
+      if (data) {
+        moveToColumnId = data.moveToColumnId ?? null;
+      }
     } catch {
       // Empty or invalid body is ok for DELETE
     }

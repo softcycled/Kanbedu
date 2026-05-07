@@ -1,0 +1,115 @@
+import { z } from "zod";
+
+// -- Auth --
+
+export const signupSchema = z.object({
+  email: z.string().trim().email("Invalid email address.").toLowerCase(),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  name: z.string().trim().default(""),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().email("Invalid email address.").toLowerCase(),
+  password: z.string().min(1, "Password is required."),
+});
+
+export const profileUpdateSchema = z
+  .object({
+    name: z.string().trim().optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color.")
+      .optional(),
+  })
+  .refine((data) => data.name !== undefined || data.color !== undefined, {
+    message: "No valid fields to update.",
+  });
+
+// -- Boards --
+
+export const createBoardSchema = z.object({
+  name: z.string().trim().min(1, "Name is required."),
+});
+
+export const renameBoardSchema = z.object({
+  name: z.string().trim().min(1, "Name is required."),
+});
+
+export const reorderBoardsSchema = z.object({
+  ids: z.array(z.string().min(1)),
+});
+
+// -- Columns --
+
+export const createColumnSchema = z.object({
+  label: z.string().trim().min(1, "Label is required."),
+  boardId: z.string().min(1, "Board ID is required."),
+});
+
+export const updateColumnSchema = z
+  .object({
+    label: z.string().trim().min(1, "Label must be non-empty.").optional(),
+    isDone: z.boolean().optional(),
+  })
+  .refine((data) => data.label !== undefined || data.isDone !== undefined, {
+    message: "No valid fields to update.",
+  });
+
+export const reorderColumnsSchema = z.object({
+  columns: z.array(
+    z.object({
+      id: z.string().min(1),
+      order: z.number().int().min(0),
+    })
+  ),
+});
+
+export const deleteColumnSchema = z
+  .object({
+    moveToColumnId: z.string().nullable().optional(),
+  })
+  .optional()
+  .default({});
+
+// -- Tasks --
+
+export const createTaskSchema = z.object({
+  title: z.string().trim().min(1, "Title is required."),
+  column: z.string().min(1, "Column ID is required."),
+});
+
+export const updateTaskSchema = z.object({
+  title: z.string().trim().min(1).optional(),
+  description: z.string().optional(),
+  column: z.string().min(1).optional(),
+  order: z.number().optional(),
+  assigneeId: z.string().nullable().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  deadline: z.string().nullable().optional(),
+});
+
+// -- Comments --
+
+export const createCommentSchema = z.object({
+  taskId: z.string().min(1, "Task ID is required."),
+  content: z.string().trim().min(1, "Comment content is required."),
+  author: z.string().trim().default(""),
+});
+
+// -- Invites --
+
+export const createInviteSchema = z.object({
+  boardId: z.string().min(1, "Board ID is required."),
+});
+
+// -- Helper --
+
+// Parses a zod schema against data, returns { data } on success or { error } on failure.
+export function parseBody<T>(schema: z.ZodSchema<T>, data: unknown): { data: T; error?: never } | { data?: never; error: string } {
+  const result = schema.safeParse(data);
+  if (result.success) {
+    return { data: result.data };
+  }
+  const message = result.error.errors.map((e) => e.message).join(" ");
+  return { error: message };
+}

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { renameBoardSchema, parseBody } from "@/lib/validations";
 
 // PATCH rename board
 export async function PATCH(
@@ -7,15 +8,15 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { name } = await request.json();
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const raw = await request.json();
+    const { data, error } = parseBody(renameBoardSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const board = await prisma.board.update({
       where: { id: params.id },
-      data: { name: name.trim() },
+      data: { name: data.name },
     });
 
     return NextResponse.json(board);
@@ -39,7 +40,6 @@ export async function DELETE(
     const columnIds = columns.map((c) => c.id);
 
     if (columnIds.length > 0) {
-      // Delete comments first (cascade isn't set on task delete for us)
       await prisma.comment.deleteMany({
         where: { task: { column: { in: columnIds } } },
       });

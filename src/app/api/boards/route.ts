@@ -1,16 +1,38 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { createBoardSchema, reorderBoardsSchema, parseBody } from "@/lib/validations";
 
-const DEFAULT_BOARD_ID = "cldefaultboard0000";
-
-// GET all boards
+// GET all boards the current user is a member of
 export async function GET() {
   try {
-    let boards = await prisma.board.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
 
+    const memberships = await prisma.boardMember.findMany({
+      where: { userId: session.userId },
+      include: { board: true },
+      orderBy: { board: { order: "asc" } },
+    });
+
+    let boards = memberships.map((m) => m.board);
+
+    // First-time user: create a default board and add them as owner
     if (boards.length === 0) {
       const board = await prisma.board.create({
-        data: { id: DEFAULT_BOARD_ID, name: "My Board" },
+        data: { name: "My Board" },
+      });
+      await prisma.boardMember.create({
+        data: { userId: session.userId, boardId: board.id, role: "owner" },
+      });
+      await prisma.column.createMany({
+        data: [
+          { label: "To Do", order: 0, isDone: false, boardId: board.id },
+          { label: "In Progress", order: 1, isDone: false, boardId: board.id },
+          { label: "Done", order: 2, isDone: true, boardId: board.id },
+        ],
       });
       boards = [board];
     }
@@ -22,18 +44,31 @@ export async function GET() {
   }
 }
 
-// POST create a new board (with default columns)
+// POST create a new board (with default columns) and add creator as owner
 export async function POST(request: NextRequest) {
   try {
-    const { name } = await request.json();
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    const existing = await prisma.board.findMany({ select: { id: true } });
+    const raw = await request.json();
+    const { data, error } = parseBody(createBoardSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
+
+    const memberCount = await prisma.boardMember.count({
+      where: { userId: session.userId },
+    });
+
     const board = await prisma.board.create({
-      data: { name: name.trim(), order: existing.length },
+      data: { name: data.name, order: memberCount },
+    });
+
+    // Auto-add creator as owner
+    await prisma.boardMember.create({
+      data: { userId: session.userId, boardId: board.id, role: "owner" },
     });
 
     await prisma.column.createMany({
@@ -51,15 +86,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT reorder boards — body: { ids: string[] } in desired order
+// PUT reorder boards -- body: { ids: string[] } in desired order
 export async function PUT(request: NextRequest) {
   try {
-    const { ids } = await request.json();
-    if (!Array.isArray(ids)) {
-      return NextResponse.json({ error: "ids must be an array" }, { status: 400 });
+    const raw = await request.json();
+    const { data, error } = parseBody(reorderBoardsSchema, raw);
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
+
     await Promise.all(
-      ids.map((id: string, index: number) =>
+      data.ids.map((id: string, index: number) =>
         prisma.board.update({ where: { id }, data: { order: index } })
       )
     );
