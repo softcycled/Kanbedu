@@ -23,9 +23,11 @@ export async function GET(request: NextRequest) {
         { label: "Done", order: 2, isDone: true, boardId },
       ];
 
-      const created = await Promise.all(
-        defaultColumns.map((col) => prisma.column.create({ data: col }))
-      );
+      await prisma.column.createMany({ data: defaultColumns });
+      const created = await prisma.column.findMany({
+        where: { boardId },
+        orderBy: { order: "asc" },
+      });
 
       return NextResponse.json(created);
     }
@@ -80,7 +82,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error }, { status: 400 });
     }
 
-    const updated = await Promise.all(
+    const updated = await prisma.$transaction(
       data.columns.map((col) =>
         prisma.column.update({
           where: { id: col.id },

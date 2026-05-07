@@ -38,10 +38,10 @@ export default async function Home() {
 
   const firstBoard = boards[0];
 
-  // Load tasks for the first board
+  // Load columns + tasks for the first board in one query
   const boardColumns = await prisma.column.findMany({
     where: { boardId: firstBoard.id },
-    select: { id: true },
+    orderBy: { order: "asc" },
   });
 
   const columnIds = boardColumns.map((c) => c.id);
@@ -81,6 +81,7 @@ export default async function Home() {
       initialTasks={serializedTasks}
       initialBoards={serializedBoards}
       initialBoardId={firstBoard.id}
+      initialColumns={boardColumns}
       currentUserId={session.userId}
     />
   );

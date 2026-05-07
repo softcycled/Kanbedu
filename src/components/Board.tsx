@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -23,40 +23,28 @@ import DeleteColumnModal from "./DeleteColumnModal";
 interface Props {
   boardId: string;
   initialTasks: Task[];
+  initialColumns: ColumnData[];
   onTasksUpdate?: (tasks: Task[]) => void;
   currentUserId?: string;
 }
 
-export default function Board({ boardId, initialTasks, onTasksUpdate, currentUserId }: Props) {
+export default function Board({ boardId, initialTasks, initialColumns, onTasksUpdate, currentUserId }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [columns, setColumns] = useState<ColumnData[]>([]);
-  const [isLoadingColumns, setIsLoadingColumns] = useState(true);
+  const [columns, setColumns] = useState<ColumnData[]>(initialColumns);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
 
-  // Fetch columns on mount
+  // Fetch columns only when not provided (e.g. board switch)
   useEffect(() => {
-    const fetchColumns = async () => {
-      try {
-        const res = await fetch(`/api/columns?boardId=${boardId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setColumns(data);
-        } else {
-          console.error("Failed to fetch columns:", res.status, res.statusText);
-        }
-      } catch (error) {
-        console.error("Failed to fetch columns:", error);
-      } finally {
-        setIsLoadingColumns(false);
-      }
-    };
-
-    fetchColumns();
-  }, [boardId]);
+    if (initialColumns.length > 0) return;
+    fetch(`/api/columns?boardId=${boardId}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setColumns(data))
+      .catch(() => {});
+  }, [boardId, initialColumns.length]);
 
   // Notify parent when tasks change
   useEffect(() => {
@@ -67,10 +55,21 @@ export default function Board({ boardId, initialTasks, onTasksUpdate, currentUse
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  const getTasksByColumn = (columnId: string) =>
-    tasks
-      .filter((t) => t.column === columnId)
-      .sort((a, b) => a.order - b.order);
+  const tasksByColumn = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    for (const t of tasks) {
+      const bucket = map.get(t.column) ?? [];
+      bucket.push(t);
+      map.set(t.column, bucket);
+    }
+    for (const [, bucket] of map) bucket.sort((a, b) => a.order - b.order);
+    return map;
+  }, [tasks]);
+
+  const getTasksByColumn = useCallback(
+    (columnId: string) => tasksByColumn.get(columnId) ?? [],
+    [tasksByColumn]
+  );
 
   // ── Column actions ─────────────────────────────────────────────
 
@@ -384,17 +383,15 @@ export default function Board({ boardId, initialTasks, onTasksUpdate, currentUse
       }),
     });
 
-    // Update sibling orders
+    // Update sibling orders in a single bulk request
     const siblings = reordered.filter((t) => t.id !== activeId);
-    await Promise.all(
-      siblings.map((t) =>
-        fetch(`/api/tasks/${t.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: orderMap[t.id] }),
-        })
-      )
-    );
+    if (siblings.length > 0) {
+      await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
+      });
+    }
   };
 
   // ── Task actions ───────────────────────────────────────────────
@@ -530,10 +527,6 @@ export default function Board({ boardId, initialTasks, onTasksUpdate, currentUse
       startScrollLeft: scrollRef.current?.scrollLeft ?? 0,
     };
   };
-
-  if (isLoadingColumns) {
-    return <div className="text-muted text-sm">Loading board...</div>;
-  }
 
   // All columns are deletable as long as more than one remains.
   // (Label-based "default" detection was fragile and broke on rename.)

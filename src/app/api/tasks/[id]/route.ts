@@ -36,13 +36,11 @@ export async function PATCH(
       });
 
       // Set completion metadata when entering or leaving the Done column.
-      const destinationColumn = await prisma.column.findUnique({
-        where: { id: body.column },
-      });
+      const [destinationColumn, currentColumn] = await Promise.all([
+        prisma.column.findUnique({ where: { id: body.column } }),
+        prisma.column.findUnique({ where: { id: current.column } }),
+      ]);
       const destinationIsDone = destinationColumn?.isDone ?? false;
-      const currentColumn = await prisma.column.findUnique({
-        where: { id: current.column },
-      });
       const currentIsDone = currentColumn?.isDone ?? false;
 
       if (destinationIsDone && !currentIsDone) {

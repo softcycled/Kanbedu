@@ -1,6 +1,24 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTaskSchema, parseBody } from "@/lib/validations";
+import { z } from "zod";
+
+const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }));
+
+// PUT /api/tasks — bulk update task order values
+export async function PUT(req: Request) {
+  const raw = await req.json();
+  const result = bulkReorderSchema.safeParse(raw);
+  if (!result.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+  await prisma.$transaction(
+    result.data.map(({ id, order }) =>
+      prisma.task.update({ where: { id }, data: { order } })
+    )
+  );
+  return NextResponse.json({ ok: true });
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

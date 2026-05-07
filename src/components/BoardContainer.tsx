@@ -13,6 +13,7 @@ interface Props {
   initialTasks: Task[];
   initialBoards: Board[];
   initialBoardId: string;
+  initialColumns: import("@/lib/types").ColumnData[];
   currentUserId: string;
 }
 
@@ -20,6 +21,7 @@ export default function BoardContainer({
   initialTasks,
   initialBoards,
   initialBoardId,
+  initialColumns,
   currentUserId,
 }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -117,6 +119,7 @@ export default function BoardContainer({
                 key={activeBoardId}
                 boardId={activeBoardId}
                 initialTasks={tasks}
+                initialColumns={activeBoardId === initialBoardId ? initialColumns : []}
                 onTasksUpdate={setTasks}
                 currentUserId={currentUserId}
               />
