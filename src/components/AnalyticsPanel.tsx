@@ -321,7 +321,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                   {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
                 </p>
                 <p className="text-xs text-red-500 mt-0.5">
-                  Flags indicate tasks completed unusually fast (&lt; 30 min) or that bypassed intermediate columns.
+                  Flags indicate tasks completed suspiciously fast or that bypassed intermediate columns.
                 </p>
               </div>
             </div>
