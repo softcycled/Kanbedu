@@ -50,7 +50,10 @@ export default async function Home() {
     columnIds.length > 0
       ? await prisma.task.findMany({
           where: { column: { in: columnIds } },
-          include: { comments: { orderBy: { createdAt: "asc" } } },
+          include: {
+            comments: { orderBy: { createdAt: "asc" } },
+            assigneeUser: { select: { id: true, name: true, color: true } },
+          },
           orderBy: [{ column: "asc" }, { order: "asc" }],
         })
       : [];
