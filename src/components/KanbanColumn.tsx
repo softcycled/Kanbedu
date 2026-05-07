@@ -83,7 +83,7 @@ export default function KanbanColumn({
       {/* Drop zone */}
       <div
         ref={setDropRef}
-        className={`flex-1 rounded-2xl p-3 transition-colors duration-150 min-h-[120px] ${
+        className={`rounded-2xl p-3 transition-colors duration-150 min-h-[120px] ${
           isOver ? "bg-accent-light" : "bg-column-bg"
         }`}
       >

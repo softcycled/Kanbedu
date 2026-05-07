@@ -547,7 +547,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-7 h-full">
+            <div className="flex gap-7 min-h-full pb-8">
             {columns.map((col, index) => (
               <KanbanColumn
                 key={col.id}
