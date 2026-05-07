@@ -132,7 +132,7 @@ function ComingSoonBadge() {
 
 function SectionBlock({ children }: { children: React.ReactNode }) {
   return (
-    <div className="divide-y divide-border border border-border rounded-xl">
+    <div className="divide-y divide-border border border-border rounded-xl shadow-sm">
       {children}
     </div>
   );
@@ -229,7 +229,7 @@ function AppearanceTab() {
         <h2 className="text-base font-semibold text-ink">Appearance</h2>
         <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <SectionTitle>UI Preferences</SectionTitle>
         <SectionBlock>
           <SectionItem>
@@ -435,7 +435,7 @@ export default function ProfilePanel() {
               <p className="text-sm text-muted mt-0.5">Manage your personal details</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Profile</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -542,7 +542,7 @@ export default function ProfilePanel() {
               </SectionBlock>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Password</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -584,7 +584,7 @@ export default function ProfilePanel() {
               </SectionBlock>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>More</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -629,7 +629,7 @@ export default function ProfilePanel() {
               <h2 className="text-base font-semibold text-ink">Notifications</h2>
               <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Alerts & Updates</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -669,7 +669,7 @@ export default function ProfilePanel() {
               <h2 className="text-base font-semibold text-ink">Boards</h2>
               <p className="text-sm text-muted mt-0.5">Defaults and display preferences for your boards</p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Display</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -694,7 +694,7 @@ export default function ProfilePanel() {
               <h2 className="text-base font-semibold text-ink">Accessibility</h2>
               <p className="text-sm text-muted mt-0.5">Make Kanbedu work better for you</p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Display & Interaction</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -724,7 +724,7 @@ export default function ProfilePanel() {
               <h2 className="text-base font-semibold text-ink">Privacy & Security</h2>
               <p className="text-sm text-muted mt-0.5">Control your data and account security</p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Security</SectionTitle>
               <SectionBlock>
                 <SectionItem>
@@ -739,7 +739,7 @@ export default function ProfilePanel() {
                 </SectionItem>
               </SectionBlock>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <SectionTitle>Privacy</SectionTitle>
               <SectionBlock>
                 <SectionItem>
