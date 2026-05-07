@@ -18,12 +18,12 @@ interface Props {
 
 const getColorClasses = (index: number) => {
   const colors = [
-    { bg: "bg-blue-100", border: "border-blue-200", dot: "bg-blue-400", text: "text-blue-700" },
-    { bg: "bg-amber-100", border: "border-amber-200", dot: "bg-amber-500", text: "text-amber-700" },
-    { bg: "bg-green-100", border: "border-green-200", dot: "bg-green-500", text: "text-green-700" },
-    { bg: "bg-purple-100", border: "border-purple-200", dot: "bg-purple-500", text: "text-purple-700" },
-    { bg: "bg-pink-100", border: "border-pink-200", dot: "bg-pink-500", text: "text-pink-700" },
-    { bg: "bg-cyan-100", border: "border-cyan-200", dot: "bg-cyan-500", text: "text-cyan-700" },
+    { bg: "bg-blue-100 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", dot: "bg-blue-400 dark:bg-blue-400", text: "text-blue-700 dark:text-blue-300" },
+    { bg: "bg-amber-100 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", dot: "bg-amber-500 dark:bg-amber-400", text: "text-amber-700 dark:text-amber-300" },
+    { bg: "bg-green-100 dark:bg-green-950/30", border: "border-green-200 dark:border-green-800", dot: "bg-green-500 dark:bg-green-400", text: "text-green-700 dark:text-green-300" },
+    { bg: "bg-purple-100 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800", dot: "bg-purple-500 dark:bg-purple-400", text: "text-purple-700 dark:text-purple-300" },
+    { bg: "bg-pink-100 dark:bg-pink-950/30", border: "border-pink-200 dark:border-pink-800", dot: "bg-pink-500 dark:bg-pink-400", text: "text-pink-700 dark:text-pink-300" },
+    { bg: "bg-cyan-100 dark:bg-cyan-950/30", border: "border-cyan-200 dark:border-cyan-800", dot: "bg-cyan-500 dark:bg-cyan-400", text: "text-cyan-700 dark:text-cyan-300" },
   ];
 
   return colors[index % colors.length];
@@ -95,7 +95,7 @@ export default function ColumnHeader({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          className={`text-base font-bold tracking-wide ${colors.text} bg-white/80 border border-current rounded px-1 py-0.5 flex-1 min-w-0`}
+          className={`text-base font-bold tracking-wide ${colors.text} bg-white/80 dark:bg-card-bg/80 border border-current rounded px-1 py-0.5 flex-1 min-w-0`}
           onClick={(e) => e.stopPropagation()}
           draggable={false}
         />
@@ -109,7 +109,7 @@ export default function ColumnHeader({
         </h2>
       )}
 
-      <span className="ml-auto text-xs text-muted font-mono bg-black/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
+      <span className="ml-auto text-xs text-muted font-mono bg-black/5 dark:bg-white/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
         {taskCount}
       </span>
 
@@ -118,7 +118,7 @@ export default function ColumnHeader({
         <span
           title="This is the Done column — click to unmark"
           onClick={(e) => { e.stopPropagation(); onSetDone(); }}
-          className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 cursor-pointer hover:bg-green-200 transition-colors select-none"
+          className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 cursor-pointer hover:bg-green-200 dark:hover:bg-green-950/60 transition-colors select-none"
         >
           ✓ Done
         </span>
@@ -128,7 +128,7 @@ export default function ColumnHeader({
           title="Mark as Done column"
           aria-label="Mark as Done column"
           draggable={false}
-          className="flex-shrink-0 text-xs text-muted hover:text-green-700 transition-colors px-1 py-0.5 rounded hover:bg-green-50"
+          className="flex-shrink-0 text-xs text-muted hover:text-green-700 dark:hover:text-green-300 transition-colors px-1 py-0.5 rounded hover:bg-green-50 dark:hover:bg-green-950/20"
         >
           ✓
         </button>

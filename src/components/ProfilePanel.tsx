@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -87,15 +88,17 @@ function Toggle({ checked, onChange, disabled = false }: {
       onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
         disabled
-          ? "cursor-not-allowed opacity-40 bg-border"
+          ? "cursor-not-allowed opacity-40 bg-muted/40"
           : checked
-          ? "cursor-pointer bg-ink"
-          : "cursor-pointer bg-border"
+          ? "cursor-pointer bg-ink/15 dark:bg-ink/30"
+          : "cursor-pointer bg-ink/60 dark:bg-ink"
       }`}
     >
       <span
-        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
-          checked ? "translate-x-4" : "translate-x-0"
+        className={`pointer-events-none inline-block h-4 w-4 rounded-full shadow transform transition-transform duration-200 ${
+          checked
+            ? "translate-x-4 bg-ink/60 dark:bg-ink"
+            : "translate-x-0 bg-paper dark:bg-paper"
         }`}
       />
     </button>
@@ -210,6 +213,49 @@ const NAV_ITEMS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: "accessibility", label: "Accessibility",      icon: <IconAccessibility /> },
   { id: "privacy",       label: "Privacy & Security", icon: <IconPrivacy /> },
 ];
+
+// ── Appearance tab (needs useTheme, separate component so hook is always called) ──
+
+function AppearanceTab() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const isDark = resolvedTheme === "dark";
+
+  return (
+    <div className="max-w-lg space-y-8">
+      <div>
+        <h2 className="text-base font-semibold text-ink">Appearance</h2>
+        <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
+      </div>
+      <div className="space-y-4">
+        <SectionTitle>UI Preferences</SectionTitle>
+        <SectionBlock>
+          <SectionItem>
+            <SettingRow label="Dark mode" description="Switch between light and dark themes">
+              {mounted ? (
+                <Toggle checked={isDark} onChange={(v) => setTheme(v ? "dark" : "light")} />
+              ) : (
+                <div className="h-5 w-9 rounded-full bg-border animate-pulse" />
+              )}
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow label="Compact mode" description="Reduce spacing for a denser layout" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow label="Reduced motion" description="Minimize animations and transitions" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+        </SectionBlock>
+      </div>
+    </div>
+  );
+}
 
 // ── Main component ────────────────────────────────────────────
 
@@ -573,32 +619,7 @@ export default function ProfilePanel() {
 
         {/* Appearance */}
         {activeTab === "appearance" && (
-          <div className="max-w-lg space-y-8">
-            <div>
-              <h2 className="text-base font-semibold text-ink">Appearance</h2>
-              <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
-            </div>
-            <div className="space-y-4">
-              <SectionTitle>UI Preferences</SectionTitle>
-              <SectionBlock>
-                <SectionItem>
-                  <SettingRow label="Light / Dark mode" description="Switch between light and dark themes" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Compact mode" description="Reduce spacing for a denser layout" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Reduced motion" description="Minimize animations and transitions" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-              </SectionBlock>
-            </div>
-          </div>
+          <AppearanceTab />
         )}
 
         {/* Notifications */}

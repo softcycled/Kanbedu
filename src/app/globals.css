@@ -4,9 +4,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Font vars ────────────────────────────────────────────────── */
 :root {
   --font-geist-sans: 'Geist', system-ui, sans-serif;
   --font-geist-mono: 'DM Mono', ui-monospace, monospace;
+}
+
+/* ── Light theme tokens ───────────────────────────────────────── */
+/* Values are space-separated R G B so Tailwind alpha modifiers work */
+:root {
+  --c-paper:      247 245 240;  /* #F7F5F0 */
+  --c-ink:        28  25  23;   /* #1C1917 */
+  --c-muted:      120 113 108;  /* #78716C */
+  --c-accent:     232  97  58;  /* #E8613A */
+  --c-accent-lt:  253 240 235;  /* #FDF0EB */
+  --c-column-bg:  239 237 232;  /* #EFEDE8 */
+  --c-card-bg:    253 252 250;  /* #FDFCFA */
+  --c-border:     226 222 216;  /* #E2DED8 */
+  --c-todo-dot:   148 163 184;  /* #94A3B8 */
+  --c-doing-dot:  245 158  11;  /* #F59E0B */
+  --c-done-dot:   74  222 128;  /* #4ADE80 */
+
+  --shadow-card:       0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04);
+  --shadow-card-hover: 0 8px 24px rgba(26,24,20,0.10), 0 3px 8px rgba(26,24,20,0.06);
+  --shadow-modal:      0 24px 64px rgba(26,24,20,0.18), 0 8px 24px rgba(26,24,20,0.10);
+}
+
+/* ── Dark theme tokens ────────────────────────────────────────── */
+.dark {
+  --c-paper:      22  20  18;   /* #161412 warm near-black */
+  --c-ink:        242 239 233;  /* #F2EFE9 warm off-white */
+  --c-muted:      168 162 158;  /* #A8A29E lighter muted */
+  --c-accent:     232  97  58;  /* accent stays the same */
+  --c-accent-lt:  45  28  18;   /* #2D1C12 dark warm orange tint */
+  --c-column-bg:  35  32  30;   /* #231E1E increased from 30,28,26 for better separation */
+  --c-card-bg:    48  45  42;   /* #302D2A increased from 38,36,33 for clarity */
+  --c-border:     70  67  63;   /* #464340 increased from 52,49,46 for visibility */
+  --c-todo-dot:   148 163 184;  /* same */
+  --c-doing-dot:  245 158  11;  /* same */
+  --c-done-dot:   74  222 128;  /* same */
+
+  --shadow-card:       0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.16), 0 3px 8px rgba(0,0,0,0.10);
+  --shadow-modal:      0 24px 64px rgba(0,0,0,0.24), 0 8px 24px rgba(0,0,0,0.14);
 }
 
 * {
@@ -27,8 +67,8 @@ html {
 }
 
 body {
-  background-color: #F7F5F0;
-  color: #1C1917;
+  background-color: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
   font-family: var(--font-geist-sans);
   font-size: 14px;
   line-height: 1.6;
@@ -43,16 +83,19 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D0CCC6;
+  background: rgb(var(--c-border));
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B0ABA4;
+  background: rgb(var(--c-muted) / 0.5);
 }
 
-/* Date input styling */
+/* Date input color-scheme adapts to theme */
 input[type="date"] {
   color-scheme: light;
+}
+.dark input[type="date"] {
+  color-scheme: dark;
 }
 
 /* Smooth column height */

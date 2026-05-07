@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -12,22 +13,24 @@ module.exports = {
         mono: ["var(--font-geist-mono)", "monospace"],
       },
       colors: {
-        paper: "#F7F5F0",
-        ink: "#1C1917",
-        muted: "#78716C",
-        accent: "#E8613A",
-        "accent-light": "#FDF0EB",
-        "column-bg": "#EFEDE8",
-        "card-bg": "#FDFCFA",
-        border: "#E2DED8",
-        "todo-dot": "#94A3B8",
-        "doing-dot": "#F59E0B",
-        "done-dot": "#4ADE80",
+        // All tokens use CSS variables so light/dark flip happens in one place (globals.css).
+        // Space-separated RGB values enable Tailwind alpha modifiers: bg-ink/80, border/50, etc.
+        paper:        "rgb(var(--c-paper)      / <alpha-value>)",
+        ink:          "rgb(var(--c-ink)        / <alpha-value>)",
+        muted:        "rgb(var(--c-muted)      / <alpha-value>)",
+        accent:       "rgb(var(--c-accent)     / <alpha-value>)",
+        "accent-light":"rgb(var(--c-accent-lt) / <alpha-value>)",
+        "column-bg":  "rgb(var(--c-column-bg) / <alpha-value>)",
+        "card-bg":    "rgb(var(--c-card-bg)   / <alpha-value>)",
+        border:       "rgb(var(--c-border)    / <alpha-value>)",
+        "todo-dot":   "rgb(var(--c-todo-dot)  / <alpha-value>)",
+        "doing-dot":  "rgb(var(--c-doing-dot) / <alpha-value>)",
+        "done-dot":   "rgb(var(--c-done-dot)  / <alpha-value>)",
       },
       boxShadow: {
-        card: "0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04)",
-        "card-hover": "0 8px 24px rgba(26,24,20,0.10), 0 3px 8px rgba(26,24,20,0.06)",
-        modal: "0 24px 64px rgba(26,24,20,0.18), 0 8px 24px rgba(26,24,20,0.10)",
+        card:       "var(--shadow-card)",
+        "card-hover":"var(--shadow-card-hover)",
+        modal:      "var(--shadow-modal)",
       },
       transitionTimingFunction: {
         "smooth-out": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",

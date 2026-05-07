@@ -227,9 +227,9 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                   {/* Column card */}
                   <div className={`w-full rounded-xl border p-4 flex flex-col gap-3 h-full ${
                     col.isBottleneck
-                      ? "border-orange-300 bg-orange-50/50"
+                      ? "border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20"
                       : col.isDone
-                      ? "border-green-300 bg-green-100/60"
+                      ? "border-green-300 dark:border-green-800 bg-green-100/60 dark:bg-green-950/20"
                       : "border-border bg-card-bg"
                   }`}>
                     {/* Header */}
@@ -237,12 +237,12 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-sm text-ink">{col.label}</span>
                         {col.isBottleneck && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                             ⚠ Bottleneck
                           </span>
                         )}
                         {col.isDone && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">
                             ✓ Done
                           </span>
                         )}
@@ -268,16 +268,16 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                         <>
                           <div className="flex justify-between items-center">
                             <span className="text-muted">Completed</span>
-                            <span className="font-semibold text-green-700">{summary.completed} / {summary.total}</span>
+                            <span className="font-semibold text-green-700 dark:text-green-300">{summary.completed} / {summary.total}</span>
                           </div>
-                          <div className="h-1.5 w-full bg-green-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${completionPct}%` }} />
+                          <div className="h-1.5 w-full bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 dark:bg-green-500 rounded-full" style={{ width: `${completionPct}%` }} />
                           </div>
                           <div className="flex justify-between items-center pt-0.5">
                             <span className="text-muted">{completionPct}% done</span>
                           </div>
                           {summary.avgCycleTimeMs !== null && (
-                            <div className="flex justify-between items-center pt-1 border-t border-green-200">
+                            <div className="flex justify-between items-center pt-1 border-t border-green-200 dark:border-green-900/40">
                               <span className="text-muted">Avg cycle time</span>
                               <span className="font-medium text-ink">{formatDuration(summary.avgCycleTimeMs)}</span>
                             </div>
@@ -364,18 +364,18 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       <Section title="Integrity Check">
         {summary.suspiciousTasks.length === 0 ? (
           <div className="bg-card-bg rounded-xl border border-border px-5 py-4 flex items-center gap-3">
-            <span className="text-green-500 text-lg">✓</span>
+            <span className="text-green-500 dark:text-green-400 text-lg">✓</span>
             <span className="text-sm text-muted">No suspicious activity detected across completed tasks.</span>
           </div>
         ) : (
           <>
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3 flex items-start gap-3">
-              <span className="text-red-500 mt-0.5">⚠</span>
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-3 flex items-start gap-3">
+              <span className="text-red-500 dark:text-red-400 mt-0.5">⚠</span>
               <div>
-                <p className="text-sm font-medium text-red-700">
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">
                   {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
                 </p>
-                <p className="text-xs text-red-500 mt-0.5">
+                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
                   Flags indicate tasks completed suspiciously fast, that bypassed intermediate columns, or moved by someone other than the assignee.
                 </p>
               </div>
@@ -407,17 +407,17 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {t.isSpeedRun && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                               Speed-run
                             </span>
                           )}
                           {t.isColumnSkip && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                               Skipped column
                             </span>
                           )}
                           {t.isMovedByOther && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
                               Moved by non-assignee
                             </span>
                           )}

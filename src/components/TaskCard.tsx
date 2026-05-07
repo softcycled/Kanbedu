@@ -76,10 +76,10 @@ export default function TaskCard({ task, onClick }: Props) {
 
       <div className="flex items-center gap-2 mt-2.5">
         <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${
-          p === "urgent" ? "bg-red-500/10 text-red-500" :
-          p === "high"   ? "bg-orange-500/10 text-orange-500" :
-          p === "low"    ? "bg-blue-500/10 text-blue-500" :
-                           "bg-yellow-500/10 text-yellow-600"
+          p === "urgent" ? "bg-red-500/10 dark:bg-red-950/30 text-red-500 dark:text-red-400" :
+          p === "high"   ? "bg-orange-500/10 dark:bg-orange-950/30 text-orange-500 dark:text-orange-400" :
+          p === "low"    ? "bg-blue-500/10 dark:bg-blue-950/30 text-blue-500 dark:text-blue-400" :
+                           "bg-yellow-500/10 dark:bg-yellow-950/30 text-yellow-600 dark:text-yellow-300"
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${priorityDot[p]}`} />
           {priorityLabel[p]}

@@ -65,7 +65,7 @@ export default function AddTask({ column, onAdd }: Props) {
       className="
         mt-2 w-full text-left px-4 py-2.5 rounded-xl
         text-sm text-muted hover:text-ink
-        hover:bg-black/5
+        hover:bg-black/5 dark:hover:bg-white/5
         transition-colors duration-100
         flex items-center gap-2
       "
