@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const comment = await prisma.comment.create({
     data: {
       content: data.content,
-      author: user?.name || "Anonymous",
+      author: (user?.name && user.name.trim()) || user?.email || "Anonymous",
       taskId: data.taskId,
     },
   });

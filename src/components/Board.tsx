@@ -423,7 +423,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       !!currentUserId &&
       task.assigneeId !== currentUserId;
 
-    await fetch(`/api/tasks/${activeId}`, {
+    const res = await fetch(`/api/tasks/${activeId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -432,6 +432,13 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         ...(isMoverMismatch ? { movedByNonAssignee: true } : {}),
       }),
     });
+
+    if (res.ok) {
+      const updatedTask = await res.json();
+      setTasks((prev) =>
+        prev.map((t) => (t.id === activeId ? updatedTask : t))
+      );
+    }
 
     // Update sibling orders in a single bulk request
     const siblings = reordered.filter((t) => t.id !== activeId);

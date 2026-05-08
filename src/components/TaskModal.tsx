@@ -345,7 +345,15 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     } else {
       newIds = [...currentIds, tagId];
     }
-    await handleUpdateWithFeedback(task.id, { tagIds: newIds });
+    
+    await handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
+    
+    // Immediately fetch fresh activities to reflect the tag change in the log
+    const res = await fetch(`/api/tasks/${task.id}`);
+    if (res.ok) {
+      const freshTask = await res.json();
+      setActivities(freshTask.activities || []);
+    }
   };
 
   const handleCreateTag = async () => {
