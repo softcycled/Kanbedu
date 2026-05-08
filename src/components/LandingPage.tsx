@@ -96,23 +96,19 @@ export default function LandingPage() {
     <div className="bg-paper min-h-screen font-sans selection:bg-accent selection:text-white">
       
       {/* ── Section 1: Navigation Bar ──────────────────────────── */}
-      <nav className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
-        isScrolled ? "bg-paper/80 backdrop-blur-md border-border py-3" : "bg-transparent border-transparent py-5"
+      {/* Dark mode only: gradient fades in on scroll */}
+      <div
+        className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-32 transition-opacity duration-500 hidden dark:block ${isScrolled ? "opacity-100" : "opacity-0"}`}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.18) 55%, transparent 100%)" }}
+      />
+      <nav className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled ? "py-3" : "py-5"
       }`}>
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <Link href="/landing" className="text-xl font-bold text-ink tracking-tight">
             kanbedu
           </Link>
           <div className="flex items-center gap-4 md:gap-6">
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="p-2 rounded-xl text-muted hover:text-ink hover:bg-column-bg transition-all"
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? <Icons.Sun /> : <Icons.Moon />}
-              </button>
-            )}
             <Link href="/login" className="text-sm font-medium text-muted hover:text-ink transition-colors">
               Sign in
             </Link>
@@ -125,7 +121,7 @@ export default function LandingPage() {
 
       <main>
         {/* ── Section 2: Hero ───────────────────────────────────── */}
-        <section className="text-center pt-24 pb-16 px-6">
+        <section className="text-center pt-16 pb-16 px-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] animate-fade-in">
               Track your group projects <br />
