@@ -253,7 +253,7 @@ export default function LandingPage() {
               <FeatureCard 
                 icon={<Icons.Chart />} 
                 title="Built-in Analytics" 
-                description="See where your project stands at a glance. Phase health, cycle times, team breakdown." 
+                description="See where your project stands at a glance. Workflow overview, cycle times, team breakdown." 
                 delay="200ms"
               />
               <FeatureCard 
