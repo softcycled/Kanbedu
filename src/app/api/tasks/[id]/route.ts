@@ -65,6 +65,13 @@ export async function PATCH(
     }
   }
 
+  if (body.tagIds !== undefined) {
+    updateData.tags = {
+      set: body.tagIds.map((id) => ({ id })),
+    };
+    delete updateData.tagIds;
+  }
+
   const hasContentChange = CONTENT_FIELDS.some((f) => f in body);
   if (hasContentChange || columnActuallyChanged) {
     updateData.updatedAt = new Date();
@@ -76,6 +83,7 @@ export async function PATCH(
     include: {
       comments: { orderBy: { createdAt: "asc" } },
       assigneeUser: { select: { id: true, name: true, color: true } },
+      tags: true,
     },
   });
 

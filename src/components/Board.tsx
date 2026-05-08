@@ -36,6 +36,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
+  const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
 
   // Fetch columns only when not provided (e.g. board switch)
   useEffect(() => {
@@ -45,6 +46,13 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       .then((data) => setColumns(data))
       .catch(() => {});
   }, [boardId, initialColumns.length]);
+
+  useEffect(() => {
+    fetch(`/api/boards/${boardId}/members`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setBoardMembers(data))
+      .catch(() => {});
+  }, [boardId]);
 
   // Notify parent when tasks change
   useEffect(() => {
@@ -600,6 +608,8 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
       <TaskModal
         task={selectedTask}
+        boardId={boardId}
+        boardMembers={boardMembers}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}
