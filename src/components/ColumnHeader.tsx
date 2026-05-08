@@ -95,7 +95,7 @@ export default function ColumnHeader({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          className={`text-base font-bold tracking-wide ${colors.text} bg-white/80 dark:bg-card-bg/80 border border-current rounded px-1 py-0.5 flex-1 min-w-0`}
+          className={`text-base font-bold tracking-wide ${colors.text} bg-card-bg/80 border border-current rounded px-1 py-0.5 flex-1 min-w-0`}
           onClick={(e) => e.stopPropagation()}
           draggable={false}
         />
@@ -109,7 +109,7 @@ export default function ColumnHeader({
         </h2>
       )}
 
-      <span className="ml-auto text-xs text-muted font-mono bg-black/5 dark:bg-white/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
+      <span className="ml-auto text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
         {taskCount}
       </span>
 

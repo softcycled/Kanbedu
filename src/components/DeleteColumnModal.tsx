@@ -10,6 +10,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onConfirmDelete: (moveToColumnId?: string) => Promise<void>;
+  errorMessage?: string | null;
 }
 
 export default function DeleteColumnModal({
@@ -19,6 +20,7 @@ export default function DeleteColumnModal({
   isOpen,
   onClose,
   onConfirmDelete,
+  errorMessage,
 }: Props) {
   const [selectedTargetColumn, setSelectedTargetColumn] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +96,12 @@ export default function DeleteColumnModal({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 px-3 py-2">
+            <p className="text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
           </div>
         )}
 

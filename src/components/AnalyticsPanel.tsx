@@ -183,7 +183,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const { summary, columns, assignees } = data;
 
   return (
-    <div className="flex-1 overflow-y-auto px-10 py-8 no-scrollbar">
+    <div className="flex-1 overflow-y-auto px-8 py-8 no-scrollbar">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>

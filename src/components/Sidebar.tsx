@@ -157,7 +157,7 @@ export default function Sidebar({
                 }}
                 placeholder="Board name…"
                 disabled={isCreating}
-                className="w-full px-2 py-1.5 text-sm rounded-lg border border-border bg-white/60 text-ink placeholder-muted/60 outline-none focus:border-ink/30"
+                className="w-full px-2 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30"
               />
             </div>
           )}

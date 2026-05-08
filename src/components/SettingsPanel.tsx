@@ -93,7 +93,7 @@ function SortableBoardRow({
           onKeyDown={(e) => onRenameKeyDown(e, board.id)}
           onBlur={() => onRenameBlur(board.id)}
           disabled={isSaving}
-          className="flex-1 text-sm px-2 py-1 rounded border border-border bg-white text-ink outline-none focus:border-ink/40"
+          className="flex-1 text-sm px-2 py-1 rounded border border-border bg-column-bg text-ink outline-none focus:border-ink/40"
         />
       ) : (
         <span
@@ -127,7 +127,7 @@ function SortableBoardRow({
         <button
           onClick={() => onDeleteClick(board)}
           disabled={!canDelete}
-          className="text-xs text-muted hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="text-xs text-red-500/80 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-30 disabled:cursor-not-allowed"
           title={!canDelete ? "Can't delete the last board" : "Delete board"}
         >
           Delete
@@ -205,7 +205,7 @@ export default function SettingsPanel({
 
   return (
     <>
-      <div className="flex-1 px-10 py-8 overflow-y-auto">
+      <div className="flex-1 px-8 py-8 overflow-y-auto">
         <h2 className="text-xl font-bold text-ink mb-1">Settings</h2>
         <p className="text-sm text-muted mb-8">Manage your boards</p>
 

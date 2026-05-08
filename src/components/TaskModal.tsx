@@ -55,6 +55,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [commentAuthor, setCommentAuthor] = useState("");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tagToDelete, setTagToDelete] = useState<import("@/lib/types").Tag | null>(null);
 
   const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
@@ -291,6 +292,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
 
   const handleClose = useCallback(async () => {
     setConfirmDelete(false);
+    setTagToDelete(null);
     await flushUpdates();
     onClose();
   }, [flushUpdates, onClose]);
@@ -353,20 +355,26 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     }
   };
 
-  const handleDeleteTag = async (e: React.MouseEvent, tagId: string) => {
+  const handleDeleteTag = (e: React.MouseEvent, tag: import("@/lib/types").Tag) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this tag from the entire board?")) return;
+    setTagDropdownOpen(false);
+    setIsCreatingTag(false);
+    setConfirmDelete(false);
+    setTagToDelete(tag);
+  };
+
+  const handleConfirmDeleteTag = async () => {
+    if (!tagToDelete) return;
     try {
-      const res = await fetch(`/api/tags/${tagId}`, { method: "DELETE" });
+      const res = await fetch(`/api/tags/${tagToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagId));
-        // If the task had this tag, it will be removed on next fetch/refresh, 
-        // but we should ideally update local task state too if possible.
-        // For now, onUpdate handlefresh data will fix it.
-        if (task) await onUpdate(task.id, {}); // Trigger refresh
+        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
+        if (task) await onUpdate(task.id, {});
       }
     } catch (error) {
       console.error("Failed to delete tag:", error);
+    } finally {
+      setTagToDelete(null);
     }
   };
 
@@ -418,6 +426,31 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
             </div>
           </div>
         )}
+
+        {tagToDelete && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-ink">Delete this tag?</p>
+                <p className="text-xs text-muted">This removes it from all tasks on this board.</p>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setTagToDelete(null)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDeleteTag}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
@@ -429,11 +462,11 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 onChange={(e) => setDraftTitle(e.target.value)}
                 onKeyDown={handleTitleKeyDown}
                 onBlur={commitTitle}
-                className="flex-1 text-base font-semibold text-ink leading-snug bg-black/[0.08] rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
+                className="flex-1 text-base font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
               />
             ) : (
               <h2
-                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-black/[0.05] transition-colors"
+                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-column-bg transition-colors"
                 onClick={() => { setDraftTitle(task.title); setIsEditingTitle(true); }}
               >
                 {task.title}
@@ -453,14 +486,14 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 </svg>
               </button>
               <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="p-2 rounded-lg text-muted hover:text-red-500 hover:bg-accent-light transition-colors"
-                  title="Delete task"
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
-                  </svg>
-                </button>
+                onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
+                className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                title="Delete task"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
+                </svg>
+              </button>
               <button
                 onClick={handleClose}
                 className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
@@ -589,8 +622,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                             </svg>
                           )}
                           <button
-                            onClick={(e) => handleDeleteTag(e, tag.id)}
-                            className="p-1 rounded hover:bg-accent-light text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteTag(e, tag)}
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
                               <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
@@ -789,7 +822,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 }}
                 rows={4}
                 className="
-                  w-full bg-black/[0.08] rounded-lg px-2 py-1
+                  w-full bg-column-bg rounded-lg px-2 py-1
                   text-sm text-ink leading-relaxed
                   border-none outline-none ring-0 shadow-none
                   resize-none overflow-hidden transition-[height]
@@ -801,7 +834,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                   descriptionOriginalRef.current = description;
                   setIsEditingDescription(true);
                 }}
-                className="min-h-[2.25rem] px-2 py-1 rounded-lg text-sm leading-relaxed cursor-text bg-black/[0.05] hover:bg-black/[0.08] transition-colors text-ink"
+                className="min-h-[2.25rem] px-2 py-1 rounded-lg text-sm leading-relaxed cursor-text bg-column-bg hover:bg-border/40 transition-colors text-ink"
               >
                 {description
                   ? <span className="whitespace-pre-wrap">{description}</span>
