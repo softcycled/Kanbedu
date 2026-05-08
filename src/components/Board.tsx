@@ -19,6 +19,7 @@ import KanbanColumn from "./KanbanColumn";
 import TaskModal from "./TaskModal";
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
+import FilterBar from "./FilterBar";
 
 interface Props {
   boardId: string;
@@ -38,6 +39,13 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
   const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
 
+  // Filtering state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
+
   // Fetch columns only when not provided (e.g. board switch)
   useEffect(() => {
     if (initialColumns.length > 0) return;
@@ -52,6 +60,11 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       .then((r) => r.ok ? r.json() : [])
       .then((data) => setBoardMembers(data))
       .catch(() => {});
+
+    fetch(`/api/tags?boardId=${boardId}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setAllTags(data))
+      .catch(() => {});
   }, [boardId]);
 
   // Notify parent when tasks change
@@ -63,16 +76,45 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      // Search query filter (title)
+      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Assignee filter (OR within category)
+      if (selectedAssignees.length > 0) {
+        const assigneeId = task.assigneeId || "unassigned";
+        if (!selectedAssignees.includes(assigneeId)) return false;
+      }
+
+      // Tags filter (OR within category - match if task has ANY of the selected tags)
+      if (selectedTags.length > 0) {
+        const taskTagIds = task.tags?.map((t) => t.id) || [];
+        const hasMatchingTag = selectedTags.some((id) => taskTagIds.includes(id));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Priority filter (OR within category)
+      if (selectedPriorities.length > 0) {
+        if (!selectedPriorities.includes(task.priority)) return false;
+      }
+
+      return true;
+    });
+  }, [tasks, searchQuery, selectedAssignees, selectedTags, selectedPriorities]);
+
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, Task[]>();
-    for (const t of tasks) {
+    for (const t of filteredTasks) {
       const bucket = map.get(t.column) ?? [];
       bucket.push(t);
       map.set(t.column, bucket);
     }
     for (const [, bucket] of map) bucket.sort((a, b) => a.order - b.order);
     return map;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const getTasksByColumn = useCallback(
     (columnId: string) => tasksByColumn.get(columnId) ?? [],
@@ -541,6 +583,21 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
   return (
     <>
+      <FilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedAssignees={selectedAssignees}
+        setSelectedAssignees={setSelectedAssignees}
+        selectedTags={selectedTags}
+        setSelectedTags={setSelectedTags}
+        selectedPriorities={selectedPriorities}
+        setSelectedPriorities={setSelectedPriorities}
+        members={boardMembers}
+        tags={allTags}
+        totalTasks={tasks.length}
+        filteredTasksCount={filteredTasks.length}
+      />
+
       <div
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
