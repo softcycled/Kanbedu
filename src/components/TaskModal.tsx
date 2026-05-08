@@ -219,32 +219,19 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
 
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
-    setSaving(true);
+    if (!task) return;
     if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
-    
+    setSaving(true);
     try {
       await onUpdate(id, data);
-      // Keep "Saved" visible for 1.5s before clearing
-      savingTimeoutRef.current = setTimeout(() => setSaving(false), 1500);
-    } catch {
-      setSaving(false);
+    } finally {
+      if (!isMounted.current) return;
+      savingTimeoutRef.current = setTimeout(() => setSaving(false), 400);
     }
-  }, [onUpdate]);
+  }, [onUpdate, task]);
 
   useEffect(() => {
-    if (!task || !isMounted.current || prevTask.current !== task.id) return;
-    if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
-    if (debouncedDescription !== originalTask.current?.description) {
-      handleUpdateWithFeedback(task.id, { description: debouncedDescription });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDescription]);
-
-  useEffect(() => {
-    if (!task || !isMounted.current || prevTask.current !== task.id) return;
-    if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
+    if (!task) return;
     if (debouncedAssigneeId !== originalTask.current?.assigneeId) {
       handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
     }
@@ -254,7 +241,6 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
     const deadlineValue = debouncedDeadline ? new Date(debouncedDeadline).toISOString() : null;
     const originalDeadline = originalTask.current?.deadline 
       ? new Date(originalTask.current.deadline).toISOString()
@@ -451,7 +437,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
             </div>
           </div>
         )}
-        
+
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
