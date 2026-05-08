@@ -67,32 +67,41 @@ export default function DeleteColumnModal({
               <button
                 type="button"
                 onClick={() => setDropdownOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-column-bg text-ink border border-border hover:border-ink/30 transition-colors focus:outline-none"
+                className="w-full bg-column-bg rounded-xl px-3 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
               >
-                <span>{selectedTargetColumn ? otherColumns.find(c => c.id === selectedTargetColumn)?.label : "Delete column and all tasks"}</span>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className={`flex-shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}>
+                <span className="truncate">
+                  {selectedTargetColumn
+                    ? otherColumns.find((c) => c.id === selectedTargetColumn)?.label
+                    : "Delete column and all tasks"}
+                </span>
+                <svg className="ml-auto flex-shrink-0 text-muted transition-transform" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M2 4l4 4 4-4"/>
                 </svg>
               </button>
               {dropdownOpen && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-card-bg border border-border rounded-xl shadow-modal z-10 py-1 animate-fade-in">
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedTargetColumn(undefined); setDropdownOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${!selectedTargetColumn ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"}`}
-                  >
-                    Delete column and all tasks
-                  </button>
-                  {otherColumns.map((col) => (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => { setSelectedTargetColumn(col.id); setDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${selectedTargetColumn === col.id ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"}`}
-                    >
-                      {col.label}
-                    </button>
-                  ))}
+                <div className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                  {[{ id: "", label: "Delete column and all tasks" }, ...otherColumns.map((c) => ({ id: c.id, label: c.label }))].map((item) => {
+                    const isSelected = (selectedTargetColumn ?? "") === item.id;
+                    return (
+                      <button
+                        key={item.id || "delete-all"}
+                        type="button"
+                        onClick={() => { setSelectedTargetColumn(item.id || undefined); setDropdownOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                          isSelected
+                            ? "bg-column-bg text-ink font-medium"
+                            : "text-ink hover:bg-column-bg"
+                        }`}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {isSelected && (
+                          <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M2 6l3 3 5-5"/>
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

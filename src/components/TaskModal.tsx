@@ -598,8 +598,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
             </div>
 
             {tagDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-card-bg border border-border rounded-xl shadow-modal z-[60] overflow-hidden">
-                <div className="p-2 max-h-48 overflow-y-auto space-y-1">
+              <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                <div className="max-h-48 overflow-y-auto">
                   {allBoardTags.length === 0 && !isCreatingTag && (
                     <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>
                   )}
@@ -609,16 +609,18 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                       <div
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-column-bg transition-colors"
+                        className={`group flex items-center gap-2.5 px-3 py-2 text-sm transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-column-bg text-ink font-medium"
+                            : "text-ink hover:bg-column-bg"
+                        }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                          <span className="text-ink font-medium">{tag.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <span className="truncate">{tag.name}</span>
+                        <div className="ml-auto flex items-center gap-2">
                           {isSelected && (
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M3 7l3 3 5-5" />
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M2 6l3 3 5-5" />
                             </svg>
                           )}
                           <button
