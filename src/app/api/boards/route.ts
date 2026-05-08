@@ -53,10 +53,11 @@ export async function POST(request: NextRequest) {
     }
 
     const raw = await request.json();
-    const { data, error } = parseBody(createBoardSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(createBoardSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const memberCount = await prisma.boardMember.count({
       where: { userId: session.userId },
@@ -90,10 +91,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(reorderBoardsSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(reorderBoardsSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     await Promise.all(
       data.ids.map((id: string, index: number) =>

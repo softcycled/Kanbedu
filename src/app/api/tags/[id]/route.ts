@@ -8,10 +8,11 @@ export async function PATCH(
 ) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(updateTagSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(updateTagSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const tag = await prisma.tag.update({
       where: { id: params.id },

@@ -6,10 +6,11 @@ import { signupSchema, parseBody } from "@/lib/validations";
 export async function POST(req: Request) {
   try {
     const raw = await req.json();
-    const { data, error } = parseBody(signupSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(signupSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {

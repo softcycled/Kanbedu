@@ -46,10 +46,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(createColumnSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(createColumnSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     // Get max order for this board
     const maxOrder = await prisma.column.aggregate({
@@ -77,10 +78,11 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(reorderColumnsSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(reorderColumnsSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const updated = await prisma.$transaction(
       data.columns.map((col) =>

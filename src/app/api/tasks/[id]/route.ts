@@ -9,10 +9,11 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const raw = await req.json();
-  const { data: body, error } = parseBody(updateTaskSchema, raw);
-  if (error) {
-    return NextResponse.json({ error }, { status: 400 });
+  const result = parseBody(updateTaskSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  const body = result.data;
   const { id } = params;
   const session = await getSession();
   if (!session) {
@@ -107,6 +108,13 @@ export async function PATCH(
     await recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`);
   }
   if (body.description !== undefined && body.description !== current.description) {
+    await prisma.taskDescriptionVersion.create({
+      data: {
+        taskId: id,
+        userId: session.userId,
+        content: body.description,
+      },
+    });
     await recordActivity(id, session.userId, "UPDATE", "Updated the description");
   }
   if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {

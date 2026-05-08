@@ -125,6 +125,6 @@ export function parseBody<T>(schema: z.ZodSchema<T>, data: unknown): { data: T; 
   if (result.success) {
     return { data: result.data };
   }
-  const message = result.error.errors.map((e) => e.message).join(" ");
+  const message = (result.error as z.ZodError<unknown>).issues.map((e) => e.message).join(" ");
   return { error: message };
 }

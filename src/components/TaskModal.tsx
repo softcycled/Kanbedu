@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import RichTextEditor from "./RichTextEditor";
 import {
   isOverdue,
   formatDateForInput,
@@ -55,6 +58,9 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [commentAuthor, setCommentAuthor] = useState("");
   const [viewMode, setViewMode] = useState<"comments" | "activity">("comments");
   const [activities, setActivities] = useState<TaskActivity[]>([]);
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tagToDelete, setTagToDelete] = useState<import("@/lib/types").Tag | null>(null);
 
   const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
@@ -156,22 +162,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     }
   };
 
-  // Auto-resize textarea to full content height while editing
-  useEffect(() => {
-    const el = descriptionTextareaRef.current;
-    if (!el || !isEditingDescription) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [description, isEditingDescription]);
 
-  // Auto-focus and place cursor at end
-  useEffect(() => {
-    if (!isEditingDescription) return;
-    const el = descriptionTextareaRef.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
-  }, [isEditingDescription]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -224,32 +215,19 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
 
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
-    setSaving(true);
+    if (!task) return;
     if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
-    
+    setSaving(true);
     try {
       await onUpdate(id, data);
-      // Keep "Saved" visible for 1.5s before clearing
-      savingTimeoutRef.current = setTimeout(() => setSaving(false), 1500);
-    } catch {
-      setSaving(false);
+    } finally {
+      if (!isMounted.current) return;
+      savingTimeoutRef.current = setTimeout(() => setSaving(false), 400);
     }
-  }, [onUpdate]);
+  }, [onUpdate, task]);
 
   useEffect(() => {
-    if (!task || !isMounted.current || prevTask.current !== task.id) return;
-    if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
-    if (debouncedDescription !== originalTask.current?.description) {
-      handleUpdateWithFeedback(task.id, { description: debouncedDescription });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDescription]);
-
-  useEffect(() => {
-    if (!task || !isMounted.current || prevTask.current !== task.id) return;
-    if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
+    if (!task) return;
     if (debouncedAssigneeId !== originalTask.current?.assigneeId) {
       handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
     }
@@ -259,7 +237,6 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    // Only update if value actually changed from original
     const deadlineValue = debouncedDeadline ? new Date(debouncedDeadline).toISOString() : null;
     const originalDeadline = originalTask.current?.deadline 
       ? new Date(originalTask.current.deadline).toISOString()
@@ -296,6 +273,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   }, [task, description, assigneeId, deadline, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(async () => {
+    setConfirmDelete(false);
+    setTagToDelete(null);
     await flushUpdates();
     onClose();
   }, [flushUpdates, onClose]);
@@ -345,7 +324,6 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     } else {
       newIds = [...currentIds, tagId];
     }
-    
     await handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
     
     // Immediately fetch fresh activities to reflect the tag change in the log
@@ -378,20 +356,26 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     }
   };
 
-  const handleDeleteTag = async (e: React.MouseEvent, tagId: string) => {
+  const handleDeleteTag = (e: React.MouseEvent, tag: import("@/lib/types").Tag) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this tag from the entire board?")) return;
+    setTagDropdownOpen(false);
+    setIsCreatingTag(false);
+    setConfirmDelete(false);
+    setTagToDelete(tag);
+  };
+
+  const handleConfirmDeleteTag = async () => {
+    if (!tagToDelete) return;
     try {
-      const res = await fetch(`/api/tags/${tagId}`, { method: "DELETE" });
+      const res = await fetch(`/api/tags/${tagToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagId));
-        // If the task had this tag, it will be removed on next fetch/refresh, 
-        // but we should ideally update local task state too if possible.
-        // For now, onUpdate handlefresh data will fix it.
-        await onUpdate(task.id, {}); // Trigger refresh
+        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
+        if (task) await onUpdate(task.id, {});
       }
     } catch (error) {
       console.error("Failed to delete tag:", error);
+    } finally {
+      setTagToDelete(null);
     }
   };
 
@@ -417,7 +401,58 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
     >
       <div className="relative bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
-        
+
+        {/* Delete confirmation overlay */}
+        {confirmDelete && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-ink">Delete this task?</p>
+                <p className="text-xs text-muted">This action cannot be undone.</p>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { onDelete(task.id); handleClose(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tagToDelete && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-ink">Delete this tag?</p>
+                <p className="text-xs text-muted">This removes it from all tasks on this board.</p>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setTagToDelete(null)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDeleteTag}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
@@ -428,11 +463,11 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 onChange={(e) => setDraftTitle(e.target.value)}
                 onKeyDown={handleTitleKeyDown}
                 onBlur={commitTitle}
-                className="flex-1 text-base font-semibold text-ink leading-snug bg-black/[0.08] rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
+                className="flex-1 text-base font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
               />
             ) : (
               <h2
-                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-black/[0.05] transition-colors"
+                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-column-bg transition-colors"
                 onClick={() => { setDraftTitle(task.title); setIsEditingTitle(true); }}
               >
                 {task.title}
@@ -452,8 +487,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 </svg>
               </button>
               <button
-                onClick={() => { onDelete(task.id); handleClose(); }}
-                className="p-2 rounded-lg text-muted hover:text-accent hover:bg-accent-light transition-colors text-xs"
+                onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
+                className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                 title="Delete task"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -545,7 +580,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 <button
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:opacity-80 transition-opacity"
+                  className="px-2 py-1 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-80 transition-opacity"
                   style={{ backgroundColor: tag.color }}
                   title="Click to remove"
                 >
@@ -564,8 +599,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
             </div>
 
             {tagDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-card-bg border border-border rounded-xl shadow-modal z-[60] overflow-hidden">
-                <div className="p-2 max-h-48 overflow-y-auto space-y-1">
+              <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                <div className="max-h-48 overflow-y-auto">
                   {allBoardTags.length === 0 && !isCreatingTag && (
                     <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>
                   )}
@@ -575,21 +610,23 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                       <div
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-column-bg transition-colors"
+                        className={`group flex items-center gap-2.5 px-3 py-2 text-sm transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-column-bg text-ink font-medium"
+                            : "text-ink hover:bg-column-bg"
+                        }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                          <span className="text-ink font-medium">{tag.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <span className="truncate">{tag.name}</span>
+                        <div className="ml-auto flex items-center gap-2">
                           {isSelected && (
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M3 7l3 3 5-5" />
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M2 6l3 3 5-5" />
                             </svg>
                           )}
                           <button
-                            onClick={(e) => handleDeleteTag(e, tag.id)}
-                            className="p-1 rounded hover:bg-accent-light text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteTag(e, tag)}
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
                               <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
@@ -767,44 +804,54 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
               Description
             </label>
             {isEditingDescription ? (
-              <textarea
-                ref={descriptionTextareaRef}
-                value={description}
-                onChange={(e) => {
-                  userHasEdited.current = true;
-                  setDescription(e.target.value);
-                  const el = e.target;
-                  el.style.height = "auto";
-                  el.style.height = `${el.scrollHeight}px`;
-                }}
-                onBlur={() => setIsEditingDescription(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setDescription(descriptionOriginalRef.current);
-                    setIsEditingDescription(false);
-                  }
-                }}
-                rows={4}
-                className="
-                  w-full bg-black/[0.08] rounded-lg px-2 py-1
-                  text-sm text-ink leading-relaxed
-                  border-none outline-none ring-0 shadow-none
-                  resize-none overflow-hidden transition-[height]
-                "
-              />
+              <div className="space-y-3">
+                <RichTextEditor
+                  content={description}
+                  onChange={(val) => {
+                    userHasEdited.current = true;
+                    setDescription(val);
+                  }}
+                  placeholder="Add a detailed description…"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setDescription(descriptionOriginalRef.current);
+                      setIsEditingDescription(false);
+                    }}
+                    className="text-xs font-bold text-muted hover:text-ink px-3 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setIsEditingDescription(false)}
+                    className="text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-lg shadow-sm"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
             ) : (
               <div
                 onClick={() => {
                   descriptionOriginalRef.current = description;
                   setIsEditingDescription(true);
                 }}
-                className="min-h-[2.25rem] px-2 py-1 rounded-lg text-sm leading-relaxed cursor-text bg-black/[0.05] hover:bg-black/[0.08] transition-colors text-ink"
+                className="
+                  min-h-[4rem] px-4 py-3 rounded-xl cursor-text 
+                  bg-column-bg hover:bg-black/[0.05] transition-colors text-ink
+                  prose prose-sm dark:prose-invert max-w-none
+                  prose-headings:font-bold prose-headings:mb-2 prose-p:leading-relaxed
+                  prose-pre:bg-black/10 prose-pre:p-3 prose-pre:rounded-lg
+                "
               >
-                {description
-                  ? <span className="whitespace-pre-wrap">{description}</span>
-                  : <span className="text-muted">Add a description…</span>}
+                {description ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {description}
+                  </ReactMarkdown>
+                ) : (
+                  <span className="text-muted italic">Add a description…</span>
+                )}
               </div>
             )}
           </div>

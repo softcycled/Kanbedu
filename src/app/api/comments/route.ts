@@ -6,10 +6,11 @@ import { recordActivity } from "@/lib/activity";
 
 export async function POST(req: Request) {
   const raw = await req.json();
-  const { data, error } = parseBody(createCommentSchema, raw);
-  if (error) {
-    return NextResponse.json({ error }, { status: 400 });
+  const result = parseBody(createCommentSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  const data = result.data;
 
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -50,12 +50,14 @@ type TaskDef = {
   priority: string;
   deadline: Date | null;
   movedByNonAssignee?: boolean;
+  tags?: string[];
   journey: Array<{ columnId: string; durationDays: number }>;
-  comments: Array<{ content: string; daysAgoPosted: number; author?: string }>;};;
+  comments: Array<{ content: string; daysAgoPosted: number; author?: string }>;
+};
 
 // ── Shared write helper ────────────────────────────────────────
 
-async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<string, string>) {
+async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<string, string>, tagMap: Map<string, string> = new Map()) {
   for (let i = 0; i < tasks.length; i++) {
     const t = tasks[i];
 
@@ -81,6 +83,7 @@ async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<s
     const isDone = currentColumnId === doneColumnId;
     const completedAt = isDone ? colUpdatedAt : null;
 
+    const tagIds = (t.tags ?? []).map(n => tagMap.get(n)).filter((id): id is string => !!id);
     const task = await prisma.task.create({
       data: {
         title: t.title,
@@ -95,6 +98,7 @@ async function writeTasks(tasks: TaskDef[], doneColumnId: string, userMap: Map<s
         columnUpdatedAt: colUpdatedAt,
         order: i,
         movedByNonAssignee: t.movedByNonAssignee ?? false,
+        ...(tagIds.length ? { tags: { connect: tagIds.map(id => ({ id })) } } : {}),
       },
     });
 
@@ -177,6 +181,21 @@ async function main() {
     data: { label: "Done", order: 3, isDone: true, boardId: board.id },
   });
 
+  // ── Tags ───────────────────────────────────────────────────
+  const b1TagDefs = [
+    { name: "frontend",  color: "#6366F1" },
+    { name: "backend",   color: "#10B981" },
+    { name: "testing",   color: "#F59E0B" },
+    { name: "devops",    color: "#8B5CF6" },
+    { name: "design",    color: "#EC4899" },
+    { name: "docs",      color: "#6B7280" },
+  ];
+  const b1TagMap = new Map<string, string>();
+  for (const td of b1TagDefs) {
+    const tag = await prisma.tag.create({ data: { name: td.name, color: td.color, boardId: board.id } });
+    b1TagMap.set(td.name, tag.id);
+  }
+
   // ── Seed tasks ─────────────────────────────────────────────
   // Each entry describes a task + its column journey + comments.
 
@@ -188,6 +207,7 @@ async function main() {
       assignee: "Alice",
       priority: "high",
       deadline: daysFromNow(-15),
+      tags: ["devops"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 2 },
@@ -205,6 +225,7 @@ async function main() {
       assignee: "Bob",
       priority: "high",
       deadline: daysFromNow(-10),
+      tags: ["backend", "docs"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 3 },
@@ -223,6 +244,7 @@ async function main() {
       assignee: "Alice",
       priority: "urgent",
       deadline: daysFromNow(-8),
+      tags: ["backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 4 },
@@ -242,6 +264,7 @@ async function main() {
       assignee: "Carol",
       priority: "medium",
       deadline: daysFromNow(-10),
+      tags: ["frontend", "design"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 2 },
@@ -260,6 +283,7 @@ async function main() {
       assignee: "Bob",
       priority: "high",
       deadline: daysFromNow(-8),
+      tags: ["backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 3 },
@@ -278,6 +302,7 @@ async function main() {
       assignee: "Dave",
       priority: "medium",
       deadline: daysFromNow(-5),
+      tags: ["testing", "backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 3 },
@@ -299,6 +324,7 @@ async function main() {
       assignee: "Alice",
       priority: "high",
       deadline: daysFromNow(2),
+      tags: ["frontend"],
       journey: [
         { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 5 },
@@ -316,6 +342,7 @@ async function main() {
       assignee: "Carol",
       priority: "high",
       deadline: daysFromNow(5),
+      tags: ["frontend", "backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 4 },
@@ -335,6 +362,7 @@ async function main() {
       assignee: "Dave",
       priority: "medium",
       deadline: daysFromNow(7),
+      tags: ["backend", "frontend"],
       journey: [
         { columnId: colTodo.id, durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 4 },
@@ -350,6 +378,7 @@ async function main() {
       assignee: "Bob",
       priority: "low",
       deadline: daysFromNow(14),
+      tags: ["backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 3 },
@@ -364,6 +393,7 @@ async function main() {
       assignee: "Carol",
       priority: "low",
       deadline: daysFromNow(18),
+      tags: ["backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 2 },
@@ -378,6 +408,7 @@ async function main() {
       assignee: "Dave",
       priority: "medium",
       deadline: daysFromNow(3),
+      tags: ["frontend", "testing"],
       journey: [
         { columnId: colTodo.id, durationDays: 2 },
         { columnId: colInProgress.id, durationDays: 9 }, // stagnant
@@ -395,6 +426,7 @@ async function main() {
       assignee: "Alice",
       priority: "medium",
       deadline: daysFromNow(10),
+      tags: ["testing"],
       journey: [
         { columnId: colTodo.id, durationDays: 0 },
       ],
@@ -406,6 +438,7 @@ async function main() {
       assignee: "",
       priority: "medium",
       deadline: daysFromNow(12),
+      tags: ["frontend", "devops"],
       journey: [
         { columnId: colTodo.id, durationDays: 0 },
       ],
@@ -419,6 +452,7 @@ async function main() {
       assignee: "Bob",
       priority: "high",
       deadline: daysFromNow(6),
+      tags: ["devops"],
       journey: [
         { columnId: colTodo.id, durationDays: 0 },
       ],
@@ -431,6 +465,7 @@ async function main() {
       assignee: "Carol",
       priority: "low",
       deadline: daysFromNow(-3), // overdue
+      tags: ["docs", "backend"],
       journey: [
         { columnId: colTodo.id, durationDays: 0 },
       ],
@@ -447,6 +482,7 @@ async function main() {
       assignee: "Dave",
       priority: "low",
       deadline: daysFromNow(5),
+      tags: ["docs"],
       journey: [
         { columnId: colTodo.id,       durationDays: 0.003 }, // ~4 min
         { columnId: colInProgress.id, durationDays: 0.008 }, // ~12 min
@@ -466,6 +502,7 @@ async function main() {
       assignee: "Carol",
       priority: "low",
       deadline: daysFromNow(4),
+      tags: ["docs", "devops"],
       journey: [
         { columnId: colTodo.id,  durationDays: 1 },
         { columnId: colDone.id,  durationDays: 2 },
@@ -484,6 +521,7 @@ async function main() {
       priority: "low",
       deadline: daysFromNow(-5),
       movedByNonAssignee: true,
+      tags: ["devops"],
       journey: [
         { columnId: colTodo.id,       durationDays: 1 },
         { columnId: colInProgress.id, durationDays: 3 },
@@ -497,7 +535,7 @@ async function main() {
     },
   ];
 
-  await writeTasks(tasks, colDone.id, userMap);
+  await writeTasks(tasks, colDone.id, userMap, b1TagMap);
   // Add all 4 web app members to board 1
   for (const name of ["Alice", "Bob", "Carol", "Dave"]) {
     const uid = userMap.get(name);
@@ -516,6 +554,20 @@ async function main() {
   const b2Testing = await prisma.column.create({ data: { label: "Testing", order: 2, isDone: false, boardId: b2.id } });
   const b2Done = await prisma.column.create({ data: { label: "Done", order: 3, isDone: true, boardId: b2.id } });
 
+  const b2TagDefs = [
+    { name: "ios",      color: "#3B82F6" },
+    { name: "android",  color: "#22C55E" },
+    { name: "ui",       color: "#F472B6" },
+    { name: "backend",  color: "#1E40AF" },
+    { name: "blocked",  color: "#EF4444" },
+    { name: "store",    color: "#F97316" },
+  ];
+  const b2TagMap = new Map<string, string>();
+  for (const td of b2TagDefs) {
+    const tag = await prisma.tag.create({ data: { name: td.name, color: td.color, boardId: b2.id } });
+    b2TagMap.set(td.name, tag.id);
+  }
+
   const b2Tasks: TaskDef[] = [
     // ── Completed (2 on time, 4 late) ────────────────────────
     // ON TIME: completed far in the past, deadline was before that
@@ -525,6 +577,7 @@ async function main() {
       assignee: "Jake",
       priority: "medium",
       deadline: daysFromNow(-35),
+      tags: ["backend"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 1 },
         { columnId: b2InProg.id,  durationDays: 7 },
@@ -542,6 +595,7 @@ async function main() {
       assignee: "Emma",
       priority: "high",
       deadline: daysFromNow(-40),
+      tags: ["ui"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 1 },
         { columnId: b2InProg.id,  durationDays: 8 },
@@ -560,6 +614,7 @@ async function main() {
       assignee: "Emma",
       priority: "high",
       deadline: daysFromNow(-8),
+      tags: ["ios", "android"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 2 },
         { columnId: b2InProg.id,  durationDays: 9 },
@@ -577,6 +632,7 @@ async function main() {
       assignee: "Jake",
       priority: "urgent",
       deadline: daysFromNow(-10),
+      tags: ["backend"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 1 },
         { columnId: b2InProg.id,  durationDays: 10 },
@@ -595,6 +651,7 @@ async function main() {
       assignee: "Priya",
       priority: "high",
       deadline: daysFromNow(-12),
+      tags: ["ui", "ios", "android"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 1 },
         { columnId: b2InProg.id,  durationDays: 8 },
@@ -612,6 +669,7 @@ async function main() {
       assignee: "Priya",
       priority: "medium",
       deadline: daysFromNow(-9),
+      tags: ["ui"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 2 },
         { columnId: b2InProg.id,  durationDays: 9 },
@@ -632,6 +690,7 @@ async function main() {
       assignee: "Jake",
       priority: "high",
       deadline: daysFromNow(1),
+      tags: ["backend", "ios", "android"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 1 },
         { columnId: b2InProg.id,  durationDays: 9 },
@@ -649,6 +708,7 @@ async function main() {
       assignee: "Priya",
       priority: "medium",
       deadline: daysFromNow(3),
+      tags: ["backend", "ui"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 2 },
         { columnId: b2InProg.id,  durationDays: 8 },
@@ -667,6 +727,7 @@ async function main() {
       assignee: "Emma",
       priority: "urgent",
       deadline: daysFromNow(-2),
+      tags: ["ios", "android", "blocked"],
       journey: [
         { columnId: b2Todo.id,   durationDays: 1 },
         { columnId: b2InProg.id, durationDays: 10 },
@@ -682,6 +743,7 @@ async function main() {
       assignee: "Jake",
       priority: "urgent",
       deadline: daysFromNow(-4),
+      tags: ["backend", "blocked"],
       journey: [
         { columnId: b2Todo.id,   durationDays: 2 },
         { columnId: b2InProg.id, durationDays: 12 },
@@ -698,6 +760,7 @@ async function main() {
       assignee: "Priya",
       priority: "low",
       deadline: daysFromNow(10),
+      tags: ["ui"],
       journey: [
         { columnId: b2Todo.id,   durationDays: 1 },
         { columnId: b2InProg.id, durationDays: 4 },
@@ -712,6 +775,7 @@ async function main() {
       assignee: "Emma",
       priority: "high",
       deadline: daysFromNow(7),
+      tags: ["store"],
       journey: [
         { columnId: b2Todo.id,   durationDays: 1 },
         { columnId: b2InProg.id, durationDays: 3 },
@@ -726,6 +790,7 @@ async function main() {
       assignee: "Jake",
       priority: "high",
       deadline: daysFromNow(-1),
+      tags: ["ios", "android"],
       journey: [{ columnId: b2Todo.id, durationDays: 0 }],
       comments: [
         { content: "This keeps slipping — must do before TestFlight.", daysAgoPosted: 1 },
@@ -737,6 +802,7 @@ async function main() {
       assignee: "",
       priority: "medium",
       deadline: daysFromNow(5),
+      tags: ["ui"],
       journey: [{ columnId: b2Todo.id, durationDays: 0 }],
       comments: [
         { content: "Can we use Typeform instead of building this custom?", daysAgoPosted: 2 },
@@ -748,6 +814,7 @@ async function main() {
       assignee: "",
       priority: "medium",
       deadline: daysFromNow(14),
+      tags: ["ios", "android"],
       journey: [{ columnId: b2Todo.id, durationDays: 0 }],
       comments: [],
     },
@@ -760,6 +827,7 @@ async function main() {
       assignee: "Emma",
       priority: "low",
       deadline: daysFromNow(3),
+      tags: ["store"],
       journey: [
         { columnId: b2Todo.id,    durationDays: 0.003 },
         { columnId: b2InProg.id,  durationDays: 0.008 },
@@ -778,6 +846,7 @@ async function main() {
       priority: "low",
       deadline: daysFromNow(2),
       movedByNonAssignee: true,
+      tags: ["ui"],
       journey: [
         { columnId: b2Todo.id,  durationDays: 1 },
         { columnId: b2Done.id,  durationDays: 2 },
@@ -788,7 +857,7 @@ async function main() {
     },
   ];
 
-  await writeTasks(b2Tasks, b2Done.id, userMap);
+  await writeTasks(b2Tasks, b2Done.id, userMap, b2TagMap);
   // Add mobile app members to board 2
   for (const name of ["Jake", "Emma", "Priya"]) {
     const uid = userMap.get(name);
@@ -807,6 +876,18 @@ async function main() {
   const b3Editing = await prisma.column.create({ data: { label: "Editing",           order: 2, isDone: false, boardId: b3.id } });
   const b3Done    = await prisma.column.create({ data: { label: "Done",              order: 3, isDone: true,  boardId: b3.id } });
 
+  const b3TagDefs = [
+    { name: "research", color: "#10B981" },
+    { name: "writing",  color: "#3B82F6" },
+    { name: "editing",  color: "#8B5CF6" },
+    { name: "data",     color: "#F59E0B" },
+  ];
+  const b3TagMap = new Map<string, string>();
+  for (const td of b3TagDefs) {
+    const tag = await prisma.tag.create({ data: { name: td.name, color: td.color, boardId: b3.id } });
+    b3TagMap.set(td.name, tag.id);
+  }
+
   const b3Tasks: TaskDef[] = [
     // ── Completed (8 on time, 1 late) ────────────────────────
     // ON TIME: completedAt (daysAgo X) where X > deadline absolute days
@@ -816,6 +897,7 @@ async function main() {
       assignee: "Sam",
       priority: "high",
       deadline: daysFromNow(-22),
+      tags: ["research"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -834,6 +916,7 @@ async function main() {
       assignee: "Mia",
       priority: "high",
       deadline: daysFromNow(-20),
+      tags: ["research", "writing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 2 },
         { columnId: b3Writing.id, durationDays: 2 },
@@ -851,6 +934,7 @@ async function main() {
       assignee: "Sam",
       priority: "high",
       deadline: daysFromNow(-18),
+      tags: ["research", "writing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 4 },
@@ -869,6 +953,7 @@ async function main() {
       assignee: "Mia",
       priority: "medium",
       deadline: daysFromNow(-15),
+      tags: ["research", "data"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 2 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -886,6 +971,7 @@ async function main() {
       assignee: "Sam",
       priority: "high",
       deadline: daysFromNow(-13),
+      tags: ["data"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 2 },
@@ -903,6 +989,7 @@ async function main() {
       assignee: "Mia",
       priority: "high",
       deadline: daysFromNow(-10),
+      tags: ["writing", "data"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 4 },
@@ -921,6 +1008,7 @@ async function main() {
       assignee: "Sam",
       priority: "high",
       deadline: daysFromNow(-8),
+      tags: ["writing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 2 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -938,6 +1026,7 @@ async function main() {
       assignee: "Mia",
       priority: "medium",
       deadline: daysFromNow(-6),
+      tags: ["writing", "editing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 2 },
@@ -956,6 +1045,7 @@ async function main() {
       assignee: "Sam",
       priority: "medium",
       deadline: daysFromNow(-8),
+      tags: ["writing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -975,6 +1065,7 @@ async function main() {
       assignee: "Mia",
       priority: "medium",
       deadline: daysFromNow(2),
+      tags: ["editing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -993,6 +1084,7 @@ async function main() {
       assignee: "Sam",
       priority: "low",
       deadline: daysFromNow(4),
+      tags: ["research", "editing"],
       journey: [
         { columnId: b3LitRev.id,  durationDays: 1 },
         { columnId: b3Writing.id, durationDays: 3 },
@@ -1009,6 +1101,7 @@ async function main() {
       assignee: "Mia",
       priority: "high",
       deadline: daysFromNow(6),
+      tags: ["editing"],
       journey: [
         { columnId: b3LitRev.id, durationDays: 0 },
       ],
@@ -1022,6 +1115,7 @@ async function main() {
       assignee: "Sam",
       priority: "high",
       deadline: daysFromNow(5),
+      tags: ["editing"],
       journey: [
         { columnId: b3LitRev.id, durationDays: 0 },
       ],
@@ -1029,7 +1123,7 @@ async function main() {
     },
   ];
 
-  await writeTasks(b3Tasks, b3Done.id, userMap);
+  await writeTasks(b3Tasks, b3Done.id, userMap, b3TagMap);
   // Add research paper members to board 3
   for (const name of ["Sam", "Mia"]) {
     const uid = userMap.get(name);

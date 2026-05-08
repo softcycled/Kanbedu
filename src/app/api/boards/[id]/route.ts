@@ -9,10 +9,11 @@ export async function PATCH(
 ) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(renameBoardSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(renameBoardSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const board = await prisma.board.update({
       where: { id: params.id },

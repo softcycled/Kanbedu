@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 const Icons = {
   Sun: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y1="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
     </svg>
   ),
   Moon: () => (
@@ -96,27 +96,23 @@ export default function LandingPage() {
     <div className="bg-paper min-h-screen font-sans selection:bg-accent selection:text-white">
       
       {/* ── Section 1: Navigation Bar ──────────────────────────── */}
-      <nav className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
-        isScrolled ? "bg-paper/80 backdrop-blur-md border-border py-3" : "bg-transparent border-transparent py-5"
+      {/* Dark mode only: gradient fades in on scroll */}
+      <div
+        className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-32 transition-opacity duration-500 hidden dark:block ${isScrolled ? "opacity-100" : "opacity-0"}`}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.18) 55%, transparent 100%)" }}
+      />
+      <nav className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled ? "py-3" : "py-5"
       }`}>
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <Link href="/landing" className="text-xl font-bold text-ink tracking-tight">
             kanbedu
           </Link>
           <div className="flex items-center gap-4 md:gap-6">
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="p-2 rounded-xl text-muted hover:text-ink hover:bg-column-bg transition-all"
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? <Icons.Sun /> : <Icons.Moon />}
-              </button>
-            )}
             <Link href="/login" className="text-sm font-medium text-muted hover:text-ink transition-colors">
               Sign in
             </Link>
-            <Link href="/login" className="bg-ink text-paper px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
+            <Link href="/login?mode=signup" className="bg-ink text-paper px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
               Get Started
             </Link>
           </div>
@@ -125,7 +121,7 @@ export default function LandingPage() {
 
       <main>
         {/* ── Section 2: Hero ───────────────────────────────────── */}
-        <section className="text-center pt-24 pb-16 px-6">
+        <section className="text-center pt-16 pb-16 px-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] animate-fade-in">
               Track your group projects <br />
@@ -136,7 +132,7 @@ export default function LandingPage() {
               No bloat. No learning curve. Just cards.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-in [animation-delay:200ms]">
-              <Link href="/login" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
+              <Link href="/login?mode=signup" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
                 Get Started
               </Link>
               <button 
@@ -165,7 +161,7 @@ export default function LandingPage() {
                       priority="high" 
                       time="4h"
                       isVisible={animStep === 0 || animStep === 5}
-                      exitDir="down"
+                      exitDir="bottom"
                     />
                   </div>
                 </div>
@@ -253,7 +249,7 @@ export default function LandingPage() {
               <FeatureCard 
                 icon={<Icons.Chart />} 
                 title="Built-in Analytics" 
-                description="See where your project stands at a glance. Phase health, cycle times, team breakdown." 
+                description="See where your project stands at a glance. Workflow overview, cycle times, team breakdown." 
                 delay="200ms"
               />
               <FeatureCard 
@@ -274,7 +270,7 @@ export default function LandingPage() {
           <p className="text-lg text-muted mt-4">
             Free forever. No credit card. No catch.
           </p>
-          <Link href="/login" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-10 shadow-lg">
+          <Link href="/login?mode=signup" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-10 shadow-lg">
             Get Started Free
           </Link>
         </section>

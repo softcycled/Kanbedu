@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="bg-paper text-ink">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

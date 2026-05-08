@@ -37,6 +37,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
 
   // Filtering state
@@ -173,6 +174,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
   const handleDeleteColumnClick = (columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
     if (columnData) {
+      setDeleteError(null);
       setColumnToDelete(columnData);
       setDeleteModalOpen(true);
     }
@@ -192,7 +194,8 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         if (!res.ok) {
           const errorData = await res.text();
           console.error("Delete failed:", res.status, errorData);
-          throw new Error(`Delete failed: ${res.status}`);
+          setDeleteError("Delete failed. Please try again.");
+          return;
         }
 
         setColumns((prev) => prev.filter((col) => col.id !== columnToDelete.id));
@@ -205,11 +208,12 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         } else {
           setTasks((prev) => prev.filter((t) => t.column !== columnToDelete.id));
         }
+        setDeleteError(null);
         setDeleteModalOpen(false);
         setColumnToDelete(null);
       } catch (error) {
         console.error("Failed to delete column:", error);
-        alert("Failed to delete column. Please try again.");
+        setDeleteError("Delete failed. Please try again.");
       }
     },
     [columnToDelete]
@@ -659,7 +663,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
               </div>
             )}
             {activeColumn && (
-              <div className="w-96 bg-white/95 dark:bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
+              <div className="w-96 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
                 <div className="p-3 font-bold text-sm text-ink">{activeColumn.label}</div>
                 <div className="px-3 pb-3 text-xs text-muted">
                   {getTasksByColumn(activeColumn.id).length} tasks
@@ -689,8 +693,10 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
           onClose={() => {
             setDeleteModalOpen(false);
             setColumnToDelete(null);
+            setDeleteError(null);
           }}
           onConfirmDelete={handleConfirmDeleteColumn}
+          errorMessage={deleteError}
         />
       )}
     </>
