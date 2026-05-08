@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Task, Comment } from "@/lib/types";
+import { Task, Comment, TaskActivity } from "@/lib/types";
 import {
   isOverdue,
   formatDateForInput,
@@ -53,6 +53,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
+  const [viewMode, setViewMode] = useState<"comments" | "activity">("comments");
+  const [activities, setActivities] = useState<TaskActivity[]>([]);
 
   const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
@@ -94,7 +96,15 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const userHasEdited = useRef(false);
 
   useEffect(() => {
-    if (task && task.id !== prevTask.current) {
+    if (!task) return;
+    
+    // Always sync comments and activities from props
+    setComments(task.comments ?? []);
+    setActivities(task.activities ?? []);
+    setPriority(task.priority ?? "medium");
+
+    // Only sync draft-related fields when switching tasks to avoid overwriting active edits
+    if (task.id !== prevTask.current) {
       prevTask.current = task.id;
       userHasEdited.current = false;
       setDescription(task.description ?? "");
@@ -104,9 +114,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       setDraftTitle(task.title);
       setAssigneeId(task.assigneeId ?? "");
       setDeadline(formatDateForInput(task.deadline));
-      setPriority(task.priority ?? "medium");
-      setComments(task.comments ?? []);
-      // Store original values for comparison
+      
       originalTask.current = {
         description: task.description ?? "",
         assigneeId: task.assigneeId,
@@ -306,9 +314,21 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     if (!trimmed || !task) return;
     setAddingComment(true);
     setCommentInput("");
-    const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
-    setComments((prev) => [...prev, newComment]);
-    setAddingComment(false);
+    try {
+      const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
+      setComments((prev) => [...prev, newComment]);
+      
+      // Fetch fresh task data to update activities feed
+      const res = await fetch(`/api/tasks/${task.id}`);
+      if (res.ok) {
+        const freshTask = await res.json();
+        setActivities(freshTask.activities || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAddingComment(false);
+    }
   };
 
   const handleCommentKey = (e: React.KeyboardEvent) => {
@@ -782,77 +802,99 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
           </div>
 
           {/* Comments Section Divider */}
-          <div className="border-t border-border pt-8" />
+          <div className="border-t border-border pt-8" />          {/* Tabs for Comments vs Activity */}
+          <div className="flex items-center gap-6 border-b border-border mb-4">
+            <button
+              onClick={() => setViewMode("comments")}
+              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
+                viewMode === "comments" ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              Comments {comments.length > 0 && <span className="normal-case font-normal text-muted ml-1">({comments.length})</span>}
+              {viewMode === "comments" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
+            </button>
+            <button
+              onClick={() => setViewMode("activity")}
+              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
+                viewMode === "activity" ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              Activity {activities.length > 0 && <span className="normal-case font-normal text-muted ml-1">({activities.length})</span>}
+              {viewMode === "activity" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
+            </button>
+          </div>
 
-          {/* Comments */}
-          <div ref={commentsRef}>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-4">
-              Notes & Comments {comments.length > 0 && <span className="normal-case font-normal text-muted">({comments.length})</span>}
-            </label>
-
-            {comments.length > 0 && (
-              <div className="space-y-2 mb-4">
-                {comments.map((c) => (
-                  <div key={c.id} className="bg-column-bg rounded-lg px-3 pt-2 pb-2.5 border border-border/50">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <div className="flex items-center gap-2">
-                        {c.author ? (
+          {viewMode === "comments" ? (
+            <div ref={commentsRef}>
+              {comments.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  {comments.map((c) => (
+                    <div key={c.id} className="bg-column-bg/40 rounded-lg px-3 py-2.5 border border-border/30">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
                           <span
-                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
                             style={{ backgroundColor: nameToColor(c.author) }}
                           >
                             {c.author.charAt(0).toUpperCase()}
                           </span>
-                        ) : (
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-border flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted/60" />
+                          <span className="text-sm font-semibold text-ink">
+                            {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
                           </span>
-                        )}
-                        <span className="text-[0.919rem] font-semibold text-ink">
-                          {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
+                        </div>
+                        <span className="text-[10px] font-medium text-muted">
+                          {formatTimeAgo(c.createdAt)}
                         </span>
                       </div>
-                      <span className="text-[0.788rem] text-muted flex-shrink-0">
-                        {new Date(c.createdAt).toLocaleString("en-US", {
-                          month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                        })}
-                      </span>
+                      <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
                     </div>
-                    <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 bg-column-bg/60 rounded-xl p-2 ring-1 ring-border/40 focus-within:ring-accent/30 transition-all">
+                <input
+                  ref={commentInputRef}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  onKeyDown={handleCommentKey}
+                  placeholder="Write a comment…"
+                  disabled={addingComment}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={!commentInput.trim() || addingComment}
+                  className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
+                >
+                  Post
+                </button>
               </div>
-            )}
-
-            <div className="flex gap-2 bg-column-bg/40 rounded-lg p-2">
-              <input
-
-                ref={commentInputRef}
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={handleCommentKey}
-                placeholder="Add a note…"
-                disabled={addingComment}
-                className="
-                  flex-1 bg-transparent px-2 py-1.5
-                  text-sm text-ink placeholder:text-muted
-                  border-none outline-none
-                  transition-colors disabled:opacity-50
-                "
-              />
-              <button
-                onClick={handleAddComment}
-                disabled={!commentInput.trim() || addingComment}
-                className="
-                  px-3 py-1.5 rounded-md bg-ink text-paper text-xs font-medium
-                  hover:bg-ink/90 disabled:opacity-30 disabled:cursor-not-allowed
-                  transition-colors flex-shrink-0
-                "
-              >
-                Post
-              </button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              {activities.length === 0 && (
+                <p className="text-center py-8 text-xs text-muted">No activity recorded yet.</p>
+              )}
+              {activities.map((a) => (
+                <div key={a.id} className="flex gap-3 items-start">
+                  <div 
+                    className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white shadow-sm mt-0.5"
+                    style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
+                  >
+                    {a.user?.name.charAt(0).toUpperCase() || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-ink truncate max-w-[120px]">{a.user?.name || "System"}</span>
+                      <span className="text-xs text-muted leading-snug">{a.content}</span>
+                    </div>
+                    <span className="text-[10px] text-muted font-medium">{formatTimeAgo(a.createdAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Jump to comments floating button */}

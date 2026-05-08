@@ -17,6 +17,7 @@ model User {
   boards        BoardMember[]
   invites       BoardInvite[]
   assignedTasks Task[]        @relation("TaskAssignees")
+  activities    TaskActivity[]
 }
 
 model Board {
@@ -78,6 +79,7 @@ model Task {
   comments             Comment[]
   columnHistory        TaskColumnHistory[]
   tags                 Tag[]
+  activities           TaskActivity[]
 }
 
 model Tag {
@@ -106,5 +108,16 @@ model Comment {
   author    String   @default("")
   createdAt DateTime @default(now())
   taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  type      String   // e.g. "MOVE", "UPDATE", "COMMENT", "TAG", "ASSIGNEE"
+  content   String   // Human readable or detailed info
+  userId    String
+  taskId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }

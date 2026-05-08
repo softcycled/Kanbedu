@@ -54,6 +54,10 @@ export default async function Home() {
             comments: { orderBy: { createdAt: "asc" } },
             assigneeUser: { select: { id: true, name: true, color: true } },
             tags: true,
+            activities: {
+              include: { user: { select: { id: true, name: true, color: true } } },
+              orderBy: { createdAt: "desc" },
+            },
           },
           orderBy: [{ column: "asc" }, { order: "asc" }],
         })
@@ -69,6 +73,10 @@ export default async function Home() {
     comments: t.comments.map((c) => ({
       ...c,
       createdAt: c.createdAt.toISOString(),
+    })),
+    activities: t.activities.map((a) => ({
+      ...a,
+      createdAt: a.createdAt.toISOString(),
     })),
   }));
 
