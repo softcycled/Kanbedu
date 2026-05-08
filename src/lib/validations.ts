@@ -87,6 +87,7 @@ export const updateTaskSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   deadline: z.string().nullable().optional(),
   movedByNonAssignee: z.boolean().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 // -- Comments --
@@ -101,6 +102,19 @@ export const createCommentSchema = z.object({
 
 export const createInviteSchema = z.object({
   boardId: z.string().min(1, "Board ID is required."),
+});
+
+// -- Tags --
+
+export const createTagSchema = z.object({
+  name: z.string().trim().min(1, "Name is required."),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color."),
+  boardId: z.string().min(1, "Board ID is required."),
+});
+
+export const updateTagSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color.").optional(),
 });
 
 // -- Helper --

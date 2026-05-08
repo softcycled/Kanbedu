@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/landing");
 
   // Load boards the user is a member of
   const memberships = await prisma.boardMember.findMany({
@@ -53,6 +53,7 @@ export default async function Home() {
           include: {
             comments: { orderBy: { createdAt: "asc" } },
             assigneeUser: { select: { id: true, name: true, color: true } },
+            tags: true,
           },
           orderBy: [{ column: "asc" }, { order: "asc" }],
         })

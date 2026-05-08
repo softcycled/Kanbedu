@@ -44,9 +44,9 @@
   --c-doing-dot:  245 158  11;  /* same */
   --c-done-dot:   74  222 128;  /* same */
 
-  --shadow-card:       0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.16), 0 3px 8px rgba(0,0,0,0.10);
-  --shadow-modal:      0 24px 64px rgba(0,0,0,0.24), 0 8px 24px rgba(0,0,0,0.14);
+  --shadow-card:       0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-modal:      0 12px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
 }
 
 * {

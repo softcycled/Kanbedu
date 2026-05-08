@@ -74,6 +74,21 @@ export default function TaskCard({ task, onClick }: Props) {
         {task.title}
       </p>
 
+      {/* Tags */}
+      {task.tags && task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {task.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-white"
+              style={{ backgroundColor: tag.color }}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mt-2.5">
         <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${
           p === "urgent" ? "bg-red-500/10 dark:bg-red-950/30 text-red-500 dark:text-red-400" :

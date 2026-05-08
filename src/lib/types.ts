@@ -21,6 +21,13 @@ export interface Comment {
   taskId: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  boardId: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -41,6 +48,7 @@ export interface Task {
   priority: string;
   movedByNonAssignee: boolean;
   comments: Comment[];
+  tags: Tag[];
 }
 
 export interface BoardMemberData {

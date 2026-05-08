@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     include: {
       comments: { orderBy: { createdAt: "asc" } },
       assigneeUser: { select: { id: true, name: true, color: true } },
+      tags: true,
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
     include: {
       comments: true,
       assigneeUser: { select: { id: true, name: true, color: true } },
+      tags: true,
     },
   });
 

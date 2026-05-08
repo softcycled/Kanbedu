@@ -16,6 +16,7 @@ interface Props {
   onUpdate: (id: string, data: Partial<Task>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddComment: (taskId: string, content: string, author: string) => Promise<Comment>;
+  boardId: string;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -37,7 +38,7 @@ function nameToColor(name: string): string {
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }
 
-export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment }: Props) {
+export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment, boardId }: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -52,6 +53,13 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
+
+  const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#4A90A4");
 
   useEffect(() => {
     try {
@@ -184,6 +192,28 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     return () => clearInterval(id);
   }, [task]);
 
+  // Fetch all available tags for this board
+  useEffect(() => {
+    if (!task) return;
+    fetch(`/api/tags?boardId=${boardId}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setAllBoardTags(data))
+      .catch(() => {});
+  }, [task, boardId]);
+
+  // Close tag dropdown on outside click
+  useEffect(() => {
+    if (!tagDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setTagDropdownOpen(false);
+        setIsCreatingTag(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [tagDropdownOpen]);
+
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
     setSaving(true);
@@ -283,6 +313,58 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
 
   const handleCommentKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleAddComment();
+  };
+
+  const toggleTag = async (tagId: string) => {
+    if (!task) return;
+    userHasEdited.current = true;
+    const currentIds = task.tags?.map((t) => t.id) ?? [];
+    let newIds: string[];
+    if (currentIds.includes(tagId)) {
+      newIds = currentIds.filter((id) => id !== tagId);
+    } else {
+      newIds = [...currentIds, tagId];
+    }
+    await handleUpdateWithFeedback(task.id, { tagIds: newIds });
+  };
+
+  const handleCreateTag = async () => {
+    const name = newTagName.trim();
+    if (!name || !task) return;
+    try {
+      const res = await fetch("/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color: newTagColor, boardId }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setAllBoardTags((prev) => [...prev, created]);
+        setNewTagName("");
+        setIsCreatingTag(false);
+        // Automatically assign the new tag to the task
+        await toggleTag(created.id);
+      }
+    } catch (error) {
+      console.error("Failed to create tag:", error);
+    }
+  };
+
+  const handleDeleteTag = async (e: React.MouseEvent, tagId: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this tag from the entire board?")) return;
+    try {
+      const res = await fetch(`/api/tags/${tagId}`, { method: "DELETE" });
+      if (res.ok) {
+        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagId));
+        // If the task had this tag, it will be removed on next fetch/refresh, 
+        // but we should ideally update local task state too if possible.
+        // For now, onUpdate handlefresh data will fix it.
+        await onUpdate(task.id, {}); // Trigger refresh
+      }
+    } catch (error) {
+      console.error("Failed to delete tag:", error);
+    }
   };
 
   useEffect(() => {
@@ -421,6 +503,131 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 );
               })}
             </div>
+          </div>
+
+
+
+          {/* Tags */}
+          <div ref={tagDropdownRef} className="relative">
+            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+              Tags
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              {task.tags?.map((tag) => (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleTag(tag.id)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: tag.color }}
+                  title="Click to remove"
+                >
+                  {tag.name}
+                </button>
+              ))}
+              <button
+                onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+                className="w-7 h-7 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-border transition-colors"
+                title="Manage tags"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 3v8M3 7h8"/>
+                </svg>
+              </button>
+            </div>
+
+            {tagDropdownOpen && (
+              <div className="absolute left-0 mt-2 w-64 bg-card-bg border border-border rounded-xl shadow-modal z-[60] overflow-hidden">
+                <div className="p-2 max-h-48 overflow-y-auto space-y-1">
+                  {allBoardTags.length === 0 && !isCreatingTag && (
+                    <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>
+                  )}
+                  {allBoardTags.map((tag) => {
+                    const isSelected = task.tags?.some((t) => t.id === tag.id);
+                    return (
+                      <div
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-column-bg transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                          <span className="text-ink font-medium">{tag.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isSelected && (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M3 7l3 3 5-5" />
+                            </svg>
+                          )}
+                          <button
+                            onClick={(e) => handleDeleteTag(e, tag.id)}
+                            className="p-1 rounded hover:bg-accent-light text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="border-t border-border p-2">
+                  {isCreatingTag ? (
+                    <div className="space-y-2 p-1">
+                      <input
+                        autoFocus
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        placeholder="Tag name…"
+                        className="w-full bg-column-bg border-none rounded-lg px-2 py-1.5 text-xs text-ink outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleCreateTag();
+                          if (e.key === "Escape") setIsCreatingTag(false);
+                        }}
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-1">
+                          {["#4A90A4", "#E8854A", "#5BAD6F", "#D4706A", "#7B68EE", "#A078C8"].map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => setNewTagColor(c)}
+                              className={`w-4 h-4 rounded-full transition-transform ${newTagColor === c ? "scale-125 ring-1 ring-offset-1 ring-muted" : "hover:scale-110"}`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setIsCreatingTag(false)}
+                            className="text-[10px] font-bold text-muted hover:text-ink px-2 py-1"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleCreateTag}
+                            className="text-[10px] font-bold text-ink hover:bg-column-bg px-2 py-1 rounded"
+                          >
+                            Create
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsCreatingTag(true)}
+                      className="w-full flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-muted hover:text-ink hover:bg-column-bg rounded-lg transition-colors"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 3v8M3 7h8" />
+                      </svg>
+                      Create new tag
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Assignee + Deadline row */}
