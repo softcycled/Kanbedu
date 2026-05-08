@@ -51,12 +51,24 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
+  // Animation state for hero mockup
+  const [animStep, setAnimStep] = useState(0);
+
   useEffect(() => {
     setMounted(true);
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Hero board animation loop
+  useEffect(() => {
+    const timings = [2000, 2000, 2000, 2000, 3000, 1000]; // ms per step
+    const timer = setTimeout(() => {
+      setAnimStep((prev) => (prev + 1) % 6);
+    }, timings[animStep]);
+    return () => clearTimeout(timer);
+  }, [animStep]);
 
   // Intersection Observer for fade-in animations
   useEffect(() => {
@@ -135,30 +147,70 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Board Preview Mockup */}
+            {/* Animated Board Preview Mockup */}
             <div className="mt-20 max-w-4xl mx-auto rounded-2xl border border-border shadow-modal overflow-hidden bg-column-bg p-4 md:p-6 animate-modal-in [animation-delay:300ms]">
-              <div className="flex gap-4 h-[300px] md:h-[400px]">
+              <div className="flex gap-3 md:gap-4 h-[300px] md:h-[400px] overflow-x-auto no-scrollbar pb-2">
                 {/* To Do Column */}
-                <div className="flex-1 bg-column-bg/50 rounded-xl flex flex-col gap-3">
-                  <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted">To Do</span>
+                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">To Do</span>
+                  <div className="relative flex-1 flex flex-col gap-3">
+                    <MockCard 
+                      title="Draft proposal outline" 
+                      priority="medium" 
+                      time="2d" 
+                      tag={{ name: "RESEARCH", color: "#E8854A" }}
+                    />
+                    <MockCard 
+                      title="Research competitor analysis" 
+                      priority="high" 
+                      time="4h"
+                      isVisible={animStep === 0 || animStep === 5}
+                      exitDir="down"
+                    />
                   </div>
-                  <MockCard title="Draft proposal outline" priority="medium" time="2d" delay="0.3s" />
-                  <MockCard title="Research competitor analysis" priority="high" time="4h" delay="0.5s" />
                 </div>
+
                 {/* In Progress Column */}
-                <div className="flex-1 bg-column-bg/50 rounded-xl flex flex-col gap-3">
-                  <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted">In Progress</span>
+                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">In Progress</span>
+                  <div className="relative flex-1 flex flex-col gap-3">
+                    <MockCard 
+                      title="Design wireframes" 
+                      priority="urgent" 
+                      time="1d"
+                      isVisible={animStep < 4 || animStep === 5}
+                      tag={animStep >= 2 && animStep < 5 ? { name: "DESIGN", color: "#7B68EE" } : undefined}
+                      exitDir="right"
+                    />
+                    <MockCard 
+                      title="Research competitor analysis" 
+                      priority="high" 
+                      time="4h"
+                      isVisible={animStep >= 1 && animStep < 5}
+                      enterDir="top"
+                      assignee={animStep >= 3 && animStep < 5 ? { letter: "A", color: "#4A90A4" } : undefined}
+                    />
                   </div>
-                  <MockCard title="Design wireframes" priority="urgent" time="1d" delay="0.7s" />
                 </div>
+
                 {/* Done Column */}
-                <div className="flex-1 bg-column-bg/50 rounded-xl flex flex-col gap-3 hidden sm:flex">
-                  <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Done</span>
+                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30 flex">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">Done</span>
+                  <div className="relative flex-1 flex flex-col gap-3">
+                    <MockCard 
+                      title="Set up project repo" 
+                      priority="low" 
+                      time="3d" 
+                    />
+                    <MockCard 
+                      title="Design wireframes" 
+                      priority="urgent" 
+                      time="1d"
+                      isVisible={animStep >= 4 && animStep < 5}
+                      enterDir="left"
+                      isComplete={animStep === 4}
+                    />
                   </div>
-                  <MockCard title="Set up project repo" priority="low" time="3d" delay="0.9s" />
                 </div>
               </div>
             </div>
@@ -254,7 +306,29 @@ export default function LandingPage() {
 
 // ── Sub-components ───────────────────────────────────────────
 
-function MockCard({ title, priority, time, delay }: { title: string, priority: string, time: string, delay: string }) {
+interface MockCardProps {
+  title: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  time: string;
+  tag?: { name: string; color: string };
+  assignee?: { letter: string; color: string };
+  isVisible?: boolean;
+  enterDir?: "top" | "left" | "right" | "bottom";
+  exitDir?: "top" | "left" | "right" | "bottom";
+  isComplete?: boolean;
+}
+
+function MockCard({ 
+  title, 
+  priority, 
+  time, 
+  tag, 
+  assignee, 
+  isVisible = true, 
+  enterDir = "bottom",
+  exitDir = "bottom",
+  isComplete = false
+}: MockCardProps) {
   const dotColor = {
     low: "bg-blue-400",
     medium: "bg-yellow-400",
@@ -262,16 +336,62 @@ function MockCard({ title, priority, time, delay }: { title: string, priority: s
     urgent: "bg-red-500"
   }[priority];
 
+  const getTransform = () => {
+    if (isVisible) return "translate-x-0 translate-y-0 scale-100";
+    
+    // Position when hidden
+    const dir = isVisible ? enterDir : exitDir;
+    switch(dir) {
+      case "top": return "-translate-y-8 scale-95";
+      case "bottom": return "translate-y-8 scale-95";
+      case "left": return "-translate-x-8 scale-95";
+      case "right": return "translate-x-8 scale-95";
+      default: return "translate-y-4 scale-95";
+    }
+  };
+
   return (
     <div 
-      className="bg-card-bg rounded-xl p-3 shadow-card border border-border/50 animate-slide-up opacity-0"
-      style={{ animationDelay: delay, animationFillMode: "forwards" }}
+      className={`bg-card-bg rounded-xl p-3 shadow-card border transition-all duration-500 ease-smooth-out ${
+        isVisible ? "opacity-100" : "opacity-0 pointer-events-none absolute w-full"
+      } ${isComplete ? "ring-2 ring-done-dot/50 border-done-dot/50" : "border-border/50"} ${getTransform()}`}
     >
-      <p className="text-[11px] font-medium text-ink leading-tight mb-2">{title}</p>
-      <div className="flex items-center gap-2">
-        <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-        <span className="text-[9px] font-mono text-muted uppercase">{priority}</span>
-        <span className="text-[9px] text-muted ml-auto">{time}</span>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-[11px] font-medium text-ink leading-tight">{title}</p>
+        {isComplete && (
+          <div className="text-done-dot flex-shrink-0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 mr-auto">
+          <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+          <span className="text-[8px] font-mono text-muted uppercase tracking-wider">{priority}</span>
+        </div>
+
+        {tag && (
+          <span 
+            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white transition-all duration-500 animate-fade-in"
+            style={{ backgroundColor: tag.color }}
+          >
+            {tag.name}
+          </span>
+        )}
+
+        {assignee && (
+          <div 
+            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white transition-all duration-500 animate-fade-in"
+            style={{ backgroundColor: assignee.color }}
+          >
+            {assignee.letter}
+          </div>
+        )}
+
+        <span className="text-[8px] text-muted font-medium">{time}</span>
       </div>
     </div>
   );
