@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ColumnData } from "@/lib/types";
 
 interface Props {
@@ -22,6 +22,19 @@ export default function DeleteColumnModal({
 }: Props) {
   const [selectedTargetColumn, setSelectedTargetColumn] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dropdownOpen]);
 
   const handleDelete = async () => {
     setIsLoading(true);
@@ -38,46 +51,66 @@ export default function DeleteColumnModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-      <div className="bg-card-bg rounded-xl shadow-modal p-6 max-w-sm w-full mx-4 animate-modal-in">
-        <h3 className="text-lg font-bold text-ink mb-2">Delete column "{column.label}"?</h3>
-        
-        <p className="text-sm text-muted mb-4">
-          This column contains <strong>{taskCount}</strong> task{taskCount !== 1 ? "s" : ""}.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px]">
+      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm animate-modal-in p-6">
+        <p className="text-sm font-semibold text-ink">Delete column "{column.label}"?</p>
+        <p className="text-xs text-muted mt-1">
+          This column contains <strong className="text-ink">{taskCount}</strong> task{taskCount !== 1 ? "s" : ""}.
         </p>
 
-        {taskCount > 0 && otherColumns.length > 0 ? (
-          <div className="mb-4">
-            <p className="text-sm text-muted mb-2">Move tasks to:</p>
-            <select
-              value={selectedTargetColumn || ""}
-              onChange={(e) => setSelectedTargetColumn(e.target.value || undefined)}
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white text-ink"
-            >
-              <option value="">Delete column and all tasks</option>
-              {otherColumns.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.label}
-                </option>
-              ))}
-            </select>
+        {taskCount > 0 && otherColumns.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs text-muted mb-1.5">Move tasks to:</p>
+            <div ref={dropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-column-bg text-ink border border-border hover:border-ink/30 transition-colors focus:outline-none"
+              >
+                <span>{selectedTargetColumn ? otherColumns.find(c => c.id === selectedTargetColumn)?.label : "Delete column and all tasks"}</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className={`flex-shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}>
+                  <path d="M2 4l4 4 4-4"/>
+                </svg>
+              </button>
+              {dropdownOpen && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-card-bg border border-border rounded-xl shadow-modal z-10 py-1 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedTargetColumn(undefined); setDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${!selectedTargetColumn ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"}`}
+                  >
+                    Delete column and all tasks
+                  </button>
+                  {otherColumns.map((col) => (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => { setSelectedTargetColumn(col.id); setDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${selectedTargetColumn === col.id ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"}`}
+                    >
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        ) : null}
+        )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center justify-end gap-2 mt-5">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-muted border border-border rounded-lg hover:bg-column-bg transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleDelete}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isLoading ? "Deleting…" : "Delete"}
           </button>
         </div>
       </div>

@@ -54,6 +54,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
@@ -288,6 +290,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   }, [task, description, assigneeId, deadline, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(async () => {
+    setConfirmDelete(false);
     await flushUpdates();
     onClose();
   }, [flushUpdates, onClose]);
@@ -389,6 +392,32 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
     >
       <div className="relative bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
+
+        {/* Delete confirmation overlay */}
+        {confirmDelete && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-ink">Delete this task?</p>
+                <p className="text-xs text-muted">This action cannot be undone.</p>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { onDelete(task.id); handleClose(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
@@ -424,14 +453,14 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 </svg>
               </button>
               <button
-                onClick={() => { onDelete(task.id); handleClose(); }}
-                className="p-2 rounded-lg text-muted hover:text-accent hover:bg-accent-light transition-colors text-xs"
-                title="Delete task"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
-                </svg>
-              </button>
+                  onClick={() => setConfirmDelete(true)}
+                  className="p-2 rounded-lg text-muted hover:text-red-500 hover:bg-accent-light transition-colors"
+                  title="Delete task"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
+                  </svg>
+                </button>
               <button
                 onClick={handleClose}
                 className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
