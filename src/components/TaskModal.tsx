@@ -579,7 +579,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
                 <button
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:opacity-80 transition-opacity"
+                  className="px-2 py-1 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-80 transition-opacity"
                   style={{ backgroundColor: tag.color }}
                   title="Click to remove"
                 >

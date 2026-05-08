@@ -80,7 +80,7 @@ export default function TaskCard({ task, onClick }: Props) {
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-white"
+              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white"
               style={{ backgroundColor: tag.color }}
             >
               {tag.name}
