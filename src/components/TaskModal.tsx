@@ -325,7 +325,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     } else {
       newIds = [...currentIds, tagId];
     }
-    await handleUpdateWithFeedback(task.id, { tagIds: newIds });
+    await handleUpdateWithFeedback(task.id, { tagIds: newIds } as unknown as Partial<Task>);
   };
 
   const handleCreateTag = async () => {
@@ -360,7 +360,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
         // If the task had this tag, it will be removed on next fetch/refresh, 
         // but we should ideally update local task state too if possible.
         // For now, onUpdate handlefresh data will fix it.
-        await onUpdate(task.id, {}); // Trigger refresh
+        if (task) await onUpdate(task.id, {}); // Trigger refresh
       }
     } catch (error) {
       console.error("Failed to delete tag:", error);

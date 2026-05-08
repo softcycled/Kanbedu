@@ -12,10 +12,11 @@ export async function POST(req: NextRequest) {
     }
 
     const raw = await req.json();
-    const { data, error } = parseBody(createInviteSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(createInviteSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     // Verify user is a member of this board
     const membership = await prisma.boardMember.findUnique({

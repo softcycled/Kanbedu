@@ -11,10 +11,11 @@ export async function PATCH(req: Request) {
 
   try {
     const raw = await req.json();
-    const { data, error } = parseBody(profileUpdateSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(profileUpdateSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const updateData: Record<string, string> = {};
     if (data.name !== undefined) updateData.name = data.name;

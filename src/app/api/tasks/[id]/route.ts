@@ -7,10 +7,11 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const raw = await req.json();
-  const { data: body, error } = parseBody(updateTaskSchema, raw);
-  if (error) {
-    return NextResponse.json({ error }, { status: 400 });
+  const result = parseBody(updateTaskSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  const body = result.data;
   const { id } = params;
 
   // Only bump updatedAt for meaningful field changes, not order/position changes

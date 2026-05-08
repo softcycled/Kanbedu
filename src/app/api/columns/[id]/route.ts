@@ -9,10 +9,11 @@ export async function PATCH(
 ) {
   try {
     const raw = await request.json();
-    const { data, error } = parseBody(updateColumnSchema, raw);
-    if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+    const result = parseBody(updateColumnSchema, raw);
+    if (!result.data) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const data = result.data;
 
     const updateData: { label?: string; isDone?: boolean } = {};
     if (data.label !== undefined) updateData.label = data.label;

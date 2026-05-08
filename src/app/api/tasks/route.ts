@@ -47,10 +47,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: Request) {
   const raw = await req.json();
-  const { data, error } = parseBody(createTaskSchema, raw);
-  if (error) {
-    return NextResponse.json({ error }, { status: 400 });
+  const result = parseBody(createTaskSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  const data = result.data;
 
   const [lastTask, destinationColumn] = await Promise.all([
     prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
