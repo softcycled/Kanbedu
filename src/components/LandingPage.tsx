@@ -112,7 +112,7 @@ export default function LandingPage() {
             <Link href="/login" className="text-sm font-medium text-muted hover:text-ink transition-colors">
               Sign in
             </Link>
-            <Link href="/login" className="bg-ink text-paper px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
+            <Link href="/login?mode=signup" className="bg-ink text-paper px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
               Get Started
             </Link>
           </div>
@@ -132,7 +132,7 @@ export default function LandingPage() {
               No bloat. No learning curve. Just cards.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-in [animation-delay:200ms]">
-              <Link href="/login" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
+              <Link href="/login?mode=signup" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
                 Get Started
               </Link>
               <button 
@@ -270,7 +270,7 @@ export default function LandingPage() {
           <p className="text-lg text-muted mt-4">
             Free forever. No credit card. No catch.
           </p>
-          <Link href="/login" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-10 shadow-lg">
+          <Link href="/login?mode=signup" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-10 shadow-lg">
             Get Started Free
           </Link>
         </section>
