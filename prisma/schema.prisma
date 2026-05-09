@@ -21,6 +21,7 @@ model User {
   assignedTasks       Task[]                   @relation("TaskAssignees")
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
+  bugReports          BugReport[]
 }
 
 model Board {
@@ -157,3 +158,16 @@ model TaskDescriptionVersion {
   @@index([taskId])
 }
 
+
+model BugReport {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String
+  browserInfo String?
+  status      String   @default("open") // open, in-progress, resolved
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}

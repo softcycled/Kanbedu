@@ -9,6 +9,7 @@ import AnalyticsPanel from "./AnalyticsPanel";
 import SettingsPanel from "./SettingsPanel";
 import ProfilePanel from "./ProfilePanel";
 import CalendarPanel from "./CalendarPanel";
+import SupportModal from "./SupportModal";
 import { useRealtime } from "@/hooks/useRealtime";
 import { ColumnData } from "@/lib/types";
 
@@ -35,6 +36,7 @@ export default function BoardContainer({
   // Incremented every time the user navigates to the analytics panel so it always fetches fresh data.
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   // Sync state with server props (triggered by router.refresh())
   useEffect(() => {
@@ -139,6 +141,7 @@ export default function BoardContainer({
         onPanelChange={handlePanelChange}
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
+        onSupportClick={() => setIsSupportOpen(true)}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -174,7 +177,11 @@ export default function BoardContainer({
         )}
         {activePanel === "profile" && <ProfilePanel />}
       </div>
+
+      <SupportModal 
+        isOpen={isSupportOpen} 
+        onClose={() => setIsSupportOpen(false)} 
+      />
     </div>
   );
 }
-
