@@ -283,16 +283,20 @@ export default function LandingPage() {
             <span className="text-sm font-bold text-ink block mb-1">kanbedu</span>
             <span className="text-xs text-muted">Built for students, by students.</span>
           </div>
-          <div className="flex items-center text-xs text-muted">
+          <div className="flex items-center flex-wrap justify-center sm:justify-end gap-x-4 gap-y-2 text-xs text-muted">
             <Link href="https://github.com/softcycled/Kanbedu" target="_blank" className="hover:text-ink transition-colors">
               GitHub
             </Link>
-            <span className="mx-3">·</span>
-            <Link href="#" className="hover:text-ink transition-colors">
-              Terms
+            <Link href="/terms" className="hover:text-ink transition-colors">
+              Terms of Service
             </Link>
-            <span className="mx-3">·</span>
-            <span>2026</span>
+            <Link href="/privacy" className="hover:text-ink transition-colors">
+              Privacy Policy
+            </Link>
+            <a href="mailto:support@kanbedu.com" className="hover:text-ink transition-colors">
+              Contact
+            </a>
+            <span>© 2026 Kanbedu</span>
           </div>
         </div>
       </footer>
