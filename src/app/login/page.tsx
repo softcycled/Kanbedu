@@ -180,6 +180,19 @@ export default function LoginPage() {
                 ? "Sign in"
                 : "Create account"}
             </button>
+
+            {mode === "signup" && (
+              <p className="text-center text-[11px] leading-relaxed" style={{ color: "#78716C" }}>
+                By creating an account, you agree to the{" "}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "#1C1917", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#1C1917", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                  Privacy Policy
+                </a>.
+              </p>
+            )}
           </form>
         </div>
 
@@ -196,6 +209,30 @@ export default function LoginPage() {
               ? "Don't have an account? Create one"
               : "Already have an account? Sign in"}
           </button>
+        </div>
+
+        {/* Legal footer */}
+        <div className="flex items-center justify-center gap-4 mt-8 flex-wrap">
+          <a href="/terms" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
+          >
+            Terms of Service
+          </a>
+          <span style={{ color: "#78716C" }} className="text-[11px]">·</span>
+          <a href="/privacy" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
+          >
+            Privacy Policy
+          </a>
+          <span style={{ color: "#78716C" }} className="text-[11px]">·</span>
+          <a href="mailto:support@kanbedu.com" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
+          >
+            Contact
+          </a>
         </div>
       </div>
     </div>
