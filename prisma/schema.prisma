@@ -10,7 +10,9 @@ datasource db {
 model User {
   id                  String                   @id @default(cuid())
   email               String                   @unique
-  password            String
+  password            String?
+  githubId            String?                  @unique
+  githubAccessToken   String?
   name                String                   @default("")
   color               String                   @default("#4A90A4")
   createdAt           DateTime                 @default(now())
@@ -22,10 +24,11 @@ model User {
 }
 
 model Board {
-  id        String        @id @default(cuid())
-  name      String
-  order     Int           @default(0)
-  createdAt DateTime      @default(now())
+  id          String        @id @default(cuid())
+  name        String
+  githubRepo  String?
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
   columns   Column[]
   members   BoardMember[]
   invites   BoardInvite[]
@@ -60,6 +63,7 @@ model Column {
   isDone  Boolean @default(false)
   boardId String  @default("cldefaultboard0000")
   board   Board   @relation(fields: [boardId], references: [id])
+  tasks   Task[]  @relation("ColumnTasks")
 }
 
 model Task {
@@ -71,6 +75,7 @@ model Task {
   updatedAt           DateTime                 @default(now())
   completedAt         DateTime?
   column              String                   @default("todo")
+  columnRel           Column                   @relation("ColumnTasks", fields: [column], references: [id])
   columnUpdatedAt     DateTime                 @default(now())
   assigneeId          String?
   assigneeUser        User?                    @relation("TaskAssignees", fields: [assigneeId], references: [id], onDelete: SetNull)

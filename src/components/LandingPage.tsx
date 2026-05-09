@@ -125,7 +125,7 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] animate-fade-in">
               Track your group projects <br />
-              <span className="text-accent">without the noise.</span>
+              <span className="text-accent">without the friction.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted mt-6 max-w-xl mx-auto leading-relaxed animate-fade-in [animation-delay:100ms]">
               The free, minimal Kanban board built for students. <br className="hidden md:block" />
@@ -154,7 +154,7 @@ export default function LandingPage() {
                       title="Draft proposal outline" 
                       priority="medium" 
                       time="2d" 
-                      tag={{ name: "RESEARCH", color: "#E8854A" }}
+                      tag={{ name: "RESEARCH", color: "#3B82F6" }}
                     />
                     <MockCard 
                       title="Research competitor analysis" 
@@ -328,7 +328,7 @@ function MockCard({
   const dotColor = {
     low: "bg-blue-400",
     medium: "bg-yellow-400",
-    high: "bg-orange-400",
+    high: "bg-amber-500",
     urgent: "bg-red-500"
   }[priority];
 

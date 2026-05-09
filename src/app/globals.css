@@ -16,8 +16,8 @@
   --c-paper:      247 245 240;  /* #F7F5F0 */
   --c-ink:        28  25  23;   /* #1C1917 */
   --c-muted:      120 113 108;  /* #78716C */
-  --c-accent:     232  97  58;  /* #E8613A */
-  --c-accent-lt:  253 240 235;  /* #FDF0EB */
+  --c-accent:     37  99  235;  /* #2563EB - Kanbedu Blue */
+  --c-accent-lt:  239 246 255;  /* #EFF6FF - Light blue tint */
   --c-column-bg:  239 237 232;  /* #EFEDE8 */
   --c-card-bg:    253 252 250;  /* #FDFCFA */
   --c-border:     226 222 216;  /* #E2DED8 */
@@ -35,8 +35,8 @@
   --c-paper:      22  20  18;   /* #161412 warm near-black */
   --c-ink:        242 239 233;  /* #F2EFE9 warm off-white */
   --c-muted:      168 162 158;  /* #A8A29E lighter muted */
-  --c-accent:     232  97  58;  /* accent stays the same */
-  --c-accent-lt:  45  28  18;   /* #2D1C12 dark warm orange tint */
+  --c-accent:     59  130 246;  /* #3B82F6 - Brighter blue for dark mode */
+  --c-accent-lt:  30  58  138;  /* #1E3A8A - Deep blue tint */
   --c-column-bg:  35  32  30;   /* #231E1E increased from 30,28,26 for better separation */
   --c-card-bg:    48  45  42;   /* #302D2A increased from 38,36,33 for clarity */
   --c-border:     70  67  63;   /* #464340 increased from 52,49,46 for visibility */

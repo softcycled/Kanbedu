@@ -77,8 +77,10 @@ export async function PATCH(
           orderBy: { enteredAt: "asc" },
         });
         updateData.completedAt = firstDoneEntry?.enteredAt ?? now;
+        await recordActivity(id, session.userId, "COMPLETE", `Completed in ${toCol?.label}`);
       } else if (!destinationIsDone && currentIsDone) {
         updateData.completedAt = null;
+        await recordActivity(id, session.userId, "REOPEN", `Reopened and moved to ${toCol?.label}`);
       }
     }
   }

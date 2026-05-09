@@ -31,8 +31,9 @@ export const createBoardSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
 });
 
-export const renameBoardSchema = z.object({
-  name: z.string().trim().min(1, "Name is required."),
+export const updateBoardSchema = z.object({
+  name: z.string().trim().min(1, "Name is required.").optional(),
+  githubRepo: z.string().trim().nullable().optional(),
 });
 
 export const reorderBoardsSchema = z.object({

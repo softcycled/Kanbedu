@@ -1,6 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from "recharts";
 
 interface Props {
   boardName: string;
@@ -117,8 +126,76 @@ const PRIORITY_LABEL: Record<string, string> = {
 
 // ── Component ─────────────────────────────────────────────────
 
+// ── Heatmap helpers ───────────────────────────────────────────
+
+function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getWeekStart(date: Date): number {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return Math.floor(d.getTime() / 1000);
+}
+
+function formatWeekLabel(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function heatColorBoard(count: number): string {
+  if (count === 0) return "var(--color-column-bg, #EFEDE8)";
+  if (count <= 1) return "#DBEafe";
+  if (count <= 3) return "#93C5FD";
+  if (count <= 6) return "#3B82F6";
+  return "#1E40AF";
+}
+
+function buildHeatmapGrid(data: { date: string; value: number }[]) {
+  const dayCounts: Record<string, number> = {};
+  data.forEach((d) => (dayCounts[d.date] = (dayCounts[d.date] || 0) + d.value));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(start.getDate() - 52 * 7);
+  start.setDate(start.getDate() - start.getDay());
+  const weeks: { date: string; count: number }[][] = [];
+  const monthLabels: { label: string; colIndex: number }[] = [];
+  let lastMonth = -1;
+  const cursor = new Date(start);
+  while (cursor <= today) {
+    const week: { date: string; count: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const key = toDateKey(cursor);
+      if (cursor.getMonth() !== lastMonth && cursor.getDate() <= 7) {
+        monthLabels.push({ label: cursor.toLocaleDateString("en-US", { month: "short" }), colIndex: weeks.length });
+        lastMonth = cursor.getMonth();
+      }
+      week.push({ date: key, count: dayCounts[key] || 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+  return { weeks, monthLabels };
+}
+
+interface ActivityStats {
+  dailyScores: { date: string; score: number }[];
+  userLeaderboard: { user: { id: string; name: string; color: string }; completedCount: number; avgCycleTimeMs: number | null; suspiciousCount: number }[];
+}
+
 export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [activityData, setActivityData] = useState<ActivityStats | null>(null);
+  const [chartData, setChartData] = useState<{ date: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("priority");
@@ -128,10 +205,33 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?boardId=${boardId}`);
-      if (res.ok) {
-        setData(await res.json());
+      const [analyticsRes, activityRes] = await Promise.all([
+        fetch(`/api/analytics?boardId=${boardId}`),
+        fetch(`/api/boards/${boardId}/activity-stats?_t=${Date.now()}`),
+      ]);
+      if (analyticsRes.ok) {
+        setData(await analyticsRes.json());
         setLastFetched(new Date());
+      }
+      if (activityRes.ok) {
+        const aData: ActivityStats = await activityRes.json();
+        setActivityData(aData);
+        // Build 12-week chart data
+        const weekBuckets: Record<number, number> = {};
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(d.getDate() - i * 7);
+          weekBuckets[getWeekStart(d)] = 0;
+        }
+        aData.dailyScores.forEach((d) => {
+          const ws = getWeekStart(new Date(d.date));
+          if (weekBuckets[ws] !== undefined) weekBuckets[ws] += d.score;
+        });
+        setChartData(Object.entries(weekBuckets).map(([ts, val]) => ({
+          date: formatWeekLabel(Number(ts)),
+          value: val,
+        })));
       }
     } finally {
       setLoading(false);
@@ -214,6 +314,40 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         <SummaryCard label="Overdue" value={String(summary.overdue)} sub="" valueColor={summary.overdue > 0 ? "text-red-500" : "text-ink"} />
         <SummaryCard label="Avg cycle time" value={summary.avgCycleTimeMs !== null ? formatDuration(summary.avgCycleTimeMs) : "—"} sub="to complete" />
       </div>
+
+      {/* Contribution Activity (merged from ContributionsDashboard) */}
+      {activityData && (
+        <Section title="Contribution Activity">
+          <ContributionHeatmap data={activityData.dailyScores.map(d => ({ date: d.date, value: d.score }))} />
+          <div className="bg-card-bg rounded-xl border border-border p-5 mt-4">
+            <div className="mb-4">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Completions over time</h4>
+              <p className="text-[11px] text-muted">Weekly volume — last 12 weeks</p>
+            </div>
+            <div className="h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2DED8" opacity={0.1} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#78716C", fontSize: 11 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#78716C", fontSize: 11 }} allowDecimals={false} />
+                  <RechartsTooltip
+                    contentStyle={{ backgroundColor: "#1C1917", borderRadius: "12px", border: "1px solid #2D2A27", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
+                    labelStyle={{ fontWeight: "bold", color: "#FDFCFA", marginBottom: "4px" }}
+                    itemStyle={{ color: "#3B82F6" }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" animationDuration={1200} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* Phase Health */}
       <Section title="Workflow Overview">
@@ -539,6 +673,55 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         </Section>
       )}
 
+      {/* Integrity Leaderboard (from Contributions) */}
+      {activityData && activityData.userLeaderboard.some(u => u.completedCount > 0) && (
+        <Section title="Completion Leaderboard">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {activityData.userLeaderboard.map((c, i) => (
+              <div key={c.user.id} className="bg-card-bg rounded-xl border border-border p-4 relative overflow-hidden hover:border-ink/20 transition-colors">
+                {c.suspiciousCount > 0 && (
+                  <div className="absolute top-0 right-0 p-1.5" title={`${c.suspiciousCount} tasks flagged`}>
+                    <div className="bg-red-500 text-white p-0.5 rounded-bl-lg">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.user.color }}>
+                    {c.user.name.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm text-ink truncate">{c.user.name}</span>
+                      <span className="text-[10px] px-1 py-0.5 rounded bg-accent/10 text-accent font-bold">#{i + 1}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                  <div>
+                    <span className="block text-[10px] font-bold text-muted uppercase tracking-wider">Completed</span>
+                    <span className="text-lg font-bold text-ink">{c.completedCount}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-muted uppercase tracking-wider">Efficiency</span>
+                    <span className={`text-lg font-bold ${c.avgCycleTimeMs && c.avgCycleTimeMs < 3600000 ? "text-orange-500" : "text-ink"}`}>
+                      {c.avgCycleTimeMs ? formatDuration(c.avgCycleTimeMs) : "--"}
+                    </span>
+                  </div>
+                </div>
+                {c.suspiciousCount > 0 && (
+                  <div className="mt-2 px-2 py-1 bg-red-50 rounded-lg border border-red-100">
+                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                      Integrity: {c.suspiciousCount} flag{c.suspiciousCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <div className="h-8" />
     </div>
   );
@@ -591,7 +774,71 @@ function SortTh({ label, k, sortKey, dir, onSort, align }: { label: string; k: S
       onClick={() => onSort(k)}
     >
       {label}
-      {active ? <span className="ml-1 opacity-60">{dir === "asc" ? "↑" : "↓"}</span> : <span className="ml-1 opacity-20">↕</span>}
+      {active ? <span className="ml-1 opacity-60">{dir === "asc" ? "\u2191" : "\u2193"}</span> : <span className="ml-1 opacity-20">{"\u2195"}</span>}
     </th>
   );
 }
+
+function ContributionHeatmap({ data }: { data: { date: string; value: number }[] }) {
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const { weeks, monthLabels } = buildHeatmapGrid(data);
+  const CELL = 11;
+  const GAP = 2;
+  const STEP = CELL + GAP;
+
+  return (
+    <div className="bg-card-bg rounded-xl border border-border p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Task Completion Velocity</h4>
+          <p className="text-[11px] text-muted">Daily completions — last 52 weeks</p>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted">
+          <span>Less</span>
+          {[0, 1, 3, 6, 10].map((v) => (
+            <div key={v} style={{ width: CELL, height: CELL, borderRadius: 3, backgroundColor: heatColorBoard(v) }} />
+          ))}
+          <span>More</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto no-scrollbar">
+        <div style={{ position: "relative", paddingTop: 18, paddingLeft: 26, width: weeks.length * STEP + 28 }}>
+          {monthLabels.map((m) => (
+            <span key={m.label + m.colIndex} style={{ position: "absolute", top: 0, left: 26 + m.colIndex * STEP, fontSize: 10, color: "var(--color-muted, #78716C)", whiteSpace: "nowrap" }}>
+              {m.label}
+            </span>
+          ))}
+          {["Mon", "Wed", "Fri"].map((label, i) => (
+            <span key={label} style={{ position: "absolute", left: 0, top: 18 + (i === 0 ? STEP : i === 1 ? STEP * 3 : STEP * 5), fontSize: 10, color: "var(--color-muted, #78716C)", lineHeight: 1 }}>
+              {label}
+            </span>
+          ))}
+          <div style={{ display: "flex", gap: GAP }}>
+            {weeks.map((week, wi) => (
+              <div key={wi} style={{ display: "flex", flexDirection: "column", gap: GAP }}>
+                {week.map((day) => (
+                  <div
+                    key={day.date}
+                    style={{ width: CELL, height: CELL, borderRadius: 3, backgroundColor: heatColorBoard(day.count), cursor: day.count > 0 ? "pointer" : "default" }}
+                    onMouseEnter={(e) => {
+                      const unit = day.count === 1 ? "task completed" : "tasks completed";
+                      setTooltip({ text: `${day.count} ${unit} on ${day.date}`, x: e.clientX, y: e.clientY });
+                    }}
+                    onMouseMove={(e) => setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                    onMouseLeave={() => setTooltip(null)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+          {tooltip && (
+            <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y - 12, transform: "translateX(-50%) translateY(-100%)", backgroundColor: "#1C1917", color: "#FDFCFA", padding: "4px 10px", borderRadius: 8, fontSize: 11, whiteSpace: "nowrap", pointerEvents: "none", border: "1px solid #2D2A27", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", zIndex: 9999 }}>
+              {tooltip.text}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

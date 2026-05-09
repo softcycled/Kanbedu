@@ -1,15 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { renameBoardSchema, parseBody } from "@/lib/validations";
+import { updateBoardSchema, parseBody } from "@/lib/validations";
 
-// PATCH rename board
+// PATCH update board
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const raw = await request.json();
-    const result = parseBody(renameBoardSchema, raw);
+    const result = parseBody(updateBoardSchema, raw);
     if (!result.data) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
@@ -17,7 +17,10 @@ export async function PATCH(
 
     const board = await prisma.board.update({
       where: { id: params.id },
-      data: { name: data.name },
+      data: { 
+        name: data.name,
+        githubRepo: data.githubRepo 
+      },
     });
 
     return NextResponse.json(board);

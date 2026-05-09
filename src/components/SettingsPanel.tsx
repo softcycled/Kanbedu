@@ -140,7 +140,7 @@ function SortableBoardRow({
 interface Props {
   boards: Board[];
   activeBoardId: string;
-  onRename: (boardId: string, name: string) => Promise<void>;
+  onUpdateBoard: (boardId: string, data: { name?: string; githubRepo?: string | null }) => Promise<void>;
   onDelete: (boardId: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
 }
@@ -148,7 +148,7 @@ interface Props {
 export default function SettingsPanel({
   boards,
   activeBoardId,
-  onRename,
+  onUpdateBoard,
   onDelete,
   onReorder,
 }: Props) {
@@ -185,7 +185,7 @@ export default function SettingsPanel({
     if (!renameValue.trim()) return;
     setIsSaving(true);
     try {
-      await onRename(boardId, renameValue.trim());
+      await onUpdateBoard(boardId, { name: renameValue.trim() });
     } finally {
       setIsSaving(false);
       setRenamingId(null);
@@ -209,10 +209,45 @@ export default function SettingsPanel({
         <h2 className="text-xl font-bold text-ink mb-1">Settings</h2>
         <p className="text-sm text-muted mb-8">Manage your boards</p>
 
-        <div className="max-w-md">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-            Boards
-          </h3>
+        <div className="max-w-md space-y-10">
+          {/* Active Board Settings */}
+          {activeBoardId && (
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">
+                Active Board: {boards.find(b => b.id === activeBoardId)?.name}
+              </h3>
+              <div className="bg-card-bg rounded-xl border border-border p-5 space-y-4 shadow-sm">
+                <div>
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">
+                    GitHub Repository
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="username/repo"
+                      defaultValue={boards.find(b => b.id === activeBoardId)?.githubRepo || ""}
+                      onBlur={async (e) => {
+                        const val = e.target.value.trim();
+                        if (val !== (boards.find(b => b.id === activeBoardId)?.githubRepo || "")) {
+                          await onUpdateBoard(activeBoardId, { githubRepo: val || null });
+                        }
+                      }}
+                      className="flex-1 text-sm px-3 py-2 rounded-xl border border-border bg-column-bg text-ink outline-none focus:border-ink/30 transition-colors"
+                    />
+                  </div>
+                  <p className="mt-2 text-[10px] text-muted leading-relaxed">
+                    Link a GitHub repository (e.g., <code className="bg-ink/5 px-1 rounded">facebook/react</code>) to enable the Contributors Insights dashboard.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Boards List */}
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+              All Boards
+            </h3>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
               <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
@@ -240,6 +275,7 @@ export default function SettingsPanel({
               </div>
             </SortableContext>
           </DndContext>
+          </section>
         </div>
       </div>
 

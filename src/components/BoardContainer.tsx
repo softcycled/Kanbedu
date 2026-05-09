@@ -92,11 +92,11 @@ export default function BoardContainer({
     await handleBoardSwitch(board.id);
   }, [handleBoardSwitch]);
 
-  const handleRenameBoard = useCallback(async (boardId: string, name: string) => {
+  const handleUpdateBoard = useCallback(async (boardId: string, data: { name?: string; githubRepo?: string | null }) => {
     const res = await fetch(`/api/boards/${boardId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(data),
     });
     if (!res.ok) return;
     const updated: Board = await res.json();
@@ -165,7 +165,7 @@ export default function BoardContainer({
           <SettingsPanel
             boards={boards}
             activeBoardId={activeBoardId}
-            onRename={handleRenameBoard}
+            onUpdateBoard={handleUpdateBoard}
             onDelete={handleDeleteBoard}
             onReorder={handleReorderBoards}
           />

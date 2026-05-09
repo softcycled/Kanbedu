@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 
-export type ActivityType = "MOVE" | "UPDATE" | "COMMENT" | "TAG" | "ASSIGNEE" | "CREATE";
+export type ActivityType = "MOVE" | "UPDATE" | "COMMENT" | "TAG" | "ASSIGNEE" | "CREATE" | "COMPLETE" | "REOPEN";
 
 export async function recordActivity(
   taskId: string,
