@@ -187,7 +187,6 @@ export default function LoginPage() {
                 : "Create account"}
             </button>
 
-<<<<<<< HEAD
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-[#E2DED8]" />
@@ -208,7 +207,7 @@ export default function LoginPage() {
               </svg>
               Continue with GitHub
             </button>
-=======
+
             {mode === "signup" && (
               <p className="text-center text-[11px] leading-relaxed" style={{ color: "#78716C" }}>
                 By creating an account, you agree to the{" "}
@@ -221,7 +220,6 @@ export default function LoginPage() {
                 </a>.
               </p>
             )}
->>>>>>> 797ff19eac195c6704073e19f16623a8686dcf2c
           </form>
         </div>
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Board } from "@/lib/types";
 
-export type Panel = "board" | "analytics" | "settings" | "profile";
+export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile";
 
 interface Props {
   boards: Board[];
@@ -19,6 +19,17 @@ function IconActivity() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="14" height="13" rx="1.5" />
+      <line x1="4" y1="0.5" x2="4" y2="3.5" />
+      <line x1="12" y1="0.5" x2="12" y2="3.5" />
+      <line x1="1" y1="6" x2="15" y2="6" />
     </svg>
   );
 }
@@ -98,6 +109,7 @@ export default function Sidebar({
 
   const navItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
+    { id: "calendar", label: "Calendar", icon: <IconCalendar /> },
     { id: "settings", label: "Boards", icon: <IconLayout /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
   ];
