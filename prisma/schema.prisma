@@ -54,6 +54,8 @@ model BoardInvite {
   expiresAt DateTime
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   creator   User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
 }
 
 model Column {
@@ -64,6 +66,8 @@ model Column {
   boardId String  @default("cldefaultboard0000")
   board   Board   @relation(fields: [boardId], references: [id])
   tasks   Task[]  @relation("ColumnTasks")
+
+  @@index([boardId])
 }
 
 model Task {
@@ -87,6 +91,10 @@ model Task {
   tags                Tag[]
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
+
+  @@index([column])
+  @@index([assigneeId])
+  @@index([completedAt])
 }
 
 model Tag {
@@ -107,6 +115,9 @@ model TaskColumnHistory {
   enteredAt DateTime  @default(now())
   exitedAt  DateTime?
   task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([columnId])
 }
 
 model Comment {
@@ -116,6 +127,8 @@ model Comment {
   createdAt DateTime @default(now())
   taskId    String
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model TaskActivity {
@@ -127,6 +140,9 @@ model TaskActivity {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([type])
 }
 
 model TaskDescriptionVersion {
@@ -137,4 +153,7 @@ model TaskDescriptionVersion {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([taskId])
 }
+

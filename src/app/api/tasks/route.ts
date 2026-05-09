@@ -38,12 +38,16 @@ export async function GET(request: NextRequest) {
   const tasks = await prisma.task.findMany({
     where,
     include: {
-      comments: { orderBy: { createdAt: "asc" } },
+      comments: {
+        select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+        orderBy: { createdAt: "asc" },
+      },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
       activities: {
         include: { user: { select: { id: true, name: true, color: true } } },
         orderBy: { createdAt: "desc" },
+        take: 20,
       },
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],

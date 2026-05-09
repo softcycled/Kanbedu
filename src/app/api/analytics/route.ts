@@ -217,14 +217,15 @@ export async function GET(request: NextRequest) {
   // bypassed intermediate columns without passing through them (column-skipping).
   const SPEED_RUN_MS = 30 * 60 * 1000; // 30 minutes
   const totalNonDoneColumns = columns.filter((c) => !c.isDone).length;
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
   const suspiciousTasks = taskDetails
     .filter((t) => {
-      const rawTask = tasks.find((r) => r.id === t.id);
+      const rawTask = taskById.get(t.id);
       const isMovedByOther = rawTask?.movedByNonAssignee ?? false;
       return (t.columnIsDone && t.cycleTimeMs !== null) || isMovedByOther;
     })
     .map((t) => {
-      const rawTask = tasks.find((r) => r.id === t.id)!;
+      const rawTask = taskById.get(t.id)!;
       return {
         id: t.id,
         title: t.title,

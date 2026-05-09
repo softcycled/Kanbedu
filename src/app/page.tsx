@@ -51,12 +51,16 @@ export default async function Home() {
       ? await prisma.task.findMany({
           where: { column: { in: columnIds } },
           include: {
-            comments: { orderBy: { createdAt: "asc" } },
+            comments: {
+              select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+              orderBy: { createdAt: "asc" },
+            },
             assigneeUser: { select: { id: true, name: true, color: true } },
             tags: true,
             activities: {
               include: { user: { select: { id: true, name: true, color: true } } },
               orderBy: { createdAt: "desc" },
+              take: 20,
             },
           },
           orderBy: [{ column: "asc" }, { order: "asc" }],

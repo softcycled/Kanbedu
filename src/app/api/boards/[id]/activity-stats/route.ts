@@ -28,8 +28,12 @@ export async function GET(
         columnRel: { boardId },
         completedAt: { not: null }
       },
-      include: {
-        columnHistory: true // To check for column skipping
+      select: {
+        id: true,
+        assigneeId: true,
+        createdAt: true,
+        completedAt: true,
+        _count: { select: { columnHistory: true } },
       }
     });
 
@@ -82,7 +86,7 @@ export async function GET(
 
         // Integrity Flags
         const isSpeedRun = cycleTime < 10 * 60 * 1000; // Under 10 minutes
-        const isColumnSkip = task.columnHistory.length < 2; // Directly created and finished?
+        const isColumnSkip = task._count.columnHistory < 2; // Directly created and finished?
         
         if (isSpeedRun || isColumnSkip) {
           stats.suspiciousCount++;
