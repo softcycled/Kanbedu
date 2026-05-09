@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Task, Board } from "@/lib/types";
 import BoardComp from "./Board";
 import Sidebar, { Panel } from "./Sidebar";
@@ -8,6 +8,8 @@ import Header from "./Header";
 import AnalyticsPanel from "./AnalyticsPanel";
 import SettingsPanel from "./SettingsPanel";
 import ProfilePanel from "./ProfilePanel";
+import { useRealtime } from "@/hooks/useRealtime";
+import { ColumnData } from "@/lib/types";
 
 interface Props {
   initialTasks: Task[];
@@ -25,12 +27,34 @@ export default function BoardContainer({
   currentUserId,
 }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [columns, setColumns] = useState<ColumnData[]>(initialColumns);
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId);
   const [activePanel, setActivePanel] = useState<Panel>("board");
   // Incremented every time the user navigates to the analytics panel so it always fetches fresh data.
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
+
+  // Sync state with server props (triggered by router.refresh())
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
+  useEffect(() => {
+    setBoards(initialBoards);
+  }, [initialBoards]);
+
+  const handleRefresh = useCallback(async () => {
+    console.log("BoardContainer: 🔄 Remote change detected, forcing refresh...");
+    const [tasksRes, columnsRes] = await Promise.all([
+      fetch(`/api/tasks?boardId=${activeBoardId}&_t=${Date.now()}`, { cache: "no-store" }),
+      fetch(`/api/columns?boardId=${activeBoardId}&_t=${Date.now()}`, { cache: "no-store" })
+    ]);
+    if (tasksRes.ok) setTasks(await tasksRes.json());
+    if (columnsRes.ok) setColumns(await columnsRes.json());
+  }, [activeBoardId]);
+
+  const { broadcastRefresh } = useRealtime(activeBoardId, handleRefresh);
 
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
@@ -41,12 +65,18 @@ export default function BoardContainer({
   }, []);
 
   const handleBoardSwitch = useCallback(async (boardId: string) => {
-    // Fetch tasks for the new board before switching
-    const res = await fetch(`/api/tasks?boardId=${boardId}`);
-    const newTasks = res.ok ? await res.json() : [];
+    // Fetch tasks and columns for the new board before switching
+    const [tasksRes, columnsRes] = await Promise.all([
+      fetch(`/api/tasks?boardId=${boardId}&_t=${Date.now()}`, { cache: "no-store" }),
+      fetch(`/api/columns?boardId=${boardId}&_t=${Date.now()}`, { cache: "no-store" })
+    ]);
+    const newTasks = tasksRes.ok ? await tasksRes.json() : [];
+    const newColumns = columnsRes.ok ? await columnsRes.json() : [];
+    
     // Batch: both updates apply in same render so Board remounts with correct data
     setActiveBoardId(boardId);
     setTasks(newTasks);
+    setColumns(newColumns);
     setActivePanel("board");
   }, []);
 
@@ -118,9 +148,11 @@ export default function BoardContainer({
               <BoardComp
                 key={activeBoardId}
                 boardId={activeBoardId}
-                initialTasks={tasks}
-                initialColumns={activeBoardId === initialBoardId ? initialColumns : []}
-                onTasksUpdate={setTasks}
+                tasks={tasks}
+                columns={columns}
+                onTasksChange={setTasks}
+                onColumnsChange={setColumns}
+                broadcastRefresh={broadcastRefresh}
                 currentUserId={currentUserId}
               />
             </main>

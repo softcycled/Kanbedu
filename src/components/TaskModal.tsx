@@ -21,6 +21,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   onAddComment: (taskId: string, content: string, author: string) => Promise<Comment>;
   boardId: string;
+  onBroadcast?: () => void;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -42,7 +43,16 @@ function nameToColor(name: string): string {
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }
 
-export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment, boardId }: Props) {
+export default function TaskModal({ 
+  task, 
+  boardMembers = [], 
+  onClose, 
+  onUpdate, 
+  onDelete, 
+  onAddComment, 
+  boardId,
+  onBroadcast
+}: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -367,6 +377,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
         setIsCreatingTag(false);
         // Automatically assign the new tag to the task
         await toggleTag(created.id);
+        onBroadcast?.();
       }
     } catch (error) {
       console.error("Failed to create tag:", error);
