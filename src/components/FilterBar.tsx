@@ -102,7 +102,7 @@ export default function FilterBar({
         </button>
 
         {openDropdown === "assignee" && (
-          <div className="absolute left-0 mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
+          <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
             <div 
               onClick={() => toggleSelection(selectedAssignees, "unassigned", setSelectedAssignees)}
               className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
@@ -195,7 +195,7 @@ export default function FilterBar({
         </button>
 
         {openDropdown === "priority" && (
-          <div className="absolute left-0 mt-2 w-48 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
+          <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-48 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
             {["low", "medium", "high", "urgent"].map((p) => (
               <div 
                 key={p}
@@ -211,7 +211,7 @@ export default function FilterBar({
       </div>
 
       {/* Results Count & Clear */}
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center justify-between w-full md:w-auto md:ml-auto gap-3 pt-2 md:pt-0 border-t border-border/30 md:border-t-0">
         <span className="text-xs text-muted font-medium">
           {hasFilters ? (
             <span>Showing {filteredTasksCount} of {totalTasks} tasks</span>

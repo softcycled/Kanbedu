@@ -283,10 +283,10 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const { summary, columns, assignees } = data;
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-8 no-scrollbar">
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-32 md:py-8 no-scrollbar">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+        <div className="pl-14 md:pl-0">
           <h2 className="text-xl font-bold text-ink">Analytics</h2>
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
@@ -307,7 +307,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <SummaryCard label="Total tasks" value={String(summary.total)} sub="" />
         <SummaryCard label="Completed" value={String(summary.completed)} sub={summary.total > 0 ? `${Math.round((summary.completed / summary.total) * 100)}%` : "0%"} valueColor="text-green-600" />
         <SummaryCard label="In progress" value={String(summary.inProgress)} sub="" valueColor="text-blue-600" />
@@ -355,9 +355,9 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
           const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
           return (
-            <div className="flex items-stretch gap-0 w-full">
+            <div className="flex flex-col lg:flex-row items-stretch gap-0 w-full">
               {columns.map((col, i) => (
-                <div key={col.id} className="flex items-stretch min-w-0" style={{ flex: "1 1 0" }}>
+                <div key={col.id} className="flex flex-col lg:flex-row items-stretch min-w-0" style={{ flex: "1 1 0" }}>
                   {/* Column card */}
                   <div className={`w-full rounded-xl border p-4 flex flex-col gap-3 h-full ${
                     col.isBottleneck
@@ -457,8 +457,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
 
                   {/* Arrow between columns */}
                   {i < columns.length - 1 && (
-                    <div className="flex items-center px-2 flex-shrink-0">
-                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40">
+                    <div className="flex items-center justify-center py-2 lg:py-0 px-0 lg:px-2 flex-shrink-0">
+                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40 rotate-90 lg:rotate-0">
                         <path d="M0 8 H16 M10 2 L18 8 L10 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
@@ -470,9 +470,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         })()}
       </Section>
 
-      {/* Project Health */}
       <Section title="Project Health">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <HealthMetric
             label="3+ days in phase"
             value={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""}`}
@@ -515,7 +514,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
               </div>
             </div>
             <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
                     <Th align="left">Task</Th>
@@ -562,7 +562,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
+        </>
         )}
       </Section>
 
@@ -636,7 +637,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       {hasAssignees && (
         <Section title="Team">
           <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr className="border-b border-border">
                   <Th align="left">Member</Th>
@@ -670,7 +672,8 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
               </tbody>
             </table>
           </div>
-        </Section>
+        </div>
+      </Section>
       )}
 
       {/* Integrity Leaderboard (from Contributions) */}

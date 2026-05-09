@@ -205,9 +205,9 @@ export default function SettingsPanel({
 
   return (
     <>
-      <div className="flex-1 px-8 py-8 overflow-y-auto">
-        <h2 className="text-xl font-bold text-ink mb-1">Settings</h2>
-        <p className="text-sm text-muted mb-8">Manage your boards</p>
+      <div className="flex-1 px-4 md:px-8 pt-6 pb-32 md:py-8 overflow-y-auto">
+        <h2 className="text-xl font-bold text-ink mb-1 pl-14 md:pl-0">Settings</h2>
+        <p className="text-sm text-muted mb-8 pl-14 md:pl-0">Manage your boards</p>
 
         <div className="max-w-md space-y-10">
           {/* Active Board Settings */}
@@ -216,30 +216,7 @@ export default function SettingsPanel({
               <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">
                 Active Board: {boards.find(b => b.id === activeBoardId)?.name}
               </h3>
-              <div className="bg-card-bg rounded-xl border border-border p-5 space-y-4 shadow-sm">
-                <div>
-                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">
-                    GitHub Repository
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="username/repo"
-                      defaultValue={boards.find(b => b.id === activeBoardId)?.githubRepo || ""}
-                      onBlur={async (e) => {
-                        const val = e.target.value.trim();
-                        if (val !== (boards.find(b => b.id === activeBoardId)?.githubRepo || "")) {
-                          await onUpdateBoard(activeBoardId, { githubRepo: val || null });
-                        }
-                      }}
-                      className="flex-1 text-sm px-3 py-2 rounded-xl border border-border bg-column-bg text-ink outline-none focus:border-ink/30 transition-colors"
-                    />
-                  </div>
-                  <p className="mt-2 text-[10px] text-muted leading-relaxed">
-                    Link a GitHub repository (e.g., <code className="bg-ink/5 px-1 rounded">facebook/react</code>) to enable the Contributors Insights dashboard.
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs text-muted mb-4 italic">Configure settings for your active board below.</p>
             </section>
           )}
 

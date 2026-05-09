@@ -58,6 +58,16 @@
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
+
+  /* iOS safe area for bottom bar */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Extra bottom padding on mobile so content isn't hidden behind the bottom bar */
+  .pb-mobile-bar {
+    padding-bottom: 64px;
+  }
 }
 
 html {

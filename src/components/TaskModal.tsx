@@ -428,12 +428,12 @@ export default function TaskModal({
       onClick={(e) => e.target === overlayRef.current && handleClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
     >
-      <div className="relative bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
+      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this task?</p>
                 <p className="text-xs text-muted">This action cannot be undone.</p>
@@ -457,8 +457,8 @@ export default function TaskModal({
         )}
 
         {tagToDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this tag?</p>
                 <p className="text-xs text-muted">This removes it from all tasks on this board.</p>
@@ -724,7 +724,7 @@ export default function TaskModal({
           </div>
 
           {/* Assignee + Deadline row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
             <div ref={assigneeDropdownRef} className="relative">
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
                 Assignee
@@ -1044,7 +1044,7 @@ export default function TaskModal({
         )}
 
         {/* Footer - Auto-save status */}
-        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
+        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between safe-area-bottom">
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>
