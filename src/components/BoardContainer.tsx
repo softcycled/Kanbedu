@@ -21,6 +21,14 @@ interface Props {
   isAdmin?: boolean;
 }
 
+interface BoardCache {
+  tasks: Task[];
+  columns: ColumnData[];
+  fetchedAt: number;
+}
+
+const CACHE_TTL_MS = 30_000; // 30 s — stale boards refresh silently in background
+
 export default function BoardContainer({
   initialTasks,
   initialBoards,
@@ -34,29 +42,49 @@ export default function BoardContainer({
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId);
   const [activePanel, setActivePanel] = useState<Panel>("board");
-  // Incremented every time the user navigates to the analytics panel so it always fetches fresh data.
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
-  // Sync state with server props (triggered by router.refresh())
-  useEffect(() => {
-    setTasks(initialTasks);
-  }, [initialTasks]);
+  // Per-board cache: boardId → { tasks, columns, fetchedAt }
+  const boardCache = useRef<Map<string, BoardCache>>(
+    new Map([
+      [initialBoardId, { tasks: initialTasks, columns: initialColumns, fetchedAt: Date.now() }],
+    ])
+  );
 
+  // Keep the cache entry for the active board in sync with live state
   useEffect(() => {
-    setBoards(initialBoards);
-  }, [initialBoards]);
+    boardCache.current.set(activeBoardId, { tasks, columns, fetchedAt: Date.now() });
+  }, [tasks, columns, activeBoardId]);
 
-  const handleRefresh = useCallback(async () => {
-    console.log("BoardContainer: 🔄 Remote change detected, forcing refresh...");
+  // activeBoardId ref for use inside callbacks that would otherwise have stale closures
+  const activeBoardIdRef = useRef(activeBoardId);
+  useEffect(() => { activeBoardIdRef.current = activeBoardId; }, [activeBoardId]);
+
+  // Sync state with server props on initial hydration only
+  useEffect(() => { setBoards(initialBoards); }, [initialBoards]);
+
+  const fetchBoardData = useCallback(async (boardId: string) => {
     const [tasksRes, columnsRes] = await Promise.all([
-      fetch(`/api/tasks?boardId=${activeBoardId}&_t=${Date.now()}`, { cache: "no-store" }),
-      fetch(`/api/columns?boardId=${activeBoardId}&_t=${Date.now()}`, { cache: "no-store" })
+      fetch(`/api/tasks?boardId=${boardId}`, { cache: "no-store" }),
+      fetch(`/api/columns?boardId=${boardId}`, { cache: "no-store" }),
     ]);
-    if (tasksRes.ok) setTasks(await tasksRes.json());
-    if (columnsRes.ok) setColumns(await columnsRes.json());
-  }, [activeBoardId]);
+    const newTasks = tasksRes.ok ? await tasksRes.json() : [];
+    const newColumns = columnsRes.ok ? await columnsRes.json() : [];
+    return { tasks: newTasks, columns: newColumns };
+  }, []);
+
+  // Realtime refresh: surgically update only the active board
+  const handleRefresh = useCallback(async () => {
+    const boardId = activeBoardIdRef.current;
+    const data = await fetchBoardData(boardId);
+    // Only apply if still on the same board
+    if (activeBoardIdRef.current === boardId) {
+      setTasks(data.tasks);
+      setColumns(data.columns);
+    }
+  }, [fetchBoardData]);
 
   const { broadcastRefresh } = useRealtime(activeBoardId, handleRefresh);
 
@@ -69,20 +97,41 @@ export default function BoardContainer({
   }, []);
 
   const handleBoardSwitch = useCallback(async (boardId: string) => {
-    // Fetch tasks and columns for the new board before switching
-    const [tasksRes, columnsRes] = await Promise.all([
-      fetch(`/api/tasks?boardId=${boardId}&_t=${Date.now()}`, { cache: "no-store" }),
-      fetch(`/api/columns?boardId=${boardId}&_t=${Date.now()}`, { cache: "no-store" })
-    ]);
-    const newTasks = tasksRes.ok ? await tasksRes.json() : [];
-    const newColumns = columnsRes.ok ? await columnsRes.json() : [];
-    
-    // Batch: both updates apply in same render so Board remounts with correct data
-    setActiveBoardId(boardId);
-    setTasks(newTasks);
-    setColumns(newColumns);
-    setActivePanel("board");
-  }, []);
+    if (boardId === activeBoardIdRef.current) return;
+
+    const cached = boardCache.current.get(boardId);
+    const isStale = !cached || Date.now() - cached.fetchedAt > CACHE_TTL_MS;
+
+    if (cached) {
+      // Render immediately from cache for instant perceived switch
+      setActiveBoardId(boardId);
+      setTasks(cached.tasks);
+      setColumns(cached.columns);
+      setActivePanel("board");
+    }
+
+    if (isStale) {
+      // Fetch fresh data (silently if we already rendered from cache)
+      const data = await fetchBoardData(boardId);
+      boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
+      // Only update if the user hasn't switched away again
+      if (activeBoardIdRef.current === boardId) {
+        setTasks(data.tasks);
+        setColumns(data.columns);
+      }
+    }
+
+    if (!cached) {
+      setActivePanel("board");
+    }
+  }, [fetchBoardData]);
+
+  // Prefetch adjacent boards so switching feels instant
+  const prefetchBoard = useCallback(async (boardId: string) => {
+    if (boardCache.current.has(boardId)) return;
+    const data = await fetchBoardData(boardId);
+    boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
+  }, [fetchBoardData]);
 
   const handleCreateBoard = useCallback(async (name: string) => {
     const res = await fetch("/api/boards", {
@@ -111,6 +160,7 @@ export default function BoardContainer({
     if (boards.length === 1) return;
     const res = await fetch(`/api/boards/${boardId}`, { method: "DELETE" });
     if (!res.ok) return;
+    boardCache.current.delete(boardId);
     const remaining = boards.filter((b) => b.id !== boardId);
     setBoards(remaining);
     if (activeBoardId === boardId) {
@@ -131,6 +181,8 @@ export default function BoardContainer({
     });
   }, []);
 
+  const handleSupportClick = useCallback(() => setIsSupportOpen(true), []);
+
   const activeBoard = boards.find((b) => b.id === activeBoardId);
 
   return (
@@ -143,7 +195,8 @@ export default function BoardContainer({
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
         onReorder={handleReorderBoards}
-        onSupportClick={() => setIsSupportOpen(true)}
+        onSupportClick={handleSupportClick}
+        onBoardHover={prefetchBoard}
         isAdmin={isAdmin}
       />
 

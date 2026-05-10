@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
@@ -11,7 +12,7 @@ interface Props {
   onClick: () => void;
 }
 
-export default function TaskCard({ task, onClick }: Props) {
+function TaskCard({ task, onClick }: Props) {
   const [mounted, setMounted] = useState(false);
   const {
     attributes,
@@ -62,7 +63,6 @@ export default function TaskCard({ task, onClick }: Props) {
         shadow-card hover:shadow-card-hover hover:-translate-y-1
         cursor-pointer select-none
         border border-transparent hover:border-border
-        animate-slide-up
       "
     >
       {/* Overdue indicator */}
@@ -127,3 +127,21 @@ export default function TaskCard({ task, onClick }: Props) {
     </div>
   );
 }
+
+// Memoize: only re-render when task data or click handler actually changes.
+// During DnD drags this prevents the entire column from re-rendering on every frame.
+export default memo(TaskCard, (prev, next) => {
+  return (
+    prev.task.id === next.task.id &&
+    prev.task.title === next.task.title &&
+    prev.task.priority === next.task.priority &&
+    prev.task.column === next.task.column &&
+    prev.task.assigneeId === next.task.assigneeId &&
+    prev.task.deadline === next.task.deadline &&
+    prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
+    prev.task.completedAt === next.task.completedAt &&
+    prev.task.comments.length === next.task.comments.length &&
+    prev.task.tags?.length === next.task.tags?.length &&
+    prev.onClick === next.onClick
+  );
+});

@@ -13,12 +13,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tag = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
-    if (!tag) {
+    const tagInfo = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!tagInfo) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: tag.boardId } },
+      where: { userId_boardId: { userId: session.userId, boardId: tagInfo.boardId } },
     });
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -59,12 +59,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tag = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
-    if (!tag) {
+    const tagToDelete = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!tagToDelete) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: tag.boardId } },
+      where: { userId_boardId: { userId: session.userId, boardId: tagToDelete.boardId } },
     });
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

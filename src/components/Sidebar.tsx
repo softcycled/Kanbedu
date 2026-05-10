@@ -29,6 +29,7 @@ interface Props {
   onCreateBoard: (name: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
   onSupportClick: () => void;
+  onBoardHover?: (id: string) => void;
   isAdmin?: boolean;
 }
 
@@ -104,10 +105,12 @@ function SortableBoardItem({
   board,
   isActive,
   onClick,
+  onHover,
 }: {
   board: Board;
   isActive: boolean;
   onClick: () => void;
+  onHover?: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: board.id });
@@ -131,6 +134,7 @@ function SortableBoardItem({
       </button>
       <button
         onClick={onClick}
+        onMouseEnter={onHover && !isActive ? () => onHover(board.id) : undefined}
         className={`flex-1 flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
           isActive
             ? "bg-ink/8 text-ink font-medium"
@@ -152,6 +156,7 @@ export default function Sidebar({
   onCreateBoard,
   onReorder,
   onSupportClick,
+  onBoardHover,
   isAdmin = false,
 }: Props) {
   const [isAddingBoard, setIsAddingBoard] = useState(false);
@@ -232,6 +237,7 @@ export default function Sidebar({
                     onPanelChange("board");
                     setMobileOpen(false);
                   }}
+                  onHover={onBoardHover}
                 />
               ))}
             </SortableContext>

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -23,7 +24,7 @@ interface Props {
   isDynamic?: boolean;
 }
 
-export default function KanbanColumn({
+function KanbanColumn({
   columnId,
   label,
   columnIndex,
@@ -51,13 +52,18 @@ export default function KanbanColumn({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleRename = async (newLabel: string) => {
+  // Stable callbacks so memoized TaskCard children don't re-render
+  const handleRename = useCallback(async (newLabel: string) => {
     await onRenameColumn(columnId, newLabel);
-  };
+  }, [onRenameColumn, columnId]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     onDeleteColumn(columnId);
-  };
+  }, [onDeleteColumn, columnId]);
+
+  const handleSetDone = useCallback(() => {
+    onSetDoneColumn(columnId);
+  }, [onSetDoneColumn, columnId]);
 
   return (
     <div
@@ -74,7 +80,7 @@ export default function KanbanColumn({
         taskCount={tasks.length}
         onRename={handleRename}
         onDelete={handleDelete}
-        onSetDone={() => onSetDoneColumn(columnId)}
+        onSetDone={handleSetDone}
         isDynamic={isDynamic}
         isDragging={isDragging}
         dragListeners={listeners}
@@ -107,3 +113,7 @@ export default function KanbanColumn({
     </div>
   );
 }
+
+// Memoize the column itself — it re-renders only when its task list or callbacks change.
+// Tasks array identity is stable (comes from useMemo in Board.tsx).
+export default memo(KanbanColumn);

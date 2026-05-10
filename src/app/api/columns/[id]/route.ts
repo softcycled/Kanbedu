@@ -15,12 +15,12 @@ export async function PATCH(
     }
 
     // Check the user is a member of the board that owns this column
-    const column = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
-    if (!column) {
+    const columnInfo = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!columnInfo) {
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: column.boardId } },
+      where: { userId_boardId: { userId: session.userId, boardId: columnInfo.boardId } },
     });
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

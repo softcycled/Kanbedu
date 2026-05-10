@@ -48,16 +48,37 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
 
-  useEffect(() => {
-    fetch(`/api/boards/${boardId}/members`)
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setBoardMembers(data))
-      .catch(() => {});
+  // Per-board cache for members and tags — avoids re-fetching on every board switch
+  const membersCache = useRef<Map<string, import("@/lib/types").BoardMemberData[]>>(new Map());
+  const tagsCache = useRef<Map<string, import("@/lib/types").Tag[]>>(new Map());
 
-    fetch(`/api/tags?boardId=${boardId}`)
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setAllTags(data))
-      .catch(() => {});
+  useEffect(() => {
+    const cachedMembers = membersCache.current.get(boardId);
+    const cachedTags = tagsCache.current.get(boardId);
+
+    if (cachedMembers) {
+      setBoardMembers(cachedMembers);
+    } else {
+      fetch(`/api/boards/${boardId}/members`)
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          membersCache.current.set(boardId, data);
+          setBoardMembers(data);
+        })
+        .catch(() => {});
+    }
+
+    if (cachedTags) {
+      setAllTags(cachedTags);
+    } else {
+      fetch(`/api/tags?boardId=${boardId}`)
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          tagsCache.current.set(boardId, data);
+          setAllTags(data);
+        })
+        .catch(() => {});
+    }
   }, [boardId]);
 
   const sensors = useSensors(
@@ -160,14 +181,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
   }, [columns, broadcastRefresh]);
 
-  const handleDeleteColumnClick = (columnId: string) => {
+  const handleDeleteColumnClick = useCallback((columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
     if (columnData) {
       setDeleteError(null);
       setColumnToDelete(columnData);
       setDeleteModalOpen(true);
     }
-  };
+  }, [columns]);
 
   const handleConfirmDeleteColumn = useCallback(
     async (moveToColumnId?: string) => {
@@ -362,7 +383,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         order: idx,
       }));
 
-      await fetch("/api/columns", {
+      // Persist order to server — fire-and-forget, UI already updated
+      fetch("/api/columns", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ columns: updates }),
@@ -436,14 +458,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
     }
 
-    // Update sibling orders in a single bulk request
+    // Update sibling orders in a single bulk request — fire-and-forget
     const siblings = reordered.filter((t) => t.id !== activeId);
     if (siblings.length > 0) {
-      await fetch("/api/tasks", {
+      fetch("/api/tasks", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
-      });
+      }).catch((err) => console.error("Failed to bulk update task order:", err));
     }
 
     broadcastRefresh();
