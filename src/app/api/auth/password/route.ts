@@ -31,6 +31,10 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
+  if (!user.password) {
+    return NextResponse.json({ error: "Users logged in via GitHub cannot change passwords." }, { status: 400 });
+  }
+
   const valid = await bcrypt.compare(currentPassword, user.password);
   if (!valid) {
     return NextResponse.json({ error: "Current password is incorrect." }, { status: 400 });
