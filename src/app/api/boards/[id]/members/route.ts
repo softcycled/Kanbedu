@@ -30,7 +30,7 @@ export async function GET(
       },
     });
 
-    const formattedMembers = members.map((m) => m.user);
+    const formattedMembers = members.map((m) => ({ ...m.user, role: m.role }));
 
     return NextResponse.json(formattedMembers);
   } catch (error) {

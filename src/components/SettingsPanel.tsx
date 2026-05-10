@@ -1,141 +1,22 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useState, useEffect } from "react";
 import { Board } from "@/lib/types";
 import DeleteBoardModal from "./DeleteBoardModal";
 
-function DragHandle() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="text-muted/50">
-      <circle cx="4.5" cy="3" r="1.2" /><circle cx="9.5" cy="3" r="1.2" />
-      <circle cx="4.5" cy="7" r="1.2" /><circle cx="9.5" cy="7" r="1.2" />
-      <circle cx="4.5" cy="11" r="1.2" /><circle cx="9.5" cy="11" r="1.2" />
-    </svg>
-  );
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  color: string;
+  role: string;
 }
 
-function SortableBoardRow({
-  board,
-  activeBoardId,
-  renamingId,
-  renameValue,
-  isSaving,
-  canDelete,
-  onStartRename,
-  onRenameChange,
-  onRenameKeyDown,
-  onRenameBlur,
-  onDeleteClick,
-  onInviteClick,
-  invitingId,
-}: {
-  board: Board;
-  activeBoardId: string;
-  renamingId: string | null;
-  renameValue: string;
-  isSaving: boolean;
-  canDelete: boolean;
-  onStartRename: (board: Board) => void;
-  onRenameChange: (v: string) => void;
-  onRenameKeyDown: (e: React.KeyboardEvent, boardId: string) => void;
-  onRenameBlur: (boardId: string) => void;
-  onDeleteClick: (board: Board) => void;
-  onInviteClick: (boardId: string) => void;
-  invitingId: string | null;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: board.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-2 px-4 py-3 border-b border-border last:border-b-0 bg-card-bg"
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none text-muted hover:text-ink/50 transition-colors mr-1 flex-shrink-0"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <DragHandle />
-      </button>
-
-      {renamingId === board.id ? (
-        <input
-          autoFocus
-          type="text"
-          value={renameValue}
-          onChange={(e) => onRenameChange(e.target.value)}
-          onKeyDown={(e) => onRenameKeyDown(e, board.id)}
-          onBlur={() => onRenameBlur(board.id)}
-          disabled={isSaving}
-          className="flex-1 text-sm px-2 py-1 rounded border border-border bg-column-bg text-ink outline-none focus:border-ink/40"
-        />
-      ) : (
-        <span
-          className={`flex-1 text-sm ${
-            board.id === activeBoardId ? "text-ink font-medium" : "text-ink/80"
-          }`}
-        >
-          {board.name}
-          {board.id === activeBoardId && (
-            <span className="ml-2 text-[10px] font-medium text-muted border border-border rounded px-1 py-0.5">
-              active
-            </span>
-          )}
-        </span>
-      )}
-
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onInviteClick(board.id)}
-          disabled={invitingId === board.id}
-          className="text-xs text-muted hover:text-ink transition-colors px-2 py-1 rounded hover:bg-ink/5 disabled:opacity-50"
-        >
-          {invitingId === board.id ? "Copied!" : "Invite"}
-        </button>
-        <button
-          onClick={() => onStartRename(board)}
-          className="text-xs text-muted hover:text-ink transition-colors px-2 py-1 rounded hover:bg-ink/5"
-        >
-          Rename
-        </button>
-        <button
-          onClick={() => onDeleteClick(board)}
-          disabled={!canDelete}
-          className="text-xs text-red-500/80 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-30 disabled:cursor-not-allowed"
-          title={!canDelete ? "Can't delete the last board" : "Delete board"}
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-}
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  owner: { label: "Owner", color: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+  admin: { label: "Admin", color: "text-blue-400 bg-blue-400/10 border-blue-400/20" },
+  member: { label: "Member", color: "text-muted bg-ink/5 border-border" },
+};
 
 interface Props {
   boards: Board[];
@@ -150,13 +31,49 @@ export default function SettingsPanel({
   activeBoardId,
   onUpdateBoard,
   onDelete,
-  onReorder,
 }: Props) {
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [deletingBoard, setDeletingBoard] = useState<Board | null>(null);
+  const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
+  const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(board?.name ?? "");
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
   const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [deletingBoard, setDeletingBoard] = useState<Board | null>(null);
+
+  useEffect(() => {
+    setNameValue(board?.name ?? "");
+    setEditingName(false);
+  }, [board?.id, board?.name]);
+
+  useEffect(() => {
+    if (!board?.id) return;
+    setLoadingMembers(true);
+    fetch(`/api/boards/${board.id}/members`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setMembers)
+      .catch(() => setMembers([]))
+      .finally(() => setLoadingMembers(false));
+  }, [board?.id]);
+
+  const saveName = async () => {
+    if (!nameValue.trim() || nameValue.trim() === board?.name) {
+      setEditingName(false);
+      setNameValue(board?.name ?? "");
+      return;
+    }
+    setIsSavingName(true);
+    try {
+      await onUpdateBoard(board!.id, { name: nameValue.trim() });
+    } finally {
+      setIsSavingName(false);
+      setEditingName(false);
+    }
+  };
 
   const handleInvite = async (boardId: string) => {
     try {
@@ -170,89 +87,181 @@ export default function SettingsPanel({
       const url = `${window.location.origin}/invite/${token}`;
       await navigator.clipboard.writeText(url);
       setInvitingId(boardId);
-      setTimeout(() => setInvitingId(null), 2000);
-    } catch (error) {
-      console.error("Failed to create invite:", error);
+      setTimeout(() => setInvitingId(null), 2500);
+    } catch {
+      // ignore
     }
   };
 
-  const startRename = (board: Board) => {
-    setRenamingId(board.id);
-    setRenameValue(board.name);
-  };
-
-  const saveRename = async (boardId: string) => {
-    if (!renameValue.trim()) return;
-    setIsSaving(true);
-    try {
-      await onUpdateBoard(boardId, { name: renameValue.trim() });
-    } finally {
-      setIsSaving(false);
-      setRenamingId(null);
-    }
-  };
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = boards.findIndex((b) => b.id === active.id);
-    const newIndex = boards.findIndex((b) => b.id === over.id);
-    const reordered = arrayMove(boards, oldIndex, newIndex);
-    await onReorder(reordered.map((b) => b.id));
-  };
+  if (!board) return null;
 
   return (
     <>
-      <div className="flex-1 px-4 md:px-8 pt-6 pb-32 md:py-8 overflow-y-auto">
-        <h2 className="text-xl font-bold text-ink mb-1 pl-14 md:pl-0">Settings</h2>
-        <p className="text-sm text-muted mb-8 pl-14 md:pl-0">Manage your boards</p>
+      <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
+        <div className="px-6 md:px-10 pt-6 pb-5 border-b border-border/60">
+          <h2 className="text-lg font-bold tracking-tight text-ink pl-14 md:pl-0">Boards</h2>
+        </div>
 
-        <div className="max-w-md space-y-10">
-          {/* Active Board Settings */}
-          {activeBoardId && (
+        <div className="flex flex-col md:flex-row min-h-0">
+          {/* Board list sidebar */}
+          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-3 px-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted px-2 mb-2">Your Boards</p>
+            {boards.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setSelectedBoardId(b.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                  selectedBoardId === b.id
+                    ? "bg-ink/8 text-ink font-medium"
+                    : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+                }`}
+              >
+                <div
+                  className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
+                  style={{ backgroundColor: "#4A90A4" }}
+                >
+                  {b.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="truncate">{b.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Board detail */}
+          <div className="flex-1 px-6 md:px-8 py-6 max-w-xl space-y-8">
+            {/* Identity */}
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">
-                Active Board: {boards.find(b => b.id === activeBoardId)?.name}
-              </h3>
-              <p className="text-xs text-muted mb-4 italic">Configure settings for your active board below.</p>
-            </section>
-          )}
-
-          {/* Boards List */}
-          <section>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-              All Boards
-            </h3>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-              <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-                {boards.map((board) => (
-                  <SortableBoardRow
-                    key={board.id}
-                    board={board}
-                    activeBoardId={activeBoardId}
-                    renamingId={renamingId}
-                    renameValue={renameValue}
-                    isSaving={isSaving}
-                    canDelete={boards.length > 1}
-                    onStartRename={startRename}
-                    onRenameChange={setRenameValue}
-                    onRenameKeyDown={(e, id) => {
-                      if (e.key === "Enter") saveRename(id);
-                      if (e.key === "Escape") setRenamingId(null);
-                    }}
-                    onRenameBlur={saveRename}
-                    onDeleteClick={setDeletingBoard}
-                    onInviteClick={handleInvite}
-                    invitingId={invitingId}
-                  />
-                ))}
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
+                  style={{ backgroundColor: "#4A90A4" }}
+                >
+                  {board.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  {editingName ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveName();
+                        if (e.key === "Escape") { setEditingName(false); setNameValue(board.name); }
+                      }}
+                      onBlur={saveName}
+                      disabled={isSavingName}
+                      className="w-full text-lg font-bold bg-transparent border-b border-accent outline-none text-ink"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <h3 className="text-lg font-bold text-ink truncate">{board.name}</h3>
+                      <button
+                        onClick={() => setEditingName(true)}
+                        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-muted"
+                        title="Rename board"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted mt-0.5">
+                    {members.length} member{members.length !== 1 ? "s" : ""}
+                    {" · Created "}
+                    {new Date(board.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </p>
+                </div>
               </div>
-            </SortableContext>
-          </DndContext>
-          </section>
+            </section>
+
+            {/* Invite */}
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Invite People</h4>
+              <div className="flex items-center gap-3 p-4 bg-card-bg border border-border rounded-xl">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-ink">Share an invite link</p>
+                  <p className="text-xs text-muted mt-0.5">Anyone with the link can join this board</p>
+                </div>
+                <button
+                  onClick={() => handleInvite(board.id)}
+                  disabled={invitingId === board.id}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-60 flex-shrink-0"
+                >
+                  {invitingId === board.id ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      Copy Link
+                    </>
+                  )}
+                </button>
+              </div>
+            </section>
+
+            {/* Members */}
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+                Members — {members.length}
+              </h4>
+              <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+                {loadingMembers ? (
+                  <div className="px-4 py-6 text-center text-xs text-muted">Loading…</div>
+                ) : members.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-xs text-muted">No members found.</div>
+                ) : (
+                  members.map((member, i) => {
+                    const roleInfo = ROLE_LABELS[member.role] ?? ROLE_LABELS.member;
+                    return (
+                      <div
+                        key={member.id}
+                        className={`flex items-center gap-3 px-4 py-3 ${i < members.length - 1 ? "border-b border-border/60" : ""}`}
+                      >
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink truncate">{member.name}</p>
+                          <p className="text-xs text-muted truncate">{member.email}</p>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleInfo.color}`}>
+                          {roleInfo.label}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            {/* Danger zone */}
+            {boards.length > 1 && (
+              <section>
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500/70 mb-3">Danger Zone</h4>
+                <div className="flex items-center gap-3 p-4 bg-card-bg border border-red-500/20 rounded-xl">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">Delete this board</p>
+                    <p className="text-xs text-muted mt-0.5">Permanently removes the board and all its tasks</p>
+                  </div>
+                  <button
+                    onClick={() => setDeletingBoard(board)}
+                    className="px-4 py-2 rounded-lg border border-red-500/30 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-colors flex-shrink-0"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </div>
 

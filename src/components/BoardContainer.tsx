@@ -142,6 +142,7 @@ export default function BoardContainer({
         onPanelChange={handlePanelChange}
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
+        onReorder={handleReorderBoards}
         onSupportClick={() => setIsSupportOpen(true)}
         isAdmin={isAdmin}
       />
