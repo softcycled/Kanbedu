@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="public/icons/logo.png" width="200" alt="Kanbedu Logo">
-</p>
+
 
 <h1 align="center">Kanbedu</h1>
 
