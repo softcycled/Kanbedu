@@ -125,6 +125,8 @@ export default function Sidebar({
       await onCreateBoard(name);
       setNewBoardName("");
       setIsAddingBoard(false);
+      onPanelChange("board");
+      setMobileOpen(false);
     } finally {
       setIsCreating(false);
     }
