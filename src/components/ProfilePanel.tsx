@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -225,7 +225,7 @@ function AppearanceTab() {
 
   return (
     <div className="max-w-lg space-y-8">
-      <div>
+      <div className="pl-14 md:pl-0">
         <h2 className="text-base font-semibold text-ink">Appearance</h2>
         <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
       </div>
@@ -400,17 +400,17 @@ export default function ProfilePanel() {
   const textColor = getTextColor(previewColor);
 
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
       {/* ── Left nav ── */}
-      <nav className="w-52 flex-shrink-0 border-r border-border h-full overflow-y-auto py-7 px-3 no-scrollbar">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Settings</p>
-        <ul className="space-y-0.5">
+      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 pl-14 pr-3 md:px-3 no-scrollbar flex md:block items-center gap-1">
+        <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Settings</p>
+        <ul className="flex md:block space-y-0 md:space-y-0.5 gap-1">
           {NAV_ITEMS.map((item) => (
             <li key={item.id}>
               <button
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activeTab === item.id
                     ? "bg-border text-ink font-medium"
                     : "text-muted hover:text-ink hover:bg-border/50"
@@ -425,12 +425,12 @@ export default function ProfilePanel() {
       </nav>
 
       {/* ── Right content ── */}
-      <div className="flex-1 overflow-y-auto px-10 py-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 pt-6 pb-32 md:py-8 no-scrollbar">
 
         {/* Account */}
         {activeTab === "account" && (
           <div className="max-w-lg space-y-8">
-            <div>
+            <div className="pl-14 md:pl-0">
               <h2 className="text-base font-semibold text-ink">Account</h2>
               <p className="text-sm text-muted mt-0.5">Manage your personal details</p>
             </div>
@@ -625,7 +625,7 @@ export default function ProfilePanel() {
         {/* Notifications */}
         {activeTab === "notifications" && (
           <div className="max-w-lg space-y-8">
-            <div>
+            <div className="pl-14 md:pl-0">
               <h2 className="text-base font-semibold text-ink">Notifications</h2>
               <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
             </div>
@@ -665,7 +665,7 @@ export default function ProfilePanel() {
         {/* Boards */}
         {activeTab === "boards" && (
           <div className="max-w-lg space-y-8">
-            <div>
+            <div className="pl-14 md:pl-0">
               <h2 className="text-base font-semibold text-ink">Boards</h2>
               <p className="text-sm text-muted mt-0.5">Defaults and display preferences for your boards</p>
             </div>
@@ -690,7 +690,7 @@ export default function ProfilePanel() {
         {/* Accessibility */}
         {activeTab === "accessibility" && (
           <div className="max-w-lg space-y-8">
-            <div>
+            <div className="pl-14 md:pl-0">
               <h2 className="text-base font-semibold text-ink">Accessibility</h2>
               <p className="text-sm text-muted mt-0.5">Make Kanbedu work better for you</p>
             </div>
@@ -720,7 +720,7 @@ export default function ProfilePanel() {
         {/* Privacy & Security */}
         {activeTab === "privacy" && (
           <div className="max-w-lg space-y-8">
-            <div>
+            <div className="pl-14 md:pl-0">
               <h2 className="text-base font-semibold text-ink">Privacy & Security</h2>
               <p className="text-sm text-muted mt-0.5">Control your data and account security</p>
             </div>

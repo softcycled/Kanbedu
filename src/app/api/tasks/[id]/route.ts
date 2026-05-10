@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { updateTaskSchema, parseBody } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity";
 
 export async function PATCH(
   req: Request,
@@ -13,6 +15,18 @@ export async function PATCH(
   }
   const body = result.data;
   const { id } = params;
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const current = await prisma.task.findUnique({ 
+    where: { id },
+    include: { tags: true } 
+  });
+  if (!current) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
   const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
@@ -21,10 +35,22 @@ export async function PATCH(
   let columnActuallyChanged = false;
 
   if (body.column !== undefined) {
-    const current = await prisma.task.findUnique({ where: { id } });
-    if (current && current.column !== body.column) {
+    if (current.column !== body.column) {
       columnActuallyChanged = true;
       updateData.columnUpdatedAt = new Date();
+
+      // Fetch column names for logging
+      const [fromCol, toCol] = await Promise.all([
+        prisma.column.findUnique({ where: { id: current.column } }),
+        prisma.column.findUnique({ where: { id: body.column } }),
+      ]);
+
+      await recordActivity(
+        id, 
+        session.userId, 
+        "MOVE", 
+        `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`
+      );
 
       // Close the current open history entry, open a new one
       const now = new Date();
@@ -37,19 +63,12 @@ export async function PATCH(
       });
 
       // Set completion metadata when entering or leaving the Done column.
-      const [destinationColumn, currentColumn] = await Promise.all([
-        prisma.column.findUnique({ where: { id: body.column } }),
-        prisma.column.findUnique({ where: { id: current.column } }),
-      ]);
-      const destinationIsDone = destinationColumn?.isDone ?? false;
-      const currentIsDone = currentColumn?.isDone ?? false;
-
+      const destinationIsDone = toCol?.isDone ?? false;
+      const currentIsDone = fromCol?.isDone ?? false;
+ 
       if (destinationIsDone && !currentIsDone) {
-        // If this task was previously completed (has prior history in a done column),
-        // reuse the original completedAt so a misclick-and-restore doesn't corrupt
-        // deadline adherence by overwriting with today's timestamp.
         const doneColumns = await prisma.column.findMany({
-          where: { boardId: destinationColumn!.boardId, isDone: true },
+          where: { boardId: toCol!.boardId, isDone: true },
           select: { id: true },
         });
         const doneColumnIds = doneColumns.map((c) => c.id);
@@ -57,11 +76,11 @@ export async function PATCH(
           where: { taskId: id, columnId: { in: doneColumnIds } },
           orderBy: { enteredAt: "asc" },
         });
-        // firstDoneEntry will be the newly-created entry (enteredAt = now) if this
-        // is the first time in Done, or the original entry if the task was here before.
         updateData.completedAt = firstDoneEntry?.enteredAt ?? now;
+        await recordActivity(id, session.userId, "COMPLETE", `Completed in ${toCol?.label}`);
       } else if (!destinationIsDone && currentIsDone) {
         updateData.completedAt = null;
+        await recordActivity(id, session.userId, "REOPEN", `Reopened and moved to ${toCol?.label}`);
       }
     }
   }
@@ -78,17 +97,55 @@ export async function PATCH(
     updateData.updatedAt = new Date();
   }
 
-  const task = await prisma.task.update({
+  await prisma.task.update({
     where: { id },
     data: updateData,
+  });
+
+  // Log other changes after update is successful
+  if (body.title && body.title !== current.title) {
+    await recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`);
+  }
+  if (body.priority && body.priority !== current.priority) {
+    await recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`);
+  }
+  if (body.description !== undefined && body.description !== current.description) {
+    await prisma.taskDescriptionVersion.create({
+      data: {
+        taskId: id,
+        userId: session.userId,
+        content: body.description,
+      },
+    });
+    await recordActivity(id, session.userId, "UPDATE", "Updated the description");
+  }
+  if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
+    if (body.assigneeId) {
+      const newUser = await prisma.user.findUnique({ where: { id: body.assigneeId } });
+      await recordActivity(id, session.userId, "ASSIGNEE", `Assigned to ${newUser?.name || "someone"}`);
+    } else {
+      await recordActivity(id, session.userId, "ASSIGNEE", "Unassigned the task");
+    }
+  }
+  if (body.tagIds !== undefined) {
+    await recordActivity(id, session.userId, "TAG", "Updated tags");
+  }
+
+  // Finally, fetch the fully updated task with all activities to return
+  const finalTask = await prisma.task.findUnique({
+    where: { id },
     include: {
       comments: { orderBy: { createdAt: "asc" } },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
+      activities: {
+        include: { user: { select: { id: true, name: true, color: true } } },
+        orderBy: { createdAt: "desc" }
+      }
     },
   });
 
-  return NextResponse.json(task);
+  return NextResponse.json(finalTask);
 }
 
 export async function DELETE(

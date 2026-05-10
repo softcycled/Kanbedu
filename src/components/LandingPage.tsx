@@ -42,6 +42,33 @@ const Icons = {
       <path d="M10 14l-2 2a3 3 0 004 0l2-2m-4-4l2-2a3 3 0 014 0l2 2" />
     </svg>
   ),
+  Calendar: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  Realtime: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+      <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4" />
+      <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
+    </svg>
+  ),
+  DarkMode: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  ),
+  Activity: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  ),
 };
 
 // ── Components ────────────────────────────────────────────────
@@ -125,7 +152,7 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] animate-fade-in">
               Track your group projects <br />
-              <span className="text-accent">without the noise.</span>
+              <span className="text-accent">without the friction.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted mt-6 max-w-xl mx-auto leading-relaxed animate-fade-in [animation-delay:100ms]">
               The free, minimal Kanban board built for students. <br className="hidden md:block" />
@@ -154,7 +181,7 @@ export default function LandingPage() {
                       title="Draft proposal outline" 
                       priority="medium" 
                       time="2d" 
-                      tag={{ name: "RESEARCH", color: "#E8854A" }}
+                      tag={{ name: "RESEARCH", color: "#3B82F6" }}
                     />
                     <MockCard 
                       title="Research competitor analysis" 
@@ -213,16 +240,43 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Section 3: Problem Statement ─────────────────────── */}
-        <section className="py-24 px-6 text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-semibold text-ink">
+        {/* ── Section 3: Before / After Strip ─────────────────── */}
+        <section className="py-16 px-6 reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-semibold text-ink text-center mb-12">
               We&apos;ve all been there.
             </h2>
-            <div className="text-base md:text-lg text-muted mt-8 max-w-lg mx-auto leading-relaxed space-y-4">
-              <p>Someone says &quot;I&apos;ll do this part&quot; in the group chat.</p>
-              <p>Nobody writes it down. Deadlines pass. Work overlaps.</p>
-              <p className="font-medium text-ink">Half the team doesn&apos;t know what the other half is doing.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Before */}
+              <div className="bg-red-500/5 border border-red-500/15 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-red-500">Without Kanbedu</span>
+                </div>
+                <ul className="space-y-3 text-sm text-muted">
+                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> &quot;I&apos;ll do this part&quot; said in the group chat. Never written down.</li>
+                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> Deadlines pass. Work overlaps. Nobody tracks anything.</li>
+                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> Half the team has no idea what the other half is doing.</li>
+                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> The night before: &quot;Wait, who was doing the slides?&quot;</li>
+                </ul>
+              </div>
+              {/* After */}
+              <div className="bg-green-500/5 border border-green-500/15 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-green-600">With Kanbedu</span>
+                </div>
+                <ul className="space-y-3 text-sm text-muted">
+                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Every task is a card. Assigned, prioritized, tracked.</li>
+                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Drag cards across columns as work progresses.</li>
+                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> See who completed what and when, at a glance.</li>
+                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Deadlines on a calendar. Nothing falls through the cracks.</li>
+                </ul>
+              </div>
             </div>
           </div>
         </section>
@@ -233,46 +287,71 @@ export default function LandingPage() {
             <h2 className="text-2xl md:text-3xl font-semibold text-ink text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
               Everything you need. Nothing you don&apos;t.
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
               <FeatureCard 
                 icon={<Icons.Kanban />} 
                 title="Drag & Drop Boards" 
-                description="Organize tasks into columns that make sense for your project. Drag to reprioritize." 
+                description="Organize tasks into columns that make sense for your workflow. Drag to reprioritize." 
                 delay="0ms"
               />
               <FeatureCard 
                 icon={<Icons.User />} 
                 title="Assign & Track" 
                 description="Know exactly who is doing what. No more 'I thought you were handling that.'" 
-                delay="100ms"
+                delay="50ms"
               />
               <FeatureCard 
                 icon={<Icons.Chart />} 
                 title="Built-in Analytics" 
-                description="See where your project stands at a glance. Workflow overview, cycle times, team breakdown." 
-                delay="200ms"
+                description="Workflow overview, cycle times, team breakdown, and contribution heatmaps." 
+                delay="100ms"
               />
               <FeatureCard 
                 icon={<Icons.Link />} 
                 title="One-click Invites" 
-                description="Share a link. Your team joins the board. That's it. No emails, no approvals." 
+                description="Share a link. Your team joins the board. No emails, no approvals." 
+                delay="150ms"
+              />
+              <FeatureCard 
+                icon={<Icons.Calendar />} 
+                title="Deadline Calendar" 
+                description="See every deadline across all your boards in one calendar view. Never miss a due date." 
+                delay="200ms"
+              />
+              <FeatureCard 
+                icon={<Icons.Realtime />} 
+                title="Real-time Sync" 
+                description="Changes appear instantly for everyone on the board. No refreshing needed." 
+                delay="250ms"
+              />
+              <FeatureCard 
+                icon={<Icons.DarkMode />} 
+                title="Dark Mode" 
+                description="Easy on the eyes during late-night deadline crunches. Toggleable with one click." 
                 delay="300ms"
+              />
+              <FeatureCard 
+                icon={<Icons.Activity />} 
+                title="Activity Tracking" 
+                description="Full audit trail of every task change. Know who did what and when." 
+                delay="350ms"
               />
             </div>
           </div>
         </section>
 
         {/* ── Section 5: CTA Banner ─────────────────────────────── */}
-        <section className="py-32 px-6 text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
+        <section className="py-20 px-6 text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
           <h2 className="text-3xl md:text-4xl font-bold text-ink">
             Ready to stop losing track?
           </h2>
           <p className="text-lg text-muted mt-4">
             Free forever. No credit card. No catch.
           </p>
-          <Link href="/login?mode=signup" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-10 shadow-lg">
+          <Link href="/login?mode=signup" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-8 shadow-lg">
             Get Started Free
           </Link>
+          <p className="text-xs text-muted mt-6">Built by students, for students.</p>
         </section>
       </main>
 
@@ -332,7 +411,7 @@ function MockCard({
   const dotColor = {
     low: "bg-blue-400",
     medium: "bg-yellow-400",
-    high: "bg-orange-400",
+    high: "bg-amber-500",
     urgent: "bg-red-500"
   }[priority];
 

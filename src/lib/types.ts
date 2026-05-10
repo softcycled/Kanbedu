@@ -49,6 +49,21 @@ export interface Task {
   movedByNonAssignee: boolean;
   comments: Comment[];
   tags: Tag[];
+  activities: TaskActivity[];
+}
+
+export interface TaskActivity {
+  id: string;
+  type: string;
+  content: string;
+  userId: string;
+  taskId: string;
+  createdAt: string | Date;
+  user?: {
+    id: string;
+    name: string;
+    color: string;
+  };
 }
 
 export interface BoardMemberData {

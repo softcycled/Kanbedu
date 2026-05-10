@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTaskSchema, parseBody } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity";
 import { z } from "zod";
 
 const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }));
@@ -36,9 +38,17 @@ export async function GET(request: NextRequest) {
   const tasks = await prisma.task.findMany({
     where,
     include: {
-      comments: { orderBy: { createdAt: "asc" } },
+      comments: {
+        select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+        orderBy: { createdAt: "asc" },
+      },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
+      activities: {
+        include: { user: { select: { id: true, name: true, color: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });
@@ -72,6 +82,10 @@ export async function POST(req: Request) {
       comments: true,
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
+      activities: {
+        include: { user: { select: { id: true, name: true, color: true } } },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -79,6 +93,11 @@ export async function POST(req: Request) {
   await prisma.taskColumnHistory.create({
     data: { taskId: task.id, columnId: data.column, enteredAt: now },
   });
+
+  const session = await getSession();
+  if (session) {
+    await recordActivity(task.id, session.userId, "CREATE", "Created the task");
+  }
 
   return NextResponse.json(task);
 }

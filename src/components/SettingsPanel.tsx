@@ -140,7 +140,7 @@ function SortableBoardRow({
 interface Props {
   boards: Board[];
   activeBoardId: string;
-  onRename: (boardId: string, name: string) => Promise<void>;
+  onUpdateBoard: (boardId: string, data: { name?: string; githubRepo?: string | null }) => Promise<void>;
   onDelete: (boardId: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
 }
@@ -148,7 +148,7 @@ interface Props {
 export default function SettingsPanel({
   boards,
   activeBoardId,
-  onRename,
+  onUpdateBoard,
   onDelete,
   onReorder,
 }: Props) {
@@ -185,7 +185,7 @@ export default function SettingsPanel({
     if (!renameValue.trim()) return;
     setIsSaving(true);
     try {
-      await onRename(boardId, renameValue.trim());
+      await onUpdateBoard(boardId, { name: renameValue.trim() });
     } finally {
       setIsSaving(false);
       setRenamingId(null);
@@ -205,14 +205,26 @@ export default function SettingsPanel({
 
   return (
     <>
-      <div className="flex-1 px-8 py-8 overflow-y-auto">
-        <h2 className="text-xl font-bold text-ink mb-1">Settings</h2>
-        <p className="text-sm text-muted mb-8">Manage your boards</p>
+      <div className="flex-1 px-4 md:px-8 pt-6 pb-32 md:py-8 overflow-y-auto">
+        <h2 className="text-xl font-bold text-ink mb-1 pl-14 md:pl-0">Settings</h2>
+        <p className="text-sm text-muted mb-8 pl-14 md:pl-0">Manage your boards</p>
 
-        <div className="max-w-md">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-            Boards
-          </h3>
+        <div className="max-w-md space-y-10">
+          {/* Active Board Settings */}
+          {activeBoardId && (
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">
+                Active Board: {boards.find(b => b.id === activeBoardId)?.name}
+              </h3>
+              <p className="text-xs text-muted mb-4 italic">Configure settings for your active board below.</p>
+            </section>
+          )}
+
+          {/* Boards List */}
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+              All Boards
+            </h3>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
               <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
@@ -240,6 +252,7 @@ export default function SettingsPanel({
               </div>
             </SortableContext>
           </DndContext>
+          </section>
         </div>
       </div>
 

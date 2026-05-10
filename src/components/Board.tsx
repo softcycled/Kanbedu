@@ -19,18 +19,19 @@ import KanbanColumn from "./KanbanColumn";
 import TaskModal from "./TaskModal";
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
+import FilterBar from "./FilterBar";
 
 interface Props {
   boardId: string;
-  initialTasks: Task[];
-  initialColumns: ColumnData[];
-  onTasksUpdate?: (tasks: Task[]) => void;
+  tasks: Task[];
+  columns: ColumnData[];
+  onTasksChange: (update: Task[] | ((prev: Task[]) => Task[])) => void;
+  onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
+  broadcastRefresh: () => void;
   currentUserId?: string;
 }
 
-export default function Board({ boardId, initialTasks, initialColumns, onTasksUpdate, currentUserId }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [columns, setColumns] = useState<ColumnData[]>(initialColumns);
+export default function Board({ boardId, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId }: Props) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -39,41 +40,68 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
 
-  // Fetch columns only when not provided (e.g. board switch)
-  useEffect(() => {
-    if (initialColumns.length > 0) return;
-    fetch(`/api/columns?boardId=${boardId}`)
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setColumns(data))
-      .catch(() => {});
-  }, [boardId, initialColumns.length]);
+  // Filtering state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
 
   useEffect(() => {
     fetch(`/api/boards/${boardId}/members`)
       .then((r) => r.ok ? r.json() : [])
       .then((data) => setBoardMembers(data))
       .catch(() => {});
-  }, [boardId]);
 
-  // Notify parent when tasks change
-  useEffect(() => {
-    onTasksUpdate?.(tasks);
-  }, [tasks, onTasksUpdate]);
+    fetch(`/api/tags?boardId=${boardId}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setAllTags(data))
+      .catch(() => {});
+  }, [boardId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      // Search query filter (title)
+      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Assignee filter (OR within category)
+      if (selectedAssignees.length > 0) {
+        const assigneeId = task.assigneeId || "unassigned";
+        if (!selectedAssignees.includes(assigneeId)) return false;
+      }
+
+      // Tags filter (OR within category - match if task has ANY of the selected tags)
+      if (selectedTags.length > 0) {
+        const taskTagIds = task.tags?.map((t) => t.id) || [];
+        const hasMatchingTag = selectedTags.some((id) => taskTagIds.includes(id));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Priority filter (OR within category)
+      if (selectedPriorities.length > 0) {
+        if (!selectedPriorities.includes(task.priority)) return false;
+      }
+
+      return true;
+    });
+  }, [tasks, searchQuery, selectedAssignees, selectedTags, selectedPriorities]);
+
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, Task[]>();
-    for (const t of tasks) {
+    for (const t of filteredTasks) {
       const bucket = map.get(t.column) ?? [];
       bucket.push(t);
       map.set(t.column, bucket);
     }
     for (const [, bucket] of map) bucket.sort((a, b) => a.order - b.order);
     return map;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const getTasksByColumn = useCallback(
     (columnId: string) => tasksByColumn.get(columnId) ?? [],
@@ -92,14 +120,15 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
       if (res.ok) {
         const updated = await res.json();
-        setColumns((prev) =>
+        onColumnsChange((prev) =>
           prev.map((col) => (col.id === columnId ? updated : col))
         );
+        broadcastRefresh();
       }
     } catch (error) {
       console.error("Failed to rename column:", error);
     }
-  }, []);
+  }, [broadcastRefresh]);
 
   const handleSetDoneColumn = useCallback(async (columnId: string) => {
     const col = columns.find((c) => c.id === columnId);
@@ -114,7 +143,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       });
       if (res.ok) {
         // Server enforces single-done: clear all then set this one.
-        setColumns((prev) =>
+        onColumnsChange((prev) =>
           prev.map((c) =>
             c.id === columnId
               ? { ...c, isDone: newIsDone }
@@ -123,11 +152,12 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
               : c
           )
         );
+        broadcastRefresh();
       }
     } catch (error) {
       console.error("Failed to set done column:", error);
     }
-  }, [columns]);
+  }, [columns, broadcastRefresh]);
 
   const handleDeleteColumnClick = (columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
@@ -156,25 +186,26 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
           return;
         }
 
-        setColumns((prev) => prev.filter((col) => col.id !== columnToDelete.id));
+        onColumnsChange((prev) => prev.filter((col) => col.id !== columnToDelete.id));
         if (moveToColumnId) {
-          setTasks((prev) =>
+          onTasksChange((prev) =>
             prev.map((t) =>
               t.column === columnToDelete.id ? { ...t, column: moveToColumnId } : t
             )
           );
         } else {
-          setTasks((prev) => prev.filter((t) => t.column !== columnToDelete.id));
+          onTasksChange((prev) => prev.filter((t) => t.column !== columnToDelete.id));
         }
         setDeleteError(null);
         setDeleteModalOpen(false);
         setColumnToDelete(null);
+        broadcastRefresh();
       } catch (error) {
         console.error("Failed to delete column:", error);
         setDeleteError("Delete failed. Please try again.");
       }
     },
-    [columnToDelete]
+    [columnToDelete, broadcastRefresh]
   );
 
   const handleAddColumn = useCallback(async () => {
@@ -187,12 +218,13 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
       if (res.ok) {
         const newColumn = await res.json();
-        setColumns((prev) => [...prev, newColumn]);
+        onColumnsChange((prev) => [...prev, newColumn]);
+        broadcastRefresh();
       }
     } catch (error) {
       console.error("Failed to create column:", error);
     }
-  }, [boardId]);
+  }, [boardId, broadcastRefresh]);
 
   // ── Scroll refs ───────────────────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -286,7 +318,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
     if (!destColumn || activeTask.column === destColumn) return;
 
-    setTasks((prev) => {
+    onTasksChange((prev) => {
       const updated = prev.map((t) =>
         t.id === activeId
           ? { ...t, column: destColumn, columnUpdatedAt: new Date() }
@@ -321,7 +353,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       const reordered = arrayMove(columns, oldIndex, newIndex);
 
       // Update local state immediately
-      setColumns(reordered);
+      onColumnsChange(reordered);
 
       // Persist order to server
       const updates = reordered.map((col, idx) => ({
@@ -335,6 +367,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         body: JSON.stringify({ columns: updates }),
       }).catch((error) => console.error("Failed to persist column order:", error));
 
+      broadcastRefresh();
       return;
     }
 
@@ -369,7 +402,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       orderMap[t.id] = i;
     });
 
-    setTasks((prev) =>
+    onTasksChange((prev) =>
       prev.map((t) =>
         orderMap[t.id] !== undefined
           ? { ...t, order: orderMap[t.id], column: destColumn }
@@ -385,7 +418,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       !!currentUserId &&
       task.assigneeId !== currentUserId;
 
-    await fetch(`/api/tasks/${activeId}`, {
+    const res = await fetch(`/api/tasks/${activeId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -394,6 +427,13 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         ...(isMoverMismatch ? { movedByNonAssignee: true } : {}),
       }),
     });
+
+    if (res.ok) {
+      const updatedTask = await res.json();
+      onTasksChange((prev) =>
+        prev.map((t) => (t.id === activeId ? updatedTask : t))
+      );
+    }
 
     // Update sibling orders in a single bulk request
     const siblings = reordered.filter((t) => t.id !== activeId);
@@ -404,6 +444,8 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
       });
     }
+
+    broadcastRefresh();
   };
 
   // ── Task actions ───────────────────────────────────────────────
@@ -417,11 +459,12 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       });
       if (!res.ok) throw new Error(`Add task failed: ${res.status}`);
       const newTask: Task = await res.json();
-      setTasks((prev) => [...prev, newTask]);
+      onTasksChange((prev) => [...prev, newTask]);
+      broadcastRefresh();
     } catch (error) {
       console.error("Failed to add task:", error);
     }
-  }, []);
+  }, [broadcastRefresh]);
 
   const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
     try {
@@ -436,20 +479,21 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       const updatedTask: Task = await res.json();
 
       // Use the server response to ensure fresh data
-      setTasks((prev) =>
+      onTasksChange((prev) =>
         prev.map((t) => (t.id === id ? updatedTask : t))
       );
       setSelectedTask((prev) => (prev?.id === id ? updatedTask : prev));
+      broadcastRefresh();
     } catch (error) {
       console.error("Failed to update task:", error);
     }
-  }, []);
+  }, [broadcastRefresh]);
 
   const handleUpdateTaskTitle = useCallback(async (id: string, title: string) => {
     const trimmed = title.trim();
     if (!trimmed) return;
 
-    setTasks((prev) =>
+    onTasksChange((prev) =>
       prev.map((t) => (t.id === id ? { ...t, title: trimmed } : t))
     );
     setSelectedTask((prev) => (prev?.id === id ? { ...prev, title: trimmed } : prev));
@@ -461,11 +505,12 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
     try {
       const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Delete task failed: ${res.status}`);
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      onTasksChange((prev) => prev.filter((t) => t.id !== id));
+      broadcastRefresh();
     } catch (error) {
       console.error("Failed to delete task:", error);
     }
-  }, []);
+  }, [broadcastRefresh]);
 
   const handleAddComment = useCallback(
     async (taskId: string, content: string, author: string): Promise<Comment> => {
@@ -476,14 +521,15 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
       });
       if (!res.ok) throw new Error(`Add comment failed: ${res.status}`);
       const comment: Comment = await res.json();
-      setTasks((prev) =>
+      onTasksChange((prev) =>
         prev.map((t) =>
           t.id === taskId ? { ...t, comments: [...t.comments, comment] } : t
         )
       );
+      broadcastRefresh();
       return comment;
     },
-    []
+    [broadcastRefresh]
   );
 
   const handleTaskClick = useCallback((task: Task) => {
@@ -545,6 +591,21 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
 
   return (
     <>
+      <FilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedAssignees={selectedAssignees}
+        setSelectedAssignees={setSelectedAssignees}
+        selectedTags={selectedTags}
+        setSelectedTags={setSelectedTags}
+        selectedPriorities={selectedPriorities}
+        setSelectedPriorities={setSelectedPriorities}
+        members={boardMembers}
+        tags={allTags}
+        totalTasks={tasks.length}
+        filteredTasksCount={filteredTasks.length}
+      />
+
       <div
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
@@ -552,6 +613,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         onMouseDown={handlePanMouseDown}
       >
         <DndContext
+          id="kanban-board"
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
@@ -578,7 +640,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
             ))}
 
             {/* Add column button */}
-            <div className="flex-shrink-0 w-96 flex items-start">
+            <div className="flex-shrink-0 w-[85vw] md:w-96 flex items-start">
               <button
                 onClick={handleAddColumn}
                 className="w-full px-4 py-3 rounded-lg border-2 border-dashed border-border text-sm text-muted hover:text-ink hover:border-ink transition-colors font-medium"
@@ -599,7 +661,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
               </div>
             )}
             {activeColumn && (
-              <div className="w-96 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
+              <div className="w-[85vw] md:w-96 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
                 <div className="p-3 font-bold text-sm text-ink">{activeColumn.label}</div>
                 <div className="px-3 pb-3 text-xs text-muted">
                   {getTasksByColumn(activeColumn.id).length} tasks
@@ -618,6 +680,7 @@ export default function Board({ boardId, initialTasks, initialColumns, onTasksUp
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}
         onAddComment={handleAddComment}
+        onBroadcast={broadcastRefresh}
       />
 
       {columnToDelete && (

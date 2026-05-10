@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Task, Comment } from "@/lib/types";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Task, Comment, TaskActivity } from "@/lib/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import RichTextEditor from "./RichTextEditor";
+import DiffViewer from "./DiffViewer";
 import {
   isOverdue,
   formatDateForInput,
@@ -17,6 +21,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   onAddComment: (taskId: string, content: string, author: string) => Promise<Comment>;
   boardId: string;
+  onBroadcast?: () => void;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -38,7 +43,16 @@ function nameToColor(name: string): string {
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }
 
-export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, onDelete, onAddComment, boardId }: Props) {
+export default function TaskModal({ 
+  task, 
+  boardMembers = [], 
+  onClose, 
+  onUpdate, 
+  onDelete, 
+  onAddComment, 
+  boardId,
+  onBroadcast
+}: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -53,6 +67,9 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
+  const [viewMode, setViewMode] = useState<"comments" | "activity" | "history">("comments");
+  const [activities, setActivities] = useState<TaskActivity[]>([]);
+  const [versions, setVersions] = useState<any[]>([]);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<import("@/lib/types").Tag | null>(null);
@@ -97,7 +114,15 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
   const userHasEdited = useRef(false);
 
   useEffect(() => {
-    if (task && task.id !== prevTask.current) {
+    if (!task) return;
+    
+    // Always sync comments and activities from props
+    setComments(task.comments ?? []);
+    setActivities(task.activities ?? []);
+    setPriority(task.priority ?? "medium");
+
+    // Only sync draft-related fields when switching tasks to avoid overwriting active edits
+    if (task.id !== prevTask.current) {
       prevTask.current = task.id;
       userHasEdited.current = false;
       setDescription(task.description ?? "");
@@ -107,9 +132,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       setDraftTitle(task.title);
       setAssigneeId(task.assigneeId ?? "");
       setDeadline(formatDateForInput(task.deadline));
-      setPriority(task.priority ?? "medium");
-      setComments(task.comments ?? []);
-      // Store original values for comparison
+      
       originalTask.current = {
         description: task.description ?? "",
         assigneeId: task.assigneeId,
@@ -151,22 +174,22 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     }
   };
 
-  // Auto-resize textarea to full content height while editing
-  useEffect(() => {
-    const el = descriptionTextareaRef.current;
-    if (!el || !isEditingDescription) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [description, isEditingDescription]);
+  const fetchVersions = useCallback(async () => {
+    if (!task) return;
+    const res = await fetch(`/api/tasks/${task.id}/versions`);
+    if (res.ok) {
+      const data = await res.json();
+      setVersions(data);
+    }
+  }, [task]);
 
-  // Auto-focus and place cursor at end
   useEffect(() => {
-    if (!isEditingDescription) return;
-    const el = descriptionTextareaRef.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
-  }, [isEditingDescription]);
+    if (viewMode === "history") {
+      fetchVersions();
+    }
+  }, [viewMode, fetchVersions]);
+
+
 
   useEffect(() => {
     isMounted.current = true;
@@ -297,9 +320,21 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     if (!trimmed || !task) return;
     setAddingComment(true);
     setCommentInput("");
-    const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
-    setComments((prev) => [...prev, newComment]);
-    setAddingComment(false);
+    try {
+      const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
+      setComments((prev) => [...prev, newComment]);
+      
+      // Fetch fresh task data to update activities feed
+      const res = await fetch(`/api/tasks/${task.id}`);
+      if (res.ok) {
+        const freshTask = await res.json();
+        setActivities(freshTask.activities || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAddingComment(false);
+    }
   };
 
   const handleCommentKey = (e: React.KeyboardEvent) => {
@@ -316,7 +351,14 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
     } else {
       newIds = [...currentIds, tagId];
     }
-    await handleUpdateWithFeedback(task.id, { tagIds: newIds } as unknown as Partial<Task>);
+    await handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
+    
+    // Immediately fetch fresh activities to reflect the tag change in the log
+    const res = await fetch(`/api/tasks/${task.id}`);
+    if (res.ok) {
+      const freshTask = await res.json();
+      setActivities(freshTask.activities || []);
+    }
   };
 
   const handleCreateTag = async () => {
@@ -335,6 +377,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
         setIsCreatingTag(false);
         // Automatically assign the new tag to the task
         await toggleTag(created.id);
+        onBroadcast?.();
       }
     } catch (error) {
       console.error("Failed to create tag:", error);
@@ -385,12 +428,12 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
       onClick={(e) => e.target === overlayRef.current && handleClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
     >
-      <div className="relative bg-card-bg rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
+      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this task?</p>
                 <p className="text-xs text-muted">This action cannot be undone.</p>
@@ -414,8 +457,8 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
         )}
 
         {tagToDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg rounded-2xl shadow-modal border border-border w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this tag?</p>
                 <p className="text-xs text-muted">This removes it from all tasks on this board.</p>
@@ -681,7 +724,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
           </div>
 
           {/* Assignee + Deadline row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
             <div ref={assigneeDropdownRef} className="relative">
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
                 Assignee
@@ -789,120 +832,191 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
               Description
             </label>
             {isEditingDescription ? (
-              <textarea
-                ref={descriptionTextareaRef}
-                value={description}
-                onChange={(e) => {
-                  userHasEdited.current = true;
-                  setDescription(e.target.value);
-                  const el = e.target;
-                  el.style.height = "auto";
-                  el.style.height = `${el.scrollHeight}px`;
-                }}
-                onBlur={() => setIsEditingDescription(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setDescription(descriptionOriginalRef.current);
-                    setIsEditingDescription(false);
-                  }
-                }}
-                rows={4}
-                className="
-                  w-full bg-column-bg rounded-lg px-2 py-1
-                  text-sm text-ink leading-relaxed
-                  border-none outline-none ring-0 shadow-none
-                  resize-none overflow-hidden transition-[height]
-                "
-              />
+              <div className="space-y-3">
+                <RichTextEditor
+                  content={description}
+                  onChange={(val) => {
+                    userHasEdited.current = true;
+                    setDescription(val);
+                  }}
+                  placeholder="Add a detailed description…"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setDescription(descriptionOriginalRef.current);
+                      setIsEditingDescription(false);
+                    }}
+                    className="text-xs font-bold text-muted hover:text-ink px-3 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setIsEditingDescription(false)}
+                    className="text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-lg shadow-sm"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
             ) : (
               <div
                 onClick={() => {
                   descriptionOriginalRef.current = description;
                   setIsEditingDescription(true);
                 }}
-                className="min-h-[2.25rem] px-2 py-1 rounded-lg text-sm leading-relaxed cursor-text bg-column-bg hover:bg-border/40 transition-colors text-ink"
+                className="
+                  min-h-[4rem] px-4 py-3 rounded-xl cursor-text 
+                  bg-column-bg hover:bg-black/[0.05] transition-colors text-ink
+                  prose prose-sm dark:prose-invert max-w-none
+                  prose-headings:font-bold prose-headings:mb-2 prose-p:leading-relaxed
+                  prose-pre:bg-black/10 prose-pre:p-3 prose-pre:rounded-lg
+                "
               >
-                {description
-                  ? <span className="whitespace-pre-wrap">{description}</span>
-                  : <span className="text-muted">Add a description…</span>}
+                {description ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {description}
+                  </ReactMarkdown>
+                ) : (
+                  <span className="text-muted italic">Add a description…</span>
+                )}
               </div>
             )}
           </div>
 
           {/* Comments Section Divider */}
-          <div className="border-t border-border pt-8" />
+          <div className="border-t border-border pt-8" />          {/* Tabs for Comments vs Activity */}
+          <div className="flex items-center gap-6 border-b border-border mb-4">
+            <button
+              onClick={() => setViewMode("comments")}
+              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
+                viewMode === "comments" ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              Comments {comments.length > 0 && <span className="normal-case font-normal text-muted ml-1">({comments.length})</span>}
+              {viewMode === "comments" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
+            </button>
+            <button
+              onClick={() => setViewMode("activity")}
+              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
+                viewMode === "activity" ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              Activity {activities.length > 0 && <span className="normal-case font-normal text-muted ml-1">({activities.length})</span>}
+              {viewMode === "activity" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
+            </button>
+            <button
+              onClick={() => setViewMode("history")}
+              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
+                viewMode === "history" ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              History {versions.length > 0 && <span className="normal-case font-normal text-muted ml-1">({versions.length})</span>}
+              {viewMode === "history" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
+            </button>
+          </div>
 
-          {/* Comments */}
-          <div ref={commentsRef}>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-4">
-              Notes & Comments {comments.length > 0 && <span className="normal-case font-normal text-muted">({comments.length})</span>}
-            </label>
-
-            {comments.length > 0 && (
-              <div className="space-y-2 mb-4">
-                {comments.map((c) => (
-                  <div key={c.id} className="bg-column-bg rounded-lg px-3 pt-2 pb-2.5 border border-border/50">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <div className="flex items-center gap-2">
-                        {c.author ? (
+          {viewMode === "comments" ? (
+            <div ref={commentsRef}>
+              {comments.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  {comments.map((c) => (
+                    <div key={c.id} className="bg-column-bg/40 rounded-lg px-3 py-2.5 border border-border/30">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
                           <span
-                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
                             style={{ backgroundColor: nameToColor(c.author) }}
                           >
                             {c.author.charAt(0).toUpperCase()}
                           </span>
-                        ) : (
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-border flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted/60" />
+                          <span className="text-sm font-semibold text-ink">
+                            {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
                           </span>
-                        )}
-                        <span className="text-[0.919rem] font-semibold text-ink">
-                          {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
+                        </div>
+                        <span className="text-[10px] font-medium text-muted">
+                          {formatTimeAgo(c.createdAt)}
                         </span>
                       </div>
-                      <span className="text-[0.788rem] text-muted flex-shrink-0">
-                        {new Date(c.createdAt).toLocaleString("en-US", {
-                          month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                        })}
-                      </span>
+                      <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
                     </div>
-                    <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 bg-column-bg/60 rounded-xl p-2 ring-1 ring-border/40 focus-within:ring-accent/30 transition-all">
+                <input
+                  ref={commentInputRef}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  onKeyDown={handleCommentKey}
+                  placeholder="Write a comment…"
+                  disabled={addingComment}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={!commentInput.trim() || addingComment}
+                  className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
+                >
+                  Post
+                </button>
               </div>
-            )}
-
-            <div className="flex gap-2 bg-column-bg/40 rounded-lg p-2">
-              <input
-
-                ref={commentInputRef}
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={handleCommentKey}
-                placeholder="Add a note…"
-                disabled={addingComment}
-                className="
-                  flex-1 bg-transparent px-2 py-1.5
-                  text-sm text-ink placeholder:text-muted
-                  border-none outline-none
-                  transition-colors disabled:opacity-50
-                "
-              />
-              <button
-                onClick={handleAddComment}
-                disabled={!commentInput.trim() || addingComment}
-                className="
-                  px-3 py-1.5 rounded-md bg-ink text-paper text-xs font-medium
-                  hover:bg-ink/90 disabled:opacity-30 disabled:cursor-not-allowed
-                  transition-colors flex-shrink-0
-                "
-              >
-                Post
-              </button>
             </div>
-          </div>
+          ) : viewMode === "activity" ? (
+            <div className="space-y-4 py-2">
+              {activities.length === 0 && (
+                <p className="text-center py-8 text-xs text-muted">No activity recorded yet.</p>
+              )}
+              {activities.map((a) => (
+                <div key={a.id} className="flex gap-3 items-start">
+                  <div 
+                    className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white shadow-sm mt-0.5"
+                    style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
+                  >
+                    {a.user?.name.charAt(0).toUpperCase() || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-ink truncate max-w-[120px]">{a.user?.name || "System"}</span>
+                      <span className="text-xs text-muted leading-snug">{a.content}</span>
+                    </div>
+                    <span className="text-[10px] text-muted font-medium">{formatTimeAgo(a.createdAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6 py-2">
+              {versions.length === 0 && (
+                <p className="text-center py-8 text-xs text-muted italic">No description history available.</p>
+              )}
+              {versions.map((v, idx) => {
+                const nextVersion = versions[idx + 1];
+                const prevContent = nextVersion ? nextVersion.content : "";
+                
+                return (
+                  <div key={v.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
+                          style={{ backgroundColor: v.user.color }}
+                        >
+                          {v.user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-xs font-bold text-ink">{v.user.name}</span>
+                        <span className="text-[10px] text-muted">updated this task</span>
+                      </div>
+                      <span className="text-[10px] text-muted font-mono">{new Date(v.createdAt).toLocaleString()}</span>
+                    </div>
+                    
+                    <DiffViewer oldText={prevContent} newText={v.content} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Jump to comments floating button */}
@@ -930,7 +1044,7 @@ export default function TaskModal({ task, boardMembers = [], onClose, onUpdate, 
         )}
 
         {/* Footer - Auto-save status */}
-        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
+        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between safe-area-bottom">
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>

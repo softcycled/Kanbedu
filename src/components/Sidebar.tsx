@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Board } from "@/lib/types";
 
-export type Panel = "board" | "analytics" | "settings" | "profile";
+export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile";
 
 interface Props {
   boards: Board[];
@@ -15,6 +15,25 @@ interface Props {
 }
 
 // ── Icons ──────────────────────────────────────────────────────
+function IconActivity() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="14" height="13" rx="1.5" />
+      <line x1="4" y1="0.5" x2="4" y2="3.5" />
+      <line x1="12" y1="0.5" x2="12" y2="3.5" />
+      <line x1="1" y1="6" x2="15" y2="6" />
+    </svg>
+  );
+}
+
 function IconLayout() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -74,6 +93,7 @@ export default function Sidebar({
   const [isAddingBoard, setIsAddingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleCreateBoard = async () => {
     const name = newBoardName.trim();
@@ -89,16 +109,29 @@ export default function Sidebar({
   };
 
   const navItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
+    { id: "board", label: "Board", icon: <IconLayout /> },
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
+    { id: "calendar", label: "Calendar", icon: <IconCalendar /> },
     { id: "settings", label: "Boards", icon: <IconLayout /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
   ];
 
-  return (
-    <aside className="w-56 flex-shrink-0 flex flex-col bg-paper border-r border-border/70 h-screen sticky top-0">
+  // Only show bottom bar items (no "board" on desktop sidebar, but needed on mobile bottom bar)
+  const bottomBarItems = navItems;
+  const desktopNavItems = navItems.filter((i) => i.id !== "board");
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="px-4 pt-6 pb-5 border-b border-border/60">
+      <div className="px-4 pt-6 pb-5 border-b border-border/60 flex items-center justify-between">
         <span className="text-lg font-bold tracking-tight text-ink">kanbedu</span>
+        {/* Close button on mobile */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden p-1 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
       </div>
 
       {/* Boards section */}
@@ -123,6 +156,7 @@ export default function Sidebar({
               onClick={() => {
                 onBoardSwitch(board.id);
                 onPanelChange("board");
+                setMobileOpen(false);
               }}
               className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors text-left ${
                 activeBoardId === board.id && activePanel === "board"
@@ -164,12 +198,15 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Bottom nav */}
+      {/* Desktop bottom nav (panel links) */}
       <div className="py-3 border-t border-border/60 px-3">
-        {navItems.map((item) => (
+        {desktopNavItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onPanelChange(item.id)}
+            onClick={() => {
+              onPanelChange(item.id);
+              setMobileOpen(false);
+            }}
             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
               activePanel === item.id
                 ? "bg-ink/8 text-ink font-medium"
@@ -181,6 +218,63 @@ export default function Sidebar({
           </button>
         ))}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-56 flex-shrink-0 flex-col bg-paper border-r border-border/70 h-screen sticky top-0">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay sidebar */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal animate-fade-in">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+
+      {/* Mobile hamburger button (fixed top-left) */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-4 left-4 z-40 md:hidden p-2 rounded-xl bg-card-bg border border-border shadow-card text-ink"
+        aria-label="Open menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-paper border-t border-border/70 safe-area-bottom">
+        <div className="flex items-center justify-around py-1.5">
+          {bottomBarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === "board") {
+                  onPanelChange("board");
+                } else {
+                  onPanelChange(item.id);
+                }
+              }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg min-w-[52px] transition-colors ${
+                activePanel === item.id
+                  ? "text-accent"
+                  : "text-muted"
+              }`}
+            >
+              {item.icon}
+              <span className="text-[9px] font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }
+
