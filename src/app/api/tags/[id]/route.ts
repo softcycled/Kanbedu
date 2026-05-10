@@ -1,12 +1,29 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateTagSchema, parseBody } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const tag = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!tag) {
+      return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+    }
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: tag.boardId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const raw = await request.json();
     const result = parseBody(updateTagSchema, raw);
     if (!result.data) {
@@ -37,6 +54,22 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const tag = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!tag) {
+      return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+    }
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: tag.boardId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const deleted = await prisma.tag.delete({
       where: { id: params.id },
     });

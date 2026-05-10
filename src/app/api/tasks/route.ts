@@ -9,31 +9,65 @@ const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }
 
 // PUT /api/tasks — bulk update task order values
 export async function PUT(req: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const raw = await req.json();
   const result = bulkReorderSchema.safeParse(raw);
   if (!result.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
+
+  // Only allow reordering tasks that belong to boards the user is a member of
+  const memberships = await prisma.boardMember.findMany({
+    where: { userId: session.userId },
+    select: { boardId: true },
+  });
+  const boardIds = memberships.map((m) => m.boardId);
+
+  const taskIds = result.data.map((t) => t.id);
+  const validTasks = await prisma.task.findMany({
+    where: { id: { in: taskIds }, columnRel: { boardId: { in: boardIds } } },
+    select: { id: true },
+  });
+  const validTaskIds = new Set(validTasks.map((t) => t.id));
+
   await prisma.$transaction(
-    result.data.map(({ id, order }) =>
-      prisma.task.update({ where: { id }, data: { order } })
-    )
+    result.data
+      .filter(({ id }) => validTaskIds.has(id))
+      .map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
   );
   return NextResponse.json({ ok: true });
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const boardId = searchParams.get("boardId");
 
-  let where = {};
-  if (boardId) {
-    const cols = await prisma.column.findMany({
-      where: { boardId },
-      select: { id: true },
-    });
-    where = { column: { in: cols.map((c) => c.id) } };
+  if (!boardId) {
+    return NextResponse.json({ error: "boardId is required" }, { status: 400 });
   }
+
+  // Verify user is a member of the requested board
+  const membership = await prisma.boardMember.findUnique({
+    where: { userId_boardId: { userId: session.userId, boardId } },
+  });
+  if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const cols = await prisma.column.findMany({
+    where: { boardId },
+    select: { id: true },
+  });
+  const where = { column: { in: cols.map((c) => c.id) } };
 
   const tasks = await prisma.task.findMany({
     where,

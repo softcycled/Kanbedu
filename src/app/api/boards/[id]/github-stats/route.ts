@@ -14,6 +14,14 @@ export async function GET(
 
   const { id } = params;
 
+  // Verify the user is a member of this board
+  const membership = await prisma.boardMember.findUnique({
+    where: { userId_boardId: { userId: session.userId, boardId: id } },
+  });
+  if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     // 1. Get the board and linked repo
     const board = await prisma.board.findUnique({

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 // PATCH update column (rename, set done)
 export async function PATCH(
@@ -8,6 +9,23 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check the user is a member of the board that owns this column
+    const column = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!column) {
+      return NextResponse.json({ error: "Column not found" }, { status: 404 });
+    }
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: column.boardId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const raw = await request.json();
     const result = parseBody(updateColumnSchema, raw);
     if (!result.data) {
@@ -81,6 +99,23 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check the user is a member of the board that owns this column
+    const col = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    if (!col) {
+      return NextResponse.json({ error: "Column not found" }, { status: 404 });
+    }
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: col.boardId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     // Parse request body, handle empty body
     let moveToColumnId: string | null = null;
     try {

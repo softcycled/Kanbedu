@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateBoardSchema, parseBody } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 // PATCH update board
 export async function PATCH(
@@ -8,6 +9,18 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: params.id } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const raw = await request.json();
     const result = parseBody(updateBoardSchema, raw);
     if (!result.data) {
@@ -36,6 +49,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: session.userId, boardId: params.id } },
+    });
+    if (!membership || membership.role !== "owner") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const columns = await prisma.column.findMany({
       where: { boardId: params.id },
       select: { id: true },

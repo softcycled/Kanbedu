@@ -21,18 +21,19 @@ export async function GET() {
 
     // First-time user: create a default board and add them as owner
     if (boards.length === 0) {
-      const board = await prisma.board.create({
-        data: { name: "My Board" },
-      });
-      await prisma.boardMember.create({
-        data: { userId: session.userId, boardId: board.id, role: "owner" },
-      });
-      await prisma.column.createMany({
-        data: [
-          { label: "To Do", order: 0, isDone: false, boardId: board.id },
-          { label: "In Progress", order: 1, isDone: false, boardId: board.id },
-          { label: "Done", order: 2, isDone: true, boardId: board.id },
-        ],
+      const board = await prisma.$transaction(async (tx) => {
+        const created = await tx.board.create({ data: { name: "My Board" } });
+        await tx.boardMember.create({
+          data: { userId: session.userId, boardId: created.id, role: "owner" },
+        });
+        await tx.column.createMany({
+          data: [
+            { label: "To Do", order: 0, isDone: false, boardId: created.id },
+            { label: "In Progress", order: 1, isDone: false, boardId: created.id },
+            { label: "Done", order: 2, isDone: true, boardId: created.id },
+          ],
+        });
+        return created;
       });
       boards = [board];
     }
@@ -63,21 +64,21 @@ export async function POST(request: NextRequest) {
       where: { userId: session.userId },
     });
 
-    const board = await prisma.board.create({
-      data: { name: data.name, order: memberCount },
-    });
-
-    // Auto-add creator as owner
-    await prisma.boardMember.create({
-      data: { userId: session.userId, boardId: board.id, role: "owner" },
-    });
-
-    await prisma.column.createMany({
-      data: [
-        { label: "To Do", order: 0, isDone: false, boardId: board.id },
-        { label: "In Progress", order: 1, isDone: false, boardId: board.id },
-        { label: "Done", order: 2, isDone: true, boardId: board.id },
-      ],
+    const board = await prisma.$transaction(async (tx) => {
+      const created = await tx.board.create({
+        data: { name: data.name, order: memberCount },
+      });
+      await tx.boardMember.create({
+        data: { userId: session.userId, boardId: created.id, role: "owner" },
+      });
+      await tx.column.createMany({
+        data: [
+          { label: "To Do", order: 0, isDone: false, boardId: created.id },
+          { label: "In Progress", order: 1, isDone: false, boardId: created.id },
+          { label: "Done", order: 2, isDone: true, boardId: created.id },
+        ],
+      });
+      return created;
     });
 
     return NextResponse.json(board, { status: 201 });

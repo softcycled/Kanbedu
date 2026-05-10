@@ -8,7 +8,6 @@ import Header from "./Header";
 import AnalyticsPanel from "./AnalyticsPanel";
 import SettingsPanel from "./SettingsPanel";
 import ProfilePanel from "./ProfilePanel";
-import CalendarPanel from "./CalendarPanel";
 import SupportModal from "./SupportModal";
 import AdminPanel from "./AdminPanel";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -169,7 +168,6 @@ export default function BoardContainer({
         {activePanel === "analytics" && (
           <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} />
         )}
-        {activePanel === "calendar" && <CalendarPanel />}
         {activePanel === "settings" && (
           <SettingsPanel
             boards={boards}
