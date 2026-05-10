@@ -16,13 +16,14 @@ import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortabl
 import { arrayMove } from "@dnd-kit/sortable";
 import { Task, Comment, ColumnData } from "@/lib/types";
 import KanbanColumn from "./KanbanColumn";
-import TaskModal from "./TaskModal";
+import TaskModal from "./TaskModal"; 
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
 
 interface Props {
   boardId: string;
+  boardName?: string;
   tasks: Task[];
   columns: ColumnData[];
   onTasksChange: (update: Task[] | ((prev: Task[]) => Task[])) => void;
@@ -31,7 +32,7 @@ interface Props {
   currentUserId?: string;
 }
 
-export default function Board({ boardId, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId }: Props) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -591,20 +592,24 @@ export default function Board({ boardId, tasks, columns, onTasksChange, onColumn
 
   return (
     <>
-      <FilterBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedAssignees={selectedAssignees}
-        setSelectedAssignees={setSelectedAssignees}
-        selectedTags={selectedTags}
-        setSelectedTags={setSelectedTags}
-        selectedPriorities={selectedPriorities}
-        setSelectedPriorities={setSelectedPriorities}
-        members={boardMembers}
-        tags={allTags}
-        totalTasks={tasks.length}
-        filteredTasksCount={filteredTasks.length}
-      />
+      {/* Header row: board name left, filters right */}
+      <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
+        <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        <FilterBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedAssignees={selectedAssignees}
+          setSelectedAssignees={setSelectedAssignees}
+          selectedTags={selectedTags}
+          setSelectedTags={setSelectedTags}
+          selectedPriorities={selectedPriorities}
+          setSelectedPriorities={setSelectedPriorities}
+          members={boardMembers}
+          tags={allTags}
+          totalTasks={tasks.length}
+          filteredTasksCount={filteredTasks.length}
+        />
+      </div>
 
       <div
         ref={scrollRef}
@@ -621,7 +626,7 @@ export default function Board({ boardId, tasks, columns, onTasksChange, onColumn
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-7 min-h-full pb-8">
+            <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
             {columns.map((col, index) => (
               <KanbanColumn
                 key={col.id}

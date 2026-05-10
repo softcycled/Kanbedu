@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Task, Board } from "@/lib/types";
 import BoardComp from "./Board";
 import Sidebar, { Panel } from "./Sidebar";
-import Header from "./Header";
 import AnalyticsPanel from "./AnalyticsPanel";
 import SettingsPanel from "./SettingsPanel";
 import ProfilePanel from "./ProfilePanel";
@@ -150,11 +149,11 @@ export default function BoardContainer({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activePanel === "board" && (
           <>
-            <Header boardName={activeBoard?.name ?? ""} />
-            <main className="flex-1 px-4 pt-4 md:px-8 md:pt-8 pb-16 md:pb-0 overflow-hidden flex flex-col">
+            <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
               <BoardComp
                 key={activeBoardId}
                 boardId={activeBoardId}
+                boardName={activeBoard?.name ?? ""}
                 tasks={tasks}
                 columns={columns}
                 onTasksChange={setTasks}

@@ -135,8 +135,8 @@ export default function Sidebar({
 
   const sidebarContent = (
     <>
-      {/* Logo */}
-      <div className="px-4 pt-6 pb-5 border-b border-border/60 flex items-center justify-between">
+      {/* Logo (i almost killed myself adjusting this shit) */}
+      <div className="px-4 pb-5 border-b border-border/60 flex items-center justify-between" style={{ paddingTop: 25.5 }}>
         <span className="text-lg font-bold tracking-tight text-ink">kanbedu</span>
         {/* Close button on mobile */}
         <button

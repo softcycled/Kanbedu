@@ -63,9 +63,9 @@ export default function FilterBar({
   };
 
   return (
-    <div ref={containerRef} className="flex flex-wrap items-center gap-3 mb-6 animate-fade-in">
+    <div ref={containerRef} className="flex items-center gap-2 ml-auto flex-wrap justify-end">
       {/* Search */}
-      <div className="relative flex-1 min-w-[200px] md:max-w-xs">
+      <div className="relative">
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
@@ -76,7 +76,7 @@ export default function FilterBar({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search tasks…"
-          className="w-full bg-column-bg/50 border border-border/50 rounded-xl pl-9 pr-4 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
+          className="w-48 bg-column-bg/50 border border-border/50 rounded-xl pl-9 pr-4 py-1 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
         />
       </div>
 
@@ -84,7 +84,7 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
             selectedAssignees.length > 0 
               ? "bg-accent/10 border-accent/30 text-accent" 
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
@@ -136,7 +136,7 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "tags" ? null : "tags")}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
             selectedTags.length > 0 
               ? "bg-accent/10 border-accent/30 text-accent" 
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
@@ -177,7 +177,7 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
             selectedPriorities.length > 0 
               ? "bg-accent/10 border-accent/30 text-accent" 
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
@@ -211,8 +211,8 @@ export default function FilterBar({
       </div>
 
       {/* Results Count & Clear */}
-      <div className="flex items-center justify-between w-full md:w-auto md:ml-auto gap-3 pt-2 md:pt-0 border-t border-border/30 md:border-t-0">
-        <span className="text-xs text-muted font-medium">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted font-medium whitespace-nowrap">
           {hasFilters ? (
             <span>Showing {filteredTasksCount} of {totalTasks} tasks</span>
           ) : (
@@ -224,7 +224,7 @@ export default function FilterBar({
             onClick={clearAll}
             className="text-xs font-bold text-accent hover:text-accent/80 transition-colors px-2 py-1"
           >
-            Clear filters
+            Clear
           </button>
         )}
       </div>
