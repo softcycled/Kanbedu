@@ -186,16 +186,9 @@ function buildHeatmapGrid(data: { date: string; value: number }[]) {
   }
   return { weeks, monthLabels };
 }
-
-interface ActivityStats {
-  dailyScores: { date: string; score: number }[];
-  userLeaderboard: { user: { id: string; name: string; color: string }; completedCount: number; avgCycleTimeMs: number | null; suspiciousCount: number }[];
-}
-
 export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
-  const [activityData, setActivityData] = useState<ActivityStats | null>(null);
-  const [chartData, setChartData] = useState<{ date: string; value: number }[]>([]);
+  // activity-stats / leaderboard removed to reduce load; keep only core analytics
   const [loading, setLoading] = useState(true);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("priority");
@@ -205,33 +198,10 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [analyticsRes, activityRes] = await Promise.all([
-        fetch(`/api/analytics?boardId=${boardId}`),
-        fetch(`/api/boards/${boardId}/activity-stats?_t=${Date.now()}`),
-      ]);
+      const analyticsRes = await fetch(`/api/analytics?boardId=${boardId}`);
       if (analyticsRes.ok) {
         setData(await analyticsRes.json());
         setLastFetched(new Date());
-      }
-      if (activityRes.ok) {
-        const aData: ActivityStats = await activityRes.json();
-        setActivityData(aData);
-        // Build 12-week chart data
-        const weekBuckets: Record<number, number> = {};
-        const now = new Date();
-        for (let i = 11; i >= 0; i--) {
-          const d = new Date(now);
-          d.setDate(d.getDate() - i * 7);
-          weekBuckets[getWeekStart(d)] = 0;
-        }
-        aData.dailyScores.forEach((d) => {
-          const ws = getWeekStart(new Date(d.date));
-          if (weekBuckets[ws] !== undefined) weekBuckets[ws] += d.score;
-        });
-        setChartData(Object.entries(weekBuckets).map(([ts, val]) => ({
-          date: formatWeekLabel(Number(ts)),
-          value: val,
-        })));
       }
     } finally {
       setLoading(false);
@@ -677,54 +647,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       </Section>
       )}
 
-      {/* Integrity Leaderboard (from Contributions) */}
-      {activityData && activityData.userLeaderboard.some(u => u.completedCount > 0) && (
-        <Section title="Completion Leaderboard">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {activityData.userLeaderboard.map((c, i) => (
-              <div key={c.user.id} className="bg-card-bg rounded-xl border border-border p-4 relative overflow-hidden hover:border-ink/20 transition-colors">
-                {c.suspiciousCount > 0 && (
-                  <div className="absolute top-0 right-0 p-1.5" title={`${c.suspiciousCount} tasks flagged`}>
-                    <div className="bg-red-500 text-white p-0.5 rounded-bl-lg">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.user.color }}>
-                    {c.user.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm text-ink truncate">{c.user.name}</span>
-                      <span className="text-[10px] px-1 py-0.5 rounded bg-accent/10 text-accent font-bold">#{i + 1}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
-                  <div>
-                    <span className="block text-[10px] font-bold text-muted uppercase tracking-wider">Completed</span>
-                    <span className="text-lg font-bold text-ink">{c.completedCount}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-bold text-muted uppercase tracking-wider">Efficiency</span>
-                    <span className={`text-lg font-bold ${c.avgCycleTimeMs && c.avgCycleTimeMs < 3600000 ? "text-orange-500" : "text-ink"}`}>
-                      {c.avgCycleTimeMs ? formatDuration(c.avgCycleTimeMs) : "--"}
-                    </span>
-                  </div>
-                </div>
-                {c.suspiciousCount > 0 && (
-                  <div className="mt-2 px-2 py-1 bg-red-50 rounded-lg border border-red-100">
-                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">
-                      Integrity: {c.suspiciousCount} flag{c.suspiciousCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
+      {/* Completion Leaderboard removed to simplify analytics and reduce load */}
 
       <div className="h-8" />
     </div>
