@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="public/icons/logo.png" width="200" alt="Kanbedu Logo">
-</p>
+
 
 <h1 align="center">Kanbedu</h1>
 
@@ -98,55 +96,6 @@ graph TD
     D --> H["DnD Context (dnd-kit)"]
     F --> I["Health API & Discord Webhooks"]
 ```
-
----
-
-## Installation
-
-### Prerequisites
-
-- Node.js 18.x or higher
-- A Supabase project (for Postgres and Realtime)
-- A Discord Webhook (optional, for admin alerts)
-
-### Steps
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/softcycled/Kanbedu.git
-   cd Kanbedu
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root:
-   ```env
-   DATABASE_URL="your-supabase-connection-string"
-   DIRECT_URL="your-supabase-direct-url"
-   NEXTAUTH_SECRET="your-secret-key"
-   DISCORD_WEBHOOK_URL="your-webhook-url"
-   ```
-
-4. **Initialize the Database:**
-   ```bash
-   npx prisma db push
-   npx prisma generate
-   ```
-
-5. **Start Development Server:**
-   ```bash
-   npm run dev
-   ```
-
-6. **Seed Admin User (Optional):**
-   Run the administrative seed script to grant admin privileges to your primary account:
-   ```bash
-   node src/lib/seed-admin.js
-   ```
 
 ---
 
