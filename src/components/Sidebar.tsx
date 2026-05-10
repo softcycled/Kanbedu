@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Board } from "@/lib/types";
 
-export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile";
+export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile" | "admin";
 
 interface Props {
   boards: Board[];
@@ -12,6 +12,8 @@ interface Props {
   onPanelChange: (panel: Panel) => void;
   onBoardSwitch: (id: string) => void;
   onCreateBoard: (name: string) => Promise<void>;
+  onSupportClick: () => void;
+  isAdmin?: boolean;
 }
 
 // ── Icons ──────────────────────────────────────────────────────
@@ -81,6 +83,24 @@ function IconPlus() {
   );
 }
 
+function IconHelp() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────
 export default function Sidebar({
   boards,
@@ -89,6 +109,8 @@ export default function Sidebar({
   onPanelChange,
   onBoardSwitch,
   onCreateBoard,
+  onSupportClick,
+  isAdmin = false,
 }: Props) {
   const [isAddingBoard, setIsAddingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
@@ -114,6 +136,7 @@ export default function Sidebar({
     { id: "calendar", label: "Calendar", icon: <IconCalendar /> },
     { id: "settings", label: "Boards", icon: <IconLayout /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
+    ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
   ];
 
   // Only show bottom bar items (no "board" on desktop sidebar, but needed on mobile bottom bar)
@@ -199,7 +222,7 @@ export default function Sidebar({
       </div>
 
       {/* Desktop bottom nav (panel links) */}
-      <div className="py-3 border-t border-border/60 px-3">
+      <div className="py-3 border-t border-border/60 px-3 space-y-0.5">
         {desktopNavItems.map((item) => (
           <button
             key={item.id}
@@ -217,6 +240,17 @@ export default function Sidebar({
             {item.label}
           </button>
         ))}
+        
+        <button
+          onClick={() => {
+            onSupportClick();
+            setMobileOpen(false);
+          }}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors"
+        >
+          <IconHelp />
+          Support
+        </button>
       </div>
     </>
   );

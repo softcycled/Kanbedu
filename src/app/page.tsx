@@ -9,6 +9,11 @@ export default async function Home() {
   const session = await getSession();
   if (!session) redirect("/landing");
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
   // Load boards the user is a member of
   const memberships = await prisma.boardMember.findMany({
     where: { userId: session.userId },
@@ -96,6 +101,7 @@ export default async function Home() {
       initialBoardId={firstBoard.id}
       initialColumns={boardColumns}
       currentUserId={session.userId}
+      isAdmin={!!user?.isAdmin}
     />
   );
 }
