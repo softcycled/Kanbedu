@@ -32,8 +32,14 @@ export default function SupportModal({ isOpen, onClose }: Props) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Submission failed");
+        let errorMessage = "Submission failed";
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          errorMessage = `Server Error (${res.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       setStatus("success");

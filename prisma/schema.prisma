@@ -22,6 +22,7 @@ model User {
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
   bugReports          BugReport[]
+  isAdmin             Boolean                  @default(false)
 }
 
 model Board {

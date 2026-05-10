@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Board } from "@/lib/types";
 
-export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile";
+export type Panel = "board" | "analytics" | "calendar" | "settings" | "profile" | "admin";
 
 interface Props {
   boards: Board[];
@@ -13,6 +13,7 @@ interface Props {
   onBoardSwitch: (id: string) => void;
   onCreateBoard: (name: string) => Promise<void>;
   onSupportClick: () => void;
+  isAdmin?: boolean;
 }
 
 // ── Icons ──────────────────────────────────────────────────────
@@ -92,6 +93,14 @@ function IconHelp() {
   );
 }
 
+function IconShield() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────
 export default function Sidebar({
   boards,
@@ -101,6 +110,7 @@ export default function Sidebar({
   onBoardSwitch,
   onCreateBoard,
   onSupportClick,
+  isAdmin = false,
 }: Props) {
   const [isAddingBoard, setIsAddingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
@@ -126,6 +136,7 @@ export default function Sidebar({
     { id: "calendar", label: "Calendar", icon: <IconCalendar /> },
     { id: "settings", label: "Boards", icon: <IconLayout /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
+    ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
   ];
 
   // Only show bottom bar items (no "board" on desktop sidebar, but needed on mobile bottom bar)
