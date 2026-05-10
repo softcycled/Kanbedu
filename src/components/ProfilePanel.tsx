@@ -257,6 +257,44 @@ function AppearanceTab() {
   );
 }
 
+// ── Name Input Component (Performance Fix) ──────────────────────
+function NameInput({ 
+  value, 
+  onChange, 
+  onSave, 
+  saving 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  onSave: () => void; 
+  saving: boolean;
+}) {
+  const [localValue, setLocalValue] = useState(value);
+  
+  // Sync if external value changes (e.g. from fetch)
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // Debounce the upward change to avoid lag during rapid typing
+  useEffect(() => {
+    const timeout = setTimeout(() => onChange(localValue), 300);
+    return () => clearTimeout(timeout);
+  }, [localValue, onChange]);
+
+  return (
+    <input
+      type="text"
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && onSave()}
+      disabled={saving}
+      placeholder="Your name"
+      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors mb-3"
+    />
+  );
+}
+
 // ── Main component ────────────────────────────────────────────
 
 export default function ProfilePanel() {
@@ -513,13 +551,11 @@ export default function ProfilePanel() {
                 <SectionItem>
                   <div className="py-4">
                     <label className="block text-xs font-medium text-muted mb-1.5">Display name</label>
-                    <input
-                      type="text"
+                    <NameInput
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
-                      placeholder="Your name"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors mb-3"
+                      onChange={setName}
+                      onSave={handleSave}
+                      saving={saving}
                     />
                     <button
                       onClick={handleSave}

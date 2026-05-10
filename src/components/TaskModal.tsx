@@ -617,7 +617,7 @@ export default function TaskModal({
               ))}
               <button
                 onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
-                className="w-7 h-7 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-border transition-colors"
+                className="w-8 h-8 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-border transition-colors"
                 title="Manage tags"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
@@ -638,7 +638,7 @@ export default function TaskModal({
                       <div
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className={`group flex items-center gap-2.5 px-3 py-2 text-sm transition-colors cursor-pointer ${
+                        className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
                           isSelected
                             ? "bg-column-bg text-ink font-medium"
                             : "text-ink hover:bg-column-bg"
@@ -734,7 +734,7 @@ export default function TaskModal({
                 type="button"
                 onClick={() => setAssigneeDropdownOpen((v) => !v)}
                 className="
-                  w-full bg-column-bg rounded-xl px-3 py-2.5
+                  w-full bg-column-bg rounded-xl px-4 py-3
                   text-sm text-ink
                   border border-transparent hover:border-border
                   transition-colors cursor-pointer text-left
@@ -765,7 +765,6 @@ export default function TaskModal({
               {assigneeDropdownOpen && (
                 <div
                   className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
-                  onMouseDown={(e) => e.preventDefault()}
                 >
                   {[{ id: "", name: "Unassigned", color: "" }, ...boardMembers].map((m) => {
                     const isSelected = m.id === assigneeId;
@@ -778,7 +777,7 @@ export default function TaskModal({
                           setAssigneeId(m.id);
                           setAssigneeDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                           isSelected
                             ? "bg-column-bg text-ink font-medium"
                             : "text-ink hover:bg-column-bg"
