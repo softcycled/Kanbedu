@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const result = bugReportSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: "Please provide a valid title (min 3 chars) and description (min 10 chars)." }, { status: 400 });
     }
 
     const validated = result.data;
