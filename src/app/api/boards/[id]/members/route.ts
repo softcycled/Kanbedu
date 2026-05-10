@@ -12,15 +12,7 @@ export async function GET(
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    // Ensure the user is a member of this board before returning its members
-    const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: params.id } },
-    });
-
-    if (!membership) {
-      return NextResponse.json({ error: "Unauthorized access to board members." }, { status: 403 });
-    }
-
+    // Fetch all members in one query, then check if caller is among them
     const members = await prisma.boardMember.findMany({
       where: { boardId: params.id },
       include: {
@@ -29,6 +21,11 @@ export async function GET(
         },
       },
     });
+
+    const isMember = members.some((m) => m.userId === session.userId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Unauthorized access to board members." }, { status: 403 });
+    }
 
     const formattedMembers = members.map((m) => ({ ...m.user, role: m.role }));
 

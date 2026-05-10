@@ -4,6 +4,32 @@ import { updateTaskSchema, parseBody } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 
+// GET single task with full details (activities, comments, etc.)
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const task = await prisma.task.findUnique({
+    where: { id: params.id },
+    include: {
+      comments: { orderBy: { createdAt: "asc" } },
+      assigneeUser: { select: { id: true, name: true, color: true } },
+      tags: true,
+      activities: {
+        include: { user: { select: { id: true, name: true, color: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+    },
+  });
+  if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  return NextResponse.json(task);
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
@@ -39,28 +65,25 @@ export async function PATCH(
       columnActuallyChanged = true;
       updateData.columnUpdatedAt = new Date();
 
-      // Fetch column names for logging
-      const [fromCol, toCol] = await Promise.all([
-        prisma.column.findUnique({ where: { id: current.column } }),
-        prisma.column.findUnique({ where: { id: body.column } }),
+      // Fetch column names and close current history in parallel
+      const now = new Date();
+      const [[fromCol, toCol]] = await Promise.all([
+        Promise.all([
+          prisma.column.findUnique({ where: { id: current.column } }),
+          prisma.column.findUnique({ where: { id: body.column } }),
+        ]),
+        prisma.taskColumnHistory.updateMany({
+          where: { taskId: id, exitedAt: null },
+          data: { exitedAt: now },
+        }),
       ]);
 
-      await recordActivity(
-        id, 
-        session.userId, 
-        "MOVE", 
-        `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`
-      );
-
-      // Close the current open history entry, open a new one
-      const now = new Date();
-      await prisma.taskColumnHistory.updateMany({
-        where: { taskId: id, exitedAt: null },
-        data: { exitedAt: now },
-      });
-      await prisma.taskColumnHistory.create({
-        data: { taskId: id, columnId: body.column, enteredAt: now },
-      });
+      await Promise.all([
+        recordActivity(id, session.userId, "MOVE", `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`),
+        prisma.taskColumnHistory.create({
+          data: { taskId: id, columnId: body.column, enteredAt: now },
+        }),
+      ]);
 
       // Set completion metadata when entering or leaving the Done column.
       const destinationIsDone = toCol?.isDone ?? false;
@@ -102,34 +125,39 @@ export async function PATCH(
     data: updateData,
   });
 
-  // Log other changes after update is successful
+  // Log other changes after update is successful — run all in parallel
+  const postUpdateWork: Promise<unknown>[] = [];
+
   if (body.title && body.title !== current.title) {
-    await recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`);
+    postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`));
   }
   if (body.priority && body.priority !== current.priority) {
-    await recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`);
+    postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
   }
   if (body.description !== undefined && body.description !== current.description) {
-    await prisma.taskDescriptionVersion.create({
-      data: {
-        taskId: id,
-        userId: session.userId,
-        content: body.description,
-      },
-    });
-    await recordActivity(id, session.userId, "UPDATE", "Updated the description");
+    postUpdateWork.push(
+      prisma.taskDescriptionVersion.create({
+        data: { taskId: id, userId: session.userId, content: body.description },
+      }),
+      recordActivity(id, session.userId, "UPDATE", "Updated the description")
+    );
   }
   if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
     if (body.assigneeId) {
-      const newUser = await prisma.user.findUnique({ where: { id: body.assigneeId } });
-      await recordActivity(id, session.userId, "ASSIGNEE", `Assigned to ${newUser?.name || "someone"}`);
+      postUpdateWork.push(
+        prisma.user.findUnique({ where: { id: body.assigneeId } }).then((newUser) =>
+          recordActivity(id, session.userId, "ASSIGNEE", `Assigned to ${newUser?.name || "someone"}`)
+        )
+      );
     } else {
-      await recordActivity(id, session.userId, "ASSIGNEE", "Unassigned the task");
+      postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Unassigned the task"));
     }
   }
   if (body.tagIds !== undefined) {
-    await recordActivity(id, session.userId, "TAG", "Updated tags");
+    postUpdateWork.push(recordActivity(id, session.userId, "TAG", "Updated tags"));
   }
+
+  await Promise.all(postUpdateWork);
 
   // Finally, fetch the fully updated task with all activities to return
   const finalTask = await prisma.task.findUnique({

@@ -6,25 +6,21 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 
 export function useRealtime(boardId: string | null, onRefresh?: () => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Stable ref so the subscribe callback always calls the latest version
+  // without triggering a reconnect on every render
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
 
   useEffect(() => {
     if (!boardId) return;
 
-    // Initialize channel
     const channel = supabase.channel(`board-${boardId}`);
     
     channel
-      .on("broadcast", { event: "refresh" }, (payload) => {
-        console.log("🚀 Realtime: Sync event received!", payload);
-        if (onRefresh) onRefresh();
+      .on("broadcast", { event: "refresh" }, () => {
+        onRefreshRef.current?.();
       })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log(`✅ Realtime: Connected to board-${boardId}`);
-        } else {
-          console.log(`⚠️ Realtime Status for board-${boardId}:`, status);
-        }
-      });
+      .subscribe();
 
     channelRef.current = channel;
 
@@ -33,19 +29,14 @@ export function useRealtime(boardId: string | null, onRefresh?: () => void) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [boardId, onRefresh]);
+  }, [boardId]); // onRefresh intentionally omitted — stable via ref
 
   const broadcastRefresh = useCallback(async () => {
     if (!boardId || !channelRef.current) return;
-    
-    console.log("Realtime: Broadcasting refresh event...");
     await channelRef.current.send({
       type: "broadcast",
       event: "refresh",
-      payload: { 
-        timestamp: new Date().toISOString(),
-        senderId: Math.random().toString(36).substring(7) 
-      },
+      payload: { timestamp: new Date().toISOString() },
     });
   }, [boardId]);
 

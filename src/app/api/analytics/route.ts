@@ -8,30 +8,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "boardId is required" }, { status: 400 });
   }
 
-  const columns = await prisma.column.findMany({
-    where: { boardId },
-    orderBy: { order: "asc" },
-  });
+  // Run columns and tasks in parallel — tasks filter via relation instead of prefetching IDs
+  const [columns, tasks] = await Promise.all([
+    prisma.column.findMany({
+      where: { boardId },
+      orderBy: { order: "asc" },
+    }),
+    prisma.task.findMany({
+      where: { columnRel: { boardId } },
+      include: {
+        comments: true,
+        columnHistory: { orderBy: { enteredAt: "asc" } },
+        assigneeUser: { select: { id: true, name: true, color: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
-  const columnIds = columns.map((c) => c.id);
-
-  if (columnIds.length === 0) {
+  if (columns.length === 0) {
     return NextResponse.json({
       columns: [],
       tasks: [],
       summary: { total: 0, completed: 0, inProgress: 0, overdue: 0, avgCycleTimeMs: null },
     });
   }
-
-  const tasks = await prisma.task.findMany({
-    where: { column: { in: columnIds } },
-    include: {
-      comments: true,
-      columnHistory: { orderBy: { enteredAt: "asc" } },
-      assigneeUser: { select: { id: true, name: true, color: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
 
   const now = new Date();
   const columnMap = new Map(columns.map((c) => [c.id, c]));

@@ -63,14 +63,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const cols = await prisma.column.findMany({
-    where: { boardId },
-    select: { id: true },
-  });
-  const where = { column: { in: cols.map((c) => c.id) } };
-
   const tasks = await prisma.task.findMany({
-    where,
+    where: { columnRel: { boardId } },
     include: {
       comments: {
         select: { id: true, content: true, author: true, createdAt: true, taskId: true },
@@ -78,11 +72,6 @@ export async function GET(request: NextRequest) {
       },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
-      activities: {
-        include: { user: { select: { id: true, name: true, color: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      },
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });

@@ -138,6 +138,14 @@ export default function TaskModal({
         assigneeId: task.assigneeId,
         deadline: formatDateForInput(task.deadline),
       };
+
+      // Lazy-load activities when opening a new task (not included in the board list fetch)
+      if (!task.activities || task.activities.length === 0) {
+        fetch(`/api/tasks/${task.id}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => { if (data?.activities) setActivities(data.activities); })
+          .catch(() => {});
+      }
     }
   }, [task]);
 

@@ -49,7 +49,7 @@ export interface Task {
   movedByNonAssignee: boolean;
   comments: Comment[];
   tags: Tag[];
-  activities: TaskActivity[];
+  activities?: TaskActivity[];
 }
 
 export interface TaskActivity {

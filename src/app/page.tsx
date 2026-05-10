@@ -9,17 +9,18 @@ export default async function Home() {
   const session = await getSession();
   if (!session) redirect("/landing");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { isAdmin: true },
-  });
-
-  // Load boards the user is a member of
-  const memberships = await prisma.boardMember.findMany({
-    where: { userId: session.userId },
-    include: { board: true },
-    orderBy: { board: { order: "asc" } },
-  });
+  // Run user lookup + board memberships in parallel
+  const [user, memberships] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isAdmin: true },
+    }),
+    prisma.boardMember.findMany({
+      where: { userId: session.userId },
+      include: { board: true },
+      orderBy: { board: { order: "asc" } },
+    }),
+  ]);
 
   let boards = memberships.map((m) => m.board);
 
@@ -43,34 +44,25 @@ export default async function Home() {
 
   const firstBoard = boards[0];
 
-  // Load columns + tasks for the first board in one query
-  const boardColumns = await prisma.column.findMany({
-    where: { boardId: firstBoard.id },
-    orderBy: { order: "asc" },
-  });
-
-  const columnIds = boardColumns.map((c) => c.id);
-
-  const tasks =
-    columnIds.length > 0
-      ? await prisma.task.findMany({
-          where: { column: { in: columnIds } },
-          include: {
-            comments: {
-              select: { id: true, content: true, author: true, createdAt: true, taskId: true },
-              orderBy: { createdAt: "asc" },
-            },
-            assigneeUser: { select: { id: true, name: true, color: true } },
-            tags: true,
-            activities: {
-              include: { user: { select: { id: true, name: true, color: true } } },
-              orderBy: { createdAt: "desc" },
-              take: 20,
-            },
-          },
-          orderBy: [{ column: "asc" }, { order: "asc" }],
-        })
-      : [];
+  // Run columns + tasks in parallel — tasks filter by relation instead of prefetching column IDs
+  const [boardColumns, tasks] = await Promise.all([
+    prisma.column.findMany({
+      where: { boardId: firstBoard.id },
+      orderBy: { order: "asc" },
+    }),
+    prisma.task.findMany({
+      where: { columnRel: { boardId: firstBoard.id } },
+      include: {
+        comments: {
+          select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+          orderBy: { createdAt: "asc" },
+        },
+        assigneeUser: { select: { id: true, name: true, color: true } },
+        tags: true,
+      },
+      orderBy: [{ column: "asc" }, { order: "asc" }],
+    }),
+  ]);
 
   const serializedTasks = tasks.map((t) => ({
     ...t,
@@ -82,10 +74,6 @@ export default async function Home() {
     comments: t.comments.map((c) => ({
       ...c,
       createdAt: c.createdAt.toISOString(),
-    })),
-    activities: t.activities.map((a) => ({
-      ...a,
-      createdAt: a.createdAt.toISOString(),
     })),
   }));
 
