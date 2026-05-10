@@ -28,7 +28,7 @@ interface Props {
   columns: ColumnData[];
   onTasksChange: (update: Task[] | ((prev: Task[]) => Task[])) => void;
   onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
-  broadcastRefresh: () => void;
+  broadcastRefresh: (payload?: unknown) => void;
   currentUserId?: string;
 }
 
@@ -150,7 +150,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     } catch (error) {
       console.error("Failed to rename column:", error);
     }
-  }, [broadcastRefresh]);
+  }, [broadcastRefresh, tasks, onTasksChange]);
 
   const handleSetDoneColumn = useCallback(async (columnId: string) => {
     const col = columns.find((c) => c.id === columnId);
@@ -456,6 +456,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       onTasksChange((prev) =>
         prev.map((t) => (t.id === activeId ? updatedTask : t))
       );
+      broadcastRefresh({ type: "task:update", task: updatedTask });
     }
 
     // Update sibling orders in a single bulk request — fire-and-forget
@@ -468,12 +469,37 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       }).catch((err) => console.error("Failed to bulk update task order:", err));
     }
 
-    broadcastRefresh();
   };
 
   // ── Task actions ───────────────────────────────────────────────
 
   const handleAddTask = useCallback(async (title: string, column: string) => {
+    // Optimistic UI: insert a temporary task locally immediately
+    const tempId = `temp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    const now = new Date();
+    const colTasks = tasks.filter((t) => t.column === column);
+    const maxOrder = colTasks.length ? Math.max(...colTasks.map((t) => t.order)) : -1;
+    const tempTask: Task = {
+      id: tempId,
+      title,
+      description: "",
+      deadline: null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      column,
+      columnUpdatedAt: now,
+      assigneeId: null,
+      order: maxOrder + 1,
+      priority: "normal",
+      movedByNonAssignee: false,
+      comments: [],
+      tags: [],
+      activities: [],
+    };
+
+    onTasksChange((prev) => [...prev, tempTask]);
+
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -482,14 +508,21 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       });
       if (!res.ok) throw new Error(`Add task failed: ${res.status}`);
       const newTask: Task = await res.json();
-      onTasksChange((prev) => [...prev, newTask]);
-      broadcastRefresh();
+
+      // Replace the temp task with server-supplied task
+      onTasksChange((prev) => prev.map((t) => (t.id === tempId ? newTask : t)));
+      broadcastRefresh({ type: "task:create", task: newTask });
     } catch (error) {
       console.error("Failed to add task:", error);
+      // Rollback optimistic insert
+      onTasksChange((prev) => prev.filter((t) => t.id !== tempId));
     }
-  }, [broadcastRefresh]);
+  }, [broadcastRefresh, tasks, onTasksChange]);
 
   const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
+    const prevTask = tasks.find((t) => t.id === id);
+    // Optimistic update locally
+    onTasksChange((prev) => prev.map((t) => (t.id === id ? { ...t, ...data, updatedAt: new Date() } : t)));
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: "PATCH",
@@ -502,13 +535,13 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       const updatedTask: Task = await res.json();
 
       // Use the server response to ensure fresh data
-      onTasksChange((prev) =>
-        prev.map((t) => (t.id === id ? updatedTask : t))
-      );
+      onTasksChange((prev) => prev.map((t) => (t.id === id ? updatedTask : t)));
       setSelectedTask((prev) => (prev?.id === id ? updatedTask : prev));
-      broadcastRefresh();
+      broadcastRefresh({ type: "task:update", task: updatedTask });
     } catch (error) {
       console.error("Failed to update task:", error);
+      // rollback optimistic update
+      if (prevTask) onTasksChange((prev) => prev.map((t) => (t.id === id ? prevTask : t)));
     }
   }, [broadcastRefresh]);
 
@@ -529,7 +562,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Delete task failed: ${res.status}`);
       onTasksChange((prev) => prev.filter((t) => t.id !== id));
-      broadcastRefresh();
+      broadcastRefresh({ type: "task:delete", taskId: id });
     } catch (error) {
       console.error("Failed to delete task:", error);
     }

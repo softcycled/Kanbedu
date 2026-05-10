@@ -86,41 +86,70 @@ export async function POST(req: Request) {
   }
   const data = result.data;
 
+  // Profile start
+  const start = Date.now();
+
+  // Find last order in column and destination column (parallel)
   const [lastTask, destinationColumn] = await Promise.all([
     prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
     prisma.column.findUnique({ where: { id: data.column } }),
   ]);
 
   const now = new Date();
-  const task = await prisma.task.create({
+  // Create the task but avoid heavy includes (comments/activities) — return minimal fields quickly
+  const created = await prisma.task.create({
     data: {
       title: data.title,
       column: data.column,
       order: (lastTask?.order ?? 0) + 1,
       columnUpdatedAt: now,
-      // If creating directly in the Done column, mark as completed immediately.
       completedAt: destinationColumn?.isDone ? now : null,
     },
-    include: {
-      comments: true,
-      assigneeUser: { select: { id: true, name: true, color: true } },
-      tags: true,
-      activities: {
-        include: { user: { select: { id: true, name: true, color: true } } },
-        orderBy: { createdAt: "desc" },
-      },
-    },
   });
 
-  // Record initial column history entry
-  await prisma.taskColumnHistory.create({
-    data: { taskId: task.id, columnId: data.column, enteredAt: now },
-  });
+  // Fire-and-forget non-critical work: history and activity logging
+  (async () => {
+    try {
+      await prisma.taskColumnHistory.create({
+        data: { taskId: created.id, columnId: data.column, enteredAt: now },
+      });
+    } catch (err) {
+      console.error("Failed to create taskColumnHistory (background):", err);
+    }
 
-  const session = await getSession();
-  if (session) {
-    await recordActivity(task.id, session.userId, "CREATE", "Created the task");
+    try {
+      const session = await getSession();
+      if (session) {
+        await recordActivity(created.id, session.userId, "CREATE", "Created the task");
+      }
+    } catch (err) {
+      console.error("Failed to record activity (background):", err);
+    }
+  })();
+
+  // Minimal response payload for fast client update
+  const responseTask = {
+    id: created.id,
+    title: created.title,
+    description: created.description ?? "",
+    deadline: created.deadline ?? null,
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt,
+    completedAt: created.completedAt ?? null,
+    column: created.column,
+    columnUpdatedAt: created.columnUpdatedAt,
+    assigneeId: created.assigneeId ?? null,
+    order: created.order,
+    priority: created.priority,
+    movedByNonAssignee: created.movedByNonAssignee ?? false,
+    comments: [],
+    tags: [],
+    activities: [],
+  };
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[perf] POST /api/tasks total ${Date.now() - start}ms`);
   }
 
-  return NextResponse.json(task);
+  return NextResponse.json(responseTask);
 }

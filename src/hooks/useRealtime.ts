@@ -4,7 +4,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
-export function useRealtime(boardId: string | null, onRefresh?: () => void) {
+export function useRealtime(boardId: string | null, onRefresh?: (payload?: unknown) => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   // Stable ref so the subscribe callback always calls the latest version
   // without triggering a reconnect on every render
@@ -17,8 +17,13 @@ export function useRealtime(boardId: string | null, onRefresh?: () => void) {
     const channel = supabase.channel(`board-${boardId}`);
     
     channel
-      .on("broadcast", { event: "refresh" }, () => {
-        onRefreshRef.current?.();
+      .on("broadcast", { event: "refresh" }, (ev) => {
+        // Pass payload through to the refresh handler (may contain task-level patch)
+        try {
+          onRefreshRef.current?.(ev?.payload ?? ev);
+        } catch (err) {
+          // swallow
+        }
       })
       .subscribe();
 
@@ -31,12 +36,12 @@ export function useRealtime(boardId: string | null, onRefresh?: () => void) {
     };
   }, [boardId]); // onRefresh intentionally omitted — stable via ref
 
-  const broadcastRefresh = useCallback(async () => {
+  const broadcastRefresh = useCallback(async (payload?: unknown) => {
     if (!boardId || !channelRef.current) return;
     await channelRef.current.send({
       type: "broadcast",
       event: "refresh",
-      payload: { timestamp: new Date().toISOString() },
+      payload: payload ?? { timestamp: new Date().toISOString() },
     });
   }, [boardId]);
 

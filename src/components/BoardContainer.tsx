@@ -76,8 +76,27 @@ export default function BoardContainer({
   }, []);
 
   // Realtime refresh: surgically update only the active board
-  const handleRefresh = useCallback(async () => {
+  // Keep a columns ref so the refresh handler can make lightweight decisions
+  const columnsRef = useRef(columns);
+  useEffect(() => { columnsRef.current = columns; }, [columns]);
+
+  const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
+    // If other clients broadcasted a patch with the changed task, apply it surgically
+    if (payload && payload.task) {
+      const t = payload.task;
+      setTasks((prev) => {
+        const exists = prev.some((p) => p.id === t.id);
+        // If task exists, patch it; otherwise append only if its column belongs to this board
+        if (exists) return prev.map((p) => (p.id === t.id ? { ...p, ...t } : p));
+        const hasColumn = columnsRef.current.some((c) => c.id === t.column);
+        if (!hasColumn) return prev;
+        return [...prev, t];
+      });
+      return;
+    }
+
+    // Fallback: full board fetch
     const data = await fetchBoardData(boardId);
     // Only apply if still on the same board
     if (activeBoardIdRef.current === boardId) {
