@@ -1051,7 +1051,7 @@ export default function TaskModal({
         )}
 
         {/* Footer - Auto-save status */}
-        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between safe-area-bottom">
+        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>
