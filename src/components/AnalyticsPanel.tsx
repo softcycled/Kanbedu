@@ -315,7 +315,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         <SummaryCard label="Avg cycle time" value={summary.avgCycleTimeMs !== null ? formatDuration(summary.avgCycleTimeMs) : "—"} sub="to complete" />
       </div>
 
-      {/* Contribution Activity (merged from ContributionsDashboard) */}
+      {/* Contribution Activity — hidden, preserved for future use
       {activityData && (
         <Section title="Contribution Activity">
           <ContributionHeatmap data={activityData.dailyScores.map(d => ({ date: d.date, value: d.score }))} />
@@ -348,6 +348,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           </div>
         </Section>
       )}
+      */}
 
       {/* Phase Health */}
       <Section title="Workflow Overview">
