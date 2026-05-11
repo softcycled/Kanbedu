@@ -44,7 +44,26 @@ export function formatDate(date: Date | string | null): string {
 export function formatDateForInput(date: Date | string | null): string {
   if (!date) return "";
   const d = new Date(date);
-  return d.toISOString().split("T")[0];
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function dateInputToISOString(input: string | null | undefined): string | null {
+  if (!input) return null;
+  // Expecting `YYYY-MM-DD` from <input type="date">. Construct a local Date
+  const parts = String(input).split("-");
+  if (parts.length === 3) {
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]);
+    // Use local midnight so conversions are explicit and consistent
+    const dt = new Date(y, m - 1, d);
+    return dt.toISOString();
+  }
+  // Fallback to regular parsing
+  return new Date(input).toISOString();
 }
 
 export function formatDateTime(date: Date | string | null): string {
@@ -77,4 +96,57 @@ export function formatTimeAgo(date: Date | string | null | undefined): string {
 
   const diffDays = Math.round(diffHours / 24);
   return rtf.format(-diffDays, "day");
+}
+
+export type DeadlineSeverity = "overdue" | "due-soon" | "future" | "none";
+
+export function formatDeadlineLabel(deadline: Date | string | null, completedAt?: Date | string | null): { label: string; severity: DeadlineSeverity } {
+  if (!deadline || completedAt) return { label: "", severity: "none" };
+
+  const now = new Date();
+  const d = new Date(deadline);
+  const diffMs = d.getTime() - now.getTime();
+
+  // Past (overdue)
+  if (diffMs < 0) {
+    const absMs = Math.abs(diffMs);
+    const days = Math.floor(absMs / 86_400_000);
+    if (days >= 1) {
+      return { label: `Overdue by ${days}d`, severity: "overdue" };
+    }
+    const hours = Math.ceil(absMs / 3_600_000);
+    return { label: `Overdue by ${hours}h`, severity: "overdue" };
+  }
+
+  // Normalize to date boundaries for 'tomorrow' detection
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfDeadlineDay = new Date(d);
+  startOfDeadlineDay.setHours(0, 0, 0, 0);
+  const daysUntil = Math.round((startOfDeadlineDay.getTime() - startOfToday.getTime()) / 86_400_000);
+
+  // Due today
+  if (daysUntil === 0) {
+    const hours = Math.ceil(diffMs / 3_600_000);
+    return { label: `Due in ${hours}h`, severity: "due-soon" };
+  }
+
+  // Due tomorrow
+  if (daysUntil === 1) {
+    return { label: "Due tomorrow", severity: "due-soon" };
+  }
+
+  // Near future (within 48h window but not tomorrow due to date boundaries)
+  if (diffMs <= 48 * 3_600_000) {
+    const hours = Math.ceil(diffMs / 3_600_000);
+    return { label: `Due in ${hours}h`, severity: "due-soon" };
+  }
+
+  // Within a week show days
+  if (daysUntil <= 7) {
+    return { label: `Due in ${daysUntil}d`, severity: "future" };
+  }
+
+  // Otherwise show a concise date
+  return { label: formatDate(d), severity: "future" };
 }

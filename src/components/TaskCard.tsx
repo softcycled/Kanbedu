@@ -5,7 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
-import { timeInColumn, isOverdue } from "@/lib/utils";
+import { timeInColumn, isOverdue, formatDeadlineLabel } from "@/lib/utils";
 
 interface Props {
   task: Task;
@@ -29,14 +29,14 @@ function TaskCard({ task, onClick }: Props) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    // Use dnd-kit's transition during sorting; our custom easing otherwise
     transition: transition ?? "transform 300ms cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 300ms cubic-bezier(0.25,0.46,0.45,0.94), border-color 200ms ease",
     willChange: "transform",
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,
-  };
+  } as React.CSSProperties;
 
   const overdue = isOverdue(task.deadline, task.completedAt);
+  const deadlineInfo = formatDeadlineLabel(task.deadline, task.completedAt);
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
   const priorityDot: Record<string, string> = {
@@ -50,6 +50,8 @@ function TaskCard({ task, onClick }: Props) {
   };
   const p = task.priority ?? "medium";
 
+  const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border ${deadlineInfo.severity === 'overdue' ? 'border-l-2 border-red-200' : ''}`;
+
   return (
     <div
       ref={setNodeRef}
@@ -58,16 +60,11 @@ function TaskCard({ task, onClick }: Props) {
       {...listeners}
       onClick={onClick}
       data-task
-      className="
-        group relative bg-card-bg rounded-2xl px-4 py-4
-        shadow-card hover:shadow-card-hover hover:-translate-y-1
-        cursor-pointer select-none
-        border border-transparent hover:border-border
-      "
+      className={rootClass}
     >
       {/* Overdue indicator */}
       {overdue && (
-        <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-accent" />
+        <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-red-500" />
       )}
 
       <p className="text-sm font-medium text-ink leading-snug tracking-[-0.01em] pr-3">
@@ -100,7 +97,21 @@ function TaskCard({ task, onClick }: Props) {
           {priorityLabel[p]}
         </span>
 
-        <span className="text-xs text-muted">{timeStr}</span>
+        {timeStr && <span className="text-xs text-muted">{timeStr}</span>}
+
+        {/* Deadline badge */}
+        {deadlineInfo.severity !== "none" && (
+          <span className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-0.5 rounded-md ${
+            deadlineInfo.severity === "overdue"
+              ? "bg-red-500/10 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+              : deadlineInfo.severity === "due-soon"
+              ? "bg-yellow-500/10 text-yellow-600 dark:bg-yellow-950/30 dark:text-yellow-300"
+              : "text-muted"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${deadlineInfo.severity === "overdue" ? "bg-red-500" : deadlineInfo.severity === "due-soon" ? "bg-yellow-500" : "bg-muted/30"}`} />
+            {deadlineInfo.label}
+          </span>
+        )}
 
         {task.assigneeUser && (
           <>

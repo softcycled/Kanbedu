@@ -11,6 +11,8 @@ import {
   formatDateForInput,
   formatDateTime,
   formatTimeAgo,
+  formatDeadlineLabel,
+  dateInputToISOString,
 } from "@/lib/utils";
 
 interface Props {
@@ -272,9 +274,9 @@ export default function TaskModal({
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    const deadlineValue = debouncedDeadline ? new Date(debouncedDeadline).toISOString() : null;
+    const deadlineValue = debouncedDeadline ? dateInputToISOString(debouncedDeadline) : null;
     const originalDeadline = originalTask.current?.deadline 
-      ? new Date(originalTask.current.deadline).toISOString()
+      ? dateInputToISOString(originalTask.current.deadline)
       : null;
     if (deadlineValue !== originalDeadline) {
       handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
@@ -293,9 +295,9 @@ export default function TaskModal({
     if (assigneeId !== originalTask.current?.assigneeId) {
       updates.assigneeId = assigneeId === "" ? null : assigneeId;
     }
-    const deadlineValue = deadline ? new Date(deadline).toISOString() : null;
+    const deadlineValue = deadline ? dateInputToISOString(deadline) : null;
     const originalDeadline = originalTask.current?.deadline 
-      ? new Date(originalTask.current.deadline).toISOString()
+      ? dateInputToISOString(originalTask.current.deadline)
       : null;
     if (deadlineValue !== originalDeadline) {
       updates.deadline = deadlineValue;
@@ -428,7 +430,26 @@ export default function TaskModal({
 
   if (!task) return null;
 
-  const overdue = isOverdue(task.deadline);
+  const overdue = isOverdue(task.deadline, task.completedAt);
+  // derive semantic deadline info from the local `deadline` input (shows unsaved edits)
+  const deadlineInfo = formatDeadlineLabel(deadline ? dateInputToISOString(deadline) : null, task.completedAt);
+
+  // decide whether to show a muted 'future' status: show only for deadlines within the next 7 days
+  let showDeadlineStatus = false;
+  if (deadline && !task.completedAt && deadlineInfo.severity !== "none") {
+    if (deadlineInfo.severity === "overdue" || deadlineInfo.severity === "due-soon") {
+      showDeadlineStatus = true;
+    } else if (deadlineInfo.severity === "future") {
+      const nowDate = new Date();
+      const d = new Date(deadline);
+      const startOfToday = new Date(nowDate);
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfDeadlineDay = new Date(d);
+      startOfDeadlineDay.setHours(0, 0, 0, 0);
+      const daysUntil = Math.round((startOfDeadlineDay.getTime() - startOfToday.getTime()) / 86_400_000);
+      showDeadlineStatus = daysUntil <= 7;
+    }
+  }
 
   return (
     <div
@@ -559,14 +580,10 @@ export default function TaskModal({
                   Completed {formatDateTime(task.completedAt)}
                 </span>
               )}
-              {overdue && task.deadline && (
-                <span className="text-xs text-accent font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
-                  Overdue
-                </span>
-              )}
+              {/* overdue label moved to a more prominent header badge */}
             </div>
           )}
+          
         </div>
 
         {/* Body - scrollable */}
@@ -830,6 +847,24 @@ export default function TaskModal({
                   transition-colors
                 "
               />
+              {showDeadlineStatus && (
+                <p className={`mt-1 flex items-center gap-2 text-xs ${
+                  deadlineInfo.severity === "overdue"
+                    ? "text-red-600"
+                    : deadlineInfo.severity === "due-soon"
+                    ? "text-yellow-600"
+                    : "text-muted"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${
+                    deadlineInfo.severity === "overdue"
+                      ? "bg-red-500"
+                      : deadlineInfo.severity === "due-soon"
+                      ? "bg-yellow-500"
+                      : "bg-muted/40"
+                  }`} />
+                  {deadlineInfo.label}
+                </p>
+              )}
             </div>
           </div>
 
