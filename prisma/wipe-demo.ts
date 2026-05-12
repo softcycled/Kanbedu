@@ -26,7 +26,16 @@ async function main() {
     await prisma.board.deleteMany({ where: { id: boardId } });
     console.log(`Wiped demo board: ${boardId}`);
   }
-  await prisma.user.deleteMany({ where: { email: { in: DEMO_USER_EMAILS } } });
+  const DEMO_USER_IDS = [
+    "demo-user-alice", "demo-user-bob", "demo-user-carol",
+    "demo-user-dave", "demo-user-jake", "demo-user-emma",
+    "demo-user-priya", "demo-user-sam", "demo-user-mia",
+  ];
+  // Delete TaskActivity rows that reference demo users (no cascade on User)
+  await prisma.taskActivity.deleteMany({ where: { userId: { in: DEMO_USER_IDS } } });
+  await prisma.taskDescriptionVersion.deleteMany({ where: { userId: { in: DEMO_USER_IDS } } });
+  await prisma.bugReport.deleteMany({ where: { userId: { in: DEMO_USER_IDS } } });
+  await prisma.user.deleteMany({ where: { OR: [{ email: { in: DEMO_USER_EMAILS } }, { id: { in: DEMO_USER_IDS } }] } });
   console.log("All demo boards and users wiped.");
 }
 

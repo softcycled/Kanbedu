@@ -1133,6 +1133,89 @@ async function main() {
   console.log(`  Board ID: ${b3.id}`);
 }
 
-main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+async function reseedBoard() {
+  const hashed = await bcrypt.hash("demo1234", 10);
+  const user = await prisma.user.upsert({
+    where: { email: "reseed@demo.kanbedu" },
+    update: {},
+    create: { id: "demo-user-reseed", name: "Reseed", email: "reseed@demo.kanbedu", password: hashed },
+  });
+
+  const boardId = `demo-board-reseed-${Date.now()}`;
+  const board = await prisma.board.create({
+    data: { id: boardId, name: `Reseeded board ${new Date().toISOString()}`, order: 999 },
+  });
+
+  const colTodo = await prisma.column.create({ data: { label: "To Do (reseed)", order: 0, isDone: false, boardId: board.id } });
+  const colIn = await prisma.column.create({ data: { label: "In Progress (reseed)", order: 1, isDone: false, boardId: board.id } });
+  const colDone = await prisma.column.create({ data: { label: "Done (reseed)", order: 2, isDone: true, boardId: board.id } });
+
+  const tag = await prisma.tag.create({ data: { name: "reseed", color: "#F59E0B", boardId: board.id } });
+
+  const now = new Date();
+  const t1 = await prisma.task.create({
+    data: {
+      title: "Reseeded: Quick task",
+      description: "Auto-created by reseed script",
+      assigneeId: user.id,
+      priority: "medium",
+      deadline: null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      column: colTodo.id,
+      columnUpdatedAt: now,
+      order: 0,
+      movedByNonAssignee: false,
+      tags: { connect: [{ id: tag.id }] },
+    },
+  });
+
+  await prisma.taskColumnHistory.create({ data: { taskId: t1.id, columnId: colTodo.id, enteredAt: now, exitedAt: null } });
+
+  const t2 = await prisma.task.create({
+    data: {
+      title: "Reseeded: Follow-up",
+      description: "Second auto-created task",
+      assigneeId: user.id,
+      priority: "low",
+      deadline: null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      column: colIn.id,
+      columnUpdatedAt: now,
+      order: 1,
+      movedByNonAssignee: false,
+      tags: { connect: [{ id: tag.id }] },
+    },
+  });
+
+  await prisma.taskColumnHistory.create({ data: { taskId: t2.id, columnId: colIn.id, enteredAt: now, exitedAt: null } });
+
+  await prisma.boardMember.upsert({
+    where: { userId_boardId: { userId: user.id, boardId: board.id } },
+    update: {},
+    create: { userId: user.id, boardId: board.id },
+  });
+
+  console.log(`✓ Created board ${board.id} with 2 tasks and user ${user.id}`);
+}
+
+const argv = process.argv.slice(2);
+const runReseed = argv.includes("reseed") || process.env.SEED_RESEED === "1";
+
+(async () => {
+  try {
+    if (runReseed) {
+      await reseedBoard();
+    } else {
+      await main();
+    }
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
+})();
