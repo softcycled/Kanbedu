@@ -14,6 +14,7 @@ import {
   formatDeadlineLabel,
   dateInputToISOString,
 } from "@/lib/utils";
+import useBoardResources from "@/hooks/useBoardResources";
 
 interface Props {
   task: Task | null;
@@ -76,7 +77,7 @@ export default function TaskModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<import("@/lib/types").Tag | null>(null);
 
-  const [allBoardTags, setAllBoardTags] = useState<import("@/lib/types").Tag[]>([]);
+  const { tags: allBoardTags, setTagsForBoard } = useBoardResources(boardId);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
@@ -228,14 +229,7 @@ export default function TaskModal({
     return () => clearInterval(id);
   }, [task]);
 
-  // Fetch all available tags for this board
-  useEffect(() => {
-    if (!task) return;
-    fetch(`/api/tags?boardId=${boardId}`)
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setAllBoardTags(data))
-      .catch(() => {});
-  }, [task, boardId]);
+  // Tags are provided from shared `useBoardResources` hook to avoid duplicate fetches.
 
   // Close tag dropdown on outside click
   useEffect(() => {
@@ -382,7 +376,8 @@ export default function TaskModal({
       });
       if (res.ok) {
         const created = await res.json();
-        setAllBoardTags((prev) => [...prev, created]);
+        // Update shared cache so other components see the new tag without refetch.
+        setTagsForBoard((prev) => [...(prev || []), created]);
         setNewTagName("");
         setIsCreatingTag(false);
         // Automatically assign the new tag to the task
@@ -407,7 +402,7 @@ export default function TaskModal({
     try {
       const res = await fetch(`/api/tags/${tagToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        setAllBoardTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
+        setTagsForBoard((prev) => (prev || []).filter((t) => t.id !== tagToDelete.id));
         if (task) await onUpdate(task.id, {});
       }
     } catch (error) {

@@ -20,6 +20,7 @@ import TaskModal from "./TaskModal";
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
+import useBoardResources from "@/hooks/useBoardResources";
 
 interface Props {
   boardId: string;
@@ -39,8 +40,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [boardMembers, setBoardMembers] = useState<import("@/lib/types").BoardMemberData[]>([]);
-
+  const [boardMembersLocal, setBoardMembersLocal] = useState<import("@/lib/types").BoardMemberData[]>([]);
   // Filtering state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
@@ -48,38 +48,26 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
 
-  // Per-board cache for members and tags — avoids re-fetching on every board switch
-  const membersCache = useRef<Map<string, import("@/lib/types").BoardMemberData[]>>(new Map());
-  const tagsCache = useRef<Map<string, import("@/lib/types").Tag[]>>(new Map());
+  // use shared board resources (members, tags) to avoid duplicate fetches
+  const {
+    members: boardMembers,
+    tags: allTagsFromHook,
+    loadingMembers,
+    loadingTags,
+    reloadMembers,
+    reloadTags,
+    setMembersForBoard,
+    setTagsForBoard,
+  } = useBoardResources(boardId);
 
+  // Keep a local placeholder so existing code that may have referenced setBoardMembers
+  // earlier doesn't break; but the hook-backed `boardMembers` is the source of truth.
   useEffect(() => {
-    const cachedMembers = membersCache.current.get(boardId);
-    const cachedTags = tagsCache.current.get(boardId);
-
-    if (cachedMembers) {
-      setBoardMembers(cachedMembers);
-    } else {
-      fetch(`/api/boards/${boardId}/members`)
-        .then((r) => r.ok ? r.json() : [])
-        .then((data) => {
-          membersCache.current.set(boardId, data);
-          setBoardMembers(data);
-        })
-        .catch(() => {});
-    }
-
-    if (cachedTags) {
-      setAllTags(cachedTags);
-    } else {
-      fetch(`/api/tags?boardId=${boardId}`)
-        .then((r) => r.ok ? r.json() : [])
-        .then((data) => {
-          tagsCache.current.set(boardId, data);
-          setAllTags(data);
-        })
-        .catch(() => {});
-    }
-  }, [boardId]);
+    setBoardMembersLocal(boardMembers);
+  }, [boardMembers]);
+  useEffect(() => {
+    setAllTags(allTagsFromHook);
+  }, [allTagsFromHook]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })

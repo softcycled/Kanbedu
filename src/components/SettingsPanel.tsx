@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
+import useBoardResources from "@/hooks/useBoardResources";
 import { Board } from "@/lib/types";
 import DeleteBoardModal from "./DeleteBoardModal";
 
@@ -39,8 +40,7 @@ export default function SettingsPanel({
   const [nameValue, setNameValue] = useState(board?.name ?? "");
   const [isSavingName, setIsSavingName] = useState(false);
 
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const { members, loadingMembers, reloadMembers, setMembersForBoard } = useBoardResources(board?.id ?? null);
 
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null);
@@ -50,15 +50,7 @@ export default function SettingsPanel({
     setEditingName(false);
   }, [board?.id, board?.name]);
 
-  useEffect(() => {
-    if (!board?.id) return;
-    setLoadingMembers(true);
-    fetch(`/api/boards/${board.id}/members`)
-      .then((r) => r.ok ? r.json() : [])
-      .then(setMembers)
-      .catch(() => setMembers([]))
-      .finally(() => setLoadingMembers(false));
-  }, [board?.id]);
+  // Members are provided via shared `useBoardResources` hook; no local fetch needed.
 
   const saveName = async () => {
     if (!nameValue.trim() || nameValue.trim() === board?.name) {
