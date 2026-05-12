@@ -27,15 +27,15 @@ model User {
 }
 
 model Board {
-  id          String        @id @default(cuid())
-  name        String
-  githubRepo  String?
-  order       Int           @default(0)
-  createdAt   DateTime      @default(now())
-  columns   Column[]
-  members   BoardMember[]
-  invites   BoardInvite[]
-  tags      Tag[]
+  id         String        @id @default(cuid())
+  name       String
+  githubRepo String?
+  order      Int           @default(0)
+  createdAt  DateTime      @default(now())
+  columns    Column[]
+  members    BoardMember[]
+  invites    BoardInvite[]
+  tags       Tag[]
 }
 
 model BoardMember {
@@ -146,6 +146,10 @@ model TaskActivity {
 
   @@index([taskId])
   @@index([type])
+  // Composite index to accelerate queries that filter by taskId and order by createdAt DESC
+  @@index([taskId, createdAt])
+  // Index on userId to speed up lookups joining users for activities
+  @@index([userId])
 }
 
 model TaskDescriptionVersion {
@@ -159,7 +163,6 @@ model TaskDescriptionVersion {
 
   @@index([taskId])
 }
-
 
 model BugReport {
   id          String   @id @default(cuid())

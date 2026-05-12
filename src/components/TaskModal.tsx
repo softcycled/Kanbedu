@@ -145,7 +145,8 @@ export default function TaskModal({
 
       // Lazy-load activities when opening a new task (not included in the board list fetch)
       if (!task.activities || task.activities.length === 0) {
-        fetch(`/api/tasks/${task.id}`)
+        // Request activities explicitly to avoid fetching heavy relations by default
+        fetch(`/api/tasks/${task.id}?include=activities`)
           .then((r) => r.ok ? r.json() : null)
           .then((data) => { if (data?.activities) setActivities(data.activities); })
           .catch(() => {});

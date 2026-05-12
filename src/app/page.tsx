@@ -10,7 +10,7 @@ export default async function Home() {
   if (!session) redirect("/landing");
 
   // Run user lookup + board memberships in parallel
-  const [user, memberships] = await Promise.all([
+  let [user, memberships] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
       select: { isAdmin: true },
@@ -26,6 +26,23 @@ export default async function Home() {
 
   // First-time user: create a default board
   if (boards.length === 0) {
+    // If the user record is missing, auto-create a minimal user in non-production
+    // to avoid foreign-key errors when creating the initial BoardMember.
+    if (!user) {
+      if (process.env.NODE_ENV === "production") {
+        // In production, don't auto-create users; redirect to landing/signup.
+        redirect("/landing");
+      } else {
+        await prisma.user.upsert({
+          where: { id: session.userId },
+          create: { id: session.userId, email: `${session.userId}@local.kanbedu`, name: "", color: "#4A90A4" },
+          update: {},
+        });
+        // Refresh `user` value (only need isAdmin for later checks).
+        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true } });
+      }
+    }
+
     const board = await prisma.board.create({
       data: { name: "My Board" },
     });
