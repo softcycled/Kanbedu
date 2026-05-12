@@ -386,45 +386,7 @@ export async function PATCH(
     })();
   }
 
-  // Fire-and-forget post-update work (activities, description versions, assignee lookups)
-  (async () => {
-    const postUpdateWork: Promise<unknown>[] = [];
 
-    if (body.title && body.title !== current.title) {
-      postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`));
-    }
-    if (body.priority && body.priority !== current.priority) {
-      postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
-    }
-    if (body.description !== undefined && body.description !== current.description) {
-      postUpdateWork.push(
-        prisma.taskDescriptionVersion.create({
-          data: { taskId: id, userId: session.userId, content: body.description },
-        }),
-        recordActivity(id, session.userId, "UPDATE", "Updated the description")
-      );
-    }
-    if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
-      if (body.assigneeId) {
-        postUpdateWork.push(
-          prisma.user.findUnique({ where: { id: body.assigneeId } }).then((newUser) =>
-            recordActivity(id, session.userId, "ASSIGNEE", `Assigned to ${newUser?.name || "someone"}`)
-          )
-        );
-      } else {
-        postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Unassigned the task"));
-      }
-    }
-    if (body.tagIds !== undefined) {
-      postUpdateWork.push(recordActivity(id, session.userId, "TAG", "Updated tags"));
-    }
-
-    try {
-      await Promise.allSettled(postUpdateWork);
-    } catch (err) {
-      console.error("Post-update background work failed:", err);
-    }
-  })();
 
   // Compose a minimal response; ensure `tags`, `comments`, and `activities` are present so
   // client code can safely replace local task objects without structural surprises.

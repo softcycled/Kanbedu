@@ -79,6 +79,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const raw = await req.json();
   const result = parseBody(createTaskSchema, raw);
   if (!result.data) {
@@ -118,10 +123,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      const session = await getSession();
-      if (session) {
-        await recordActivity(created.id, session.userId, "CREATE", "Created the task");
-      }
+      await recordActivity(created.id, session.userId, "CREATE", "Created the task");
     } catch (err) {
       console.error("Failed to record activity (background):", err);
     }
