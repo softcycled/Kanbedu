@@ -71,4 +71,5 @@ export interface BoardMemberData {
   name: string;
   color: string;
   email: string;
+  role?: string;
 }

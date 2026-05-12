@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import RichTextEditor from "./RichTextEditor";
-import DiffViewer from "./DiffViewer";
+import dynamic from "next/dynamic";
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false, loading: () => null });
+const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
+const LazyMarkdown = dynamic(() => import("./LazyMarkdown"), { ssr: false, loading: () => null });
 import {
   isOverdue,
   formatDateForInput,
@@ -911,9 +911,7 @@ export default function TaskModal({
                 "
               >
                 {description ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {description}
-                  </ReactMarkdown>
+                  <LazyMarkdown content={description} />
                 ) : (
                   <span className="text-muted italic">Add a description…</span>
                 )}

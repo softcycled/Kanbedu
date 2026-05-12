@@ -16,7 +16,8 @@ import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortabl
 import { arrayMove } from "@dnd-kit/sortable";
 import { Task, Comment, ColumnData } from "@/lib/types";
 import KanbanColumn from "./KanbanColumn";
-import TaskModal from "./TaskModal"; 
+import dynamic from "next/dynamic";
+const TaskModal = dynamic(() => import("./TaskModal"), { ssr: false, loading: () => null });
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";

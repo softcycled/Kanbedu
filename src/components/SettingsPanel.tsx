@@ -209,7 +209,7 @@ export default function SettingsPanel({
                   <div className="px-4 py-6 text-center text-xs text-muted">No members found.</div>
                 ) : (
                   members.map((member, i) => {
-                    const roleInfo = ROLE_LABELS[member.role] ?? ROLE_LABELS.member;
+                    const roleInfo = ROLE_LABELS[member.role ?? "member"] ?? ROLE_LABELS.member;
                     return (
                       <div
                         key={member.id}
