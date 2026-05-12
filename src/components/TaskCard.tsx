@@ -105,10 +105,10 @@ function TaskCard({ task, onClick }: Props) {
             deadlineInfo.severity === "overdue"
               ? "bg-red-500/10 text-red-600 dark:bg-red-950/30 dark:text-red-400"
               : deadlineInfo.severity === "due-soon"
-              ? "bg-yellow-500/10 text-yellow-600 dark:bg-yellow-950/30 dark:text-yellow-300"
+              ? "bg-orange-500/10 text-orange-500 dark:bg-orange-950/30 dark:text-orange-400"
               : "text-muted"
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${deadlineInfo.severity === "overdue" ? "bg-red-500" : deadlineInfo.severity === "due-soon" ? "bg-yellow-500" : "bg-muted/30"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${deadlineInfo.severity === "overdue" ? "bg-red-500" : deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/30"}`} />
             {deadlineInfo.label}
           </span>
         )}

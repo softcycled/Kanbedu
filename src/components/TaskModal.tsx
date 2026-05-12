@@ -850,16 +850,16 @@ export default function TaskModal({
               {showDeadlineStatus && (
                 <p className={`mt-1 flex items-center gap-2 text-xs ${
                   deadlineInfo.severity === "overdue"
-                    ? "text-red-600"
+                    ? "text-red-600 dark:text-red-400"
                     : deadlineInfo.severity === "due-soon"
-                    ? "text-yellow-600"
+                    ? "text-orange-500 dark:text-orange-400"
                     : "text-muted"
                 }`}>
                   <span className={`w-2 h-2 rounded-full ${
                     deadlineInfo.severity === "overdue"
                       ? "bg-red-500"
                       : deadlineInfo.severity === "due-soon"
-                      ? "bg-yellow-500"
+                      ? "bg-orange-500"
                       : "bg-muted/40"
                   }`} />
                   {deadlineInfo.label}
