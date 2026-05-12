@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
 import dynamic from "next/dynamic";
-const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false, loading: () => null });
 const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
-const LazyMarkdown = dynamic(() => import("./LazyMarkdown"), { ssr: false, loading: () => null });
 import {
   isOverdue,
   formatDateForInput,
@@ -58,6 +56,7 @@ export default function TaskModal({
 }: Props) {
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
+  const [optimisticTitle, setOptimisticTitle] = useState<string | null>(null);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
@@ -110,6 +109,7 @@ export default function TaskModal({
   const debouncedDescription = useDebounce(description, 600);
   const debouncedAssigneeId = useDebounce(assigneeId, 600);
   const debouncedDeadline = useDebounce(deadline, 600);
+  const [optimisticTagIds, setOptimisticTagIds] = useState<string[] | null>(null);
 
   const prevTask = useRef<string | null>(null);
   const originalTask = useRef<{ description?: string; assigneeId?: string | null; deadline?: string } | null>(null);
@@ -118,13 +118,8 @@ export default function TaskModal({
 
   useEffect(() => {
     if (!task) return;
-    
-    // Always sync comments and activities from props
-    setComments(task.comments ?? []);
-    setActivities(task.activities ?? []);
-    setPriority(task.priority ?? "medium");
 
-    // Only sync draft-related fields when switching tasks to avoid overwriting active edits
+    // Only sync everything when switching to a new task id - otherwise do a minimal, non-destructive sync
     if (task.id !== prevTask.current) {
       prevTask.current = task.id;
       userHasEdited.current = false;
@@ -133,14 +128,20 @@ export default function TaskModal({
       setIsEditingTitle(false);
       setShowInfo(false);
       setDraftTitle(task.title);
+      setOptimisticTitle(null);
+      setOptimisticTagIds(null);
       setAssigneeId(task.assigneeId ?? "");
       setDeadline(formatDateForInput(task.deadline));
-      
+
       originalTask.current = {
         description: task.description ?? "",
         assigneeId: task.assigneeId,
         deadline: formatDateForInput(task.deadline),
       };
+
+      // sync comments/activities on first load for this task
+      setComments(task.comments ?? []);
+      setActivities(task.activities ?? []);
 
       // Lazy-load activities when opening a new task (not included in the board list fetch)
       if (!task.activities || task.activities.length === 0) {
@@ -149,6 +150,32 @@ export default function TaskModal({
           .then((data) => { if (data?.activities) setActivities(data.activities); })
           .catch(() => {});
       }
+    } else {
+      // Same task id: do not clobber local edits. Only sync comments/activities when the server shows
+      // new entries (compare last item id) or when we have no local content.
+      const incomingComments = task.comments ?? [];
+      const incomingActivities = task.activities ?? [];
+
+      const lastIncomingCommentId = incomingComments.length ? incomingComments[incomingComments.length - 1].id : null;
+      const lastLocalCommentId = comments.length ? comments[comments.length - 1].id : null;
+      if ((!comments || comments.length === 0) && incomingComments.length > 0) {
+        setComments(incomingComments);
+      } else if (lastIncomingCommentId && lastIncomingCommentId !== lastLocalCommentId) {
+        setComments(incomingComments);
+      }
+
+      const lastIncomingActivityId = incomingActivities.length ? incomingActivities[incomingActivities.length - 1].id : null;
+      const lastLocalActivityId = activities.length ? activities[activities.length - 1].id : null;
+      if ((!activities || activities.length === 0) && incomingActivities.length > 0) {
+        setActivities(incomingActivities);
+      } else if (lastIncomingActivityId && lastIncomingActivityId !== lastLocalActivityId) {
+        setActivities(incomingActivities);
+      }
+
+      // keep priority in sync only when not actively editing it
+      setPriority(task.priority ?? "medium");
+      // if server-side title matches optimistic title, clear optimistic overlay
+      if (optimisticTitle && task.title === optimisticTitle) setOptimisticTitle(null);
     }
   }, [task]);
 
@@ -159,7 +186,8 @@ export default function TaskModal({
     titleInputRef.current?.select();
   }, [isEditingTitle]);
 
-  const commitTitle = useCallback(async () => {
+  // commit title optimistically (non-blocking)
+  const commitTitle = useCallback(() => {
     const trimmed = draftTitle.trim();
     if (!trimmed || !task) {
       setDraftTitle(task?.title ?? "");
@@ -167,7 +195,14 @@ export default function TaskModal({
       return;
     }
     if (trimmed !== task.title) {
-      await onUpdate(task.id, { title: trimmed });
+      // show optimistic title instantly
+      setOptimisticTitle(trimmed);
+      // fire update in background
+      void onUpdate(task.id, { title: trimmed }).catch((err) => {
+        console.error("Title update failed", err);
+        // clear optimistic on failure; parent fetch may also reconcile
+        setOptimisticTitle(null);
+      });
     }
     setIsEditingTitle(false);
   }, [draftTitle, task, onUpdate]);
@@ -209,6 +244,63 @@ export default function TaskModal({
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     };
   }, []);
+
+  // Auto-resize textarea for comfortable editing
+  const adjustDescriptionHeight = useCallback(() => {
+    const el = descriptionTextareaRef.current;
+    if (!el) return;
+    // compute useful metrics
+    const cs = window.getComputedStyle(el);
+    let lineHeight = parseFloat(cs.lineHeight || "");
+    if (!lineHeight || Number.isNaN(lineHeight)) {
+      const fontSize = parseFloat(cs.fontSize || "14");
+      lineHeight = fontSize * 1.4;
+    }
+    const paddingTop = parseFloat(cs.paddingTop || "0") || 0;
+    const paddingBottom = parseFloat(cs.paddingBottom || "0") || 0;
+    const borderTop = parseFloat(cs.borderTopWidth || "0") || 0;
+    const borderBottom = parseFloat(cs.borderBottomWidth || "0") || 0;
+
+    const minLines = 10; // preferred minimum 8-12 lines
+    const minHeight = Math.round(lineHeight * minLines + paddingTop + paddingBottom + borderTop + borderBottom);
+
+    // Reset to auto then measure
+    el.style.height = "auto";
+    const scrollH = el.scrollHeight;
+    const desired = Math.max(scrollH, minHeight);
+
+    // cap height to avoid overflowing the modal body
+    const modalAvailable = modalBodyRef.current ? Math.max(120, modalBodyRef.current.clientHeight - 120) : window.innerHeight * 0.5;
+    const maxHeight = Math.max(200, modalAvailable);
+
+    el.style.height = Math.min(desired, maxHeight) + "px";
+    el.style.overflow = desired > maxHeight ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isEditingDescription) return;
+    // focus and adjust when entering edit mode
+    const el = descriptionTextareaRef.current;
+    if (!el) return;
+    // small delay to ensure element is rendered
+    requestAnimationFrame(() => {
+      adjustDescriptionHeight();
+      try {
+        el.focus();
+        el.selectionStart = el.selectionEnd = el.value.length;
+      } catch {}
+    });
+
+    const onInput = () => {
+      requestAnimationFrame(adjustDescriptionHeight);
+    };
+    el.addEventListener("input", onInput);
+    window.addEventListener("resize", onInput);
+    return () => {
+      el.removeEventListener("input", onInput);
+      window.removeEventListener("resize", onInput);
+    };
+  }, [isEditingDescription, adjustDescriptionHeight]);
 
   // Close assignee dropdown on outside click
   useEffect(() => {
@@ -260,10 +352,20 @@ export default function TaskModal({
   useEffect(() => {
     if (!task) return;
     if (debouncedAssigneeId !== originalTask.current?.assigneeId) {
-      handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
+      void handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedAssigneeId]);
+
+  // Auto-save description when debounced value changes
+  useEffect(() => {
+    if (!task || !isMounted.current || prevTask.current !== task.id) return;
+    if (!userHasEdited.current) return;
+    if (debouncedDescription !== originalTask.current?.description) {
+      void handleUpdateWithFeedback(task.id, { description: debouncedDescription } as Partial<Task>);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedDescription]);
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
@@ -273,13 +375,13 @@ export default function TaskModal({
       ? dateInputToISOString(originalTask.current.deadline)
       : null;
     if (deadlineValue !== originalDeadline) {
-      handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
+      void handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedDeadline]);
 
   // Flush any pending debounced updates before closing
-  const flushUpdates = useCallback(async () => {
+  const flushUpdates = useCallback(() => {
     if (!task || !isMounted.current || !userHasEdited.current) return;
 
     const updates: Partial<Task> = {};
@@ -297,16 +399,17 @@ export default function TaskModal({
       updates.deadline = deadlineValue;
     }
 
-    // Send all pending updates
+    // Send all pending updates in background (do not block UI/closing)
     if (Object.keys(updates).length > 0) {
-      await handleUpdateWithFeedback(task.id, updates);
+      void handleUpdateWithFeedback(task.id, updates);
     }
   }, [task, description, assigneeId, deadline, handleUpdateWithFeedback]);
 
-  const handleClose = useCallback(async () => {
+  const handleClose = useCallback(() => {
     setConfirmDelete(false);
     setTagToDelete(null);
-    await flushUpdates();
+    // flush in background so closing feels instant
+    flushUpdates();
     onClose();
   }, [flushUpdates, onClose]);
 
@@ -322,23 +425,31 @@ export default function TaskModal({
   const handleAddComment = async () => {
     const trimmed = commentInput.trim();
     if (!trimmed || !task) return;
-    setAddingComment(true);
+    // optimistic UI: add a local comment and activity immediately
     setCommentInput("");
-    try {
-      const newComment = await onAddComment(task.id, trimmed, commentAuthor.trim());
-      setComments((prev) => [...prev, newComment]);
-      
-      // Fetch fresh task data to update activities feed
-      const res = await fetch(`/api/tasks/${task.id}`);
-      if (res.ok) {
-        const freshTask = await res.json();
-        setActivities(freshTask.activities || []);
-      }
-    } catch (err) {
+    const localId = `local-comment-${Date.now()}`;
+    const optimistic: Comment = { id: localId, content: trimmed, author: commentAuthor.trim() || "Anonymous", createdAt: new Date().toISOString(), taskId: task.id };
+    setComments((prev) => [...prev, optimistic]);
+    setActivities((prev) => [
+      ...prev,
+      {
+        id: `local-act-${Date.now()}`,
+        type: "comment",
+        content: trimmed,
+        userId: "",
+        taskId: task.id,
+        createdAt: new Date().toISOString(),
+        user: { id: "", name: commentAuthor.trim() || "You", color: nameToColor(commentAuthor.trim() || "You") },
+      },
+    ]);
+
+    // fire server request in background and reconcile when it completes
+    void onAddComment(task.id, trimmed, commentAuthor.trim()).then((serverComment) => {
+      setComments((prev) => prev.map((c) => (c.id === localId ? serverComment : c)));
+    }).catch((err) => {
       console.error(err);
-    } finally {
-      setAddingComment(false);
-    }
+      setComments((prev) => prev.filter((c) => c.id !== localId));
+    });
   };
 
   const handleCommentKey = (e: React.KeyboardEvent) => {
@@ -347,22 +458,29 @@ export default function TaskModal({
 
   const toggleTag = async (tagId: string) => {
     if (!task) return;
+    // optimistic tag toggle
     userHasEdited.current = true;
-    const currentIds = task.tags?.map((t) => t.id) ?? [];
-    let newIds: string[];
-    if (currentIds.includes(tagId)) {
-      newIds = currentIds.filter((id) => id !== tagId);
-    } else {
-      newIds = [...currentIds, tagId];
-    }
-    await handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
-    
-    // Immediately fetch fresh activities to reflect the tag change in the log
-    const res = await fetch(`/api/tasks/${task.id}`);
-    if (res.ok) {
-      const freshTask = await res.json();
-      setActivities(freshTask.activities || []);
-    }
+    const base = optimisticTagIds ?? (task.tags?.map((t) => t.id) ?? []);
+    const newIds = base.includes(tagId) ? base.filter((id) => id !== tagId) : [...base, tagId];
+    setOptimisticTagIds(newIds);
+
+    // add optimistic activity entry
+    const tagObj = allBoardTags.find((t) => t.id === tagId);
+    setActivities((prev) => [
+      ...prev,
+      {
+        id: `local-act-${Date.now()}`,
+        type: "tag",
+        content: tagObj ? `${tagObj.name}` : "tagged",
+        userId: "",
+        taskId: task.id,
+        createdAt: new Date().toISOString(),
+        user: { id: "", name: commentAuthor || "You", color: nameToColor(commentAuthor || "You") },
+      },
+    ]);
+
+    // fire the update in background (do not await to keep UI snappy)
+    void handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
   };
 
   const handleCreateTag = async () => {
@@ -380,8 +498,8 @@ export default function TaskModal({
         setTagsForBoard((prev) => [...(prev || []), created]);
         setNewTagName("");
         setIsCreatingTag(false);
-        // Automatically assign the new tag to the task
-        await toggleTag(created.id);
+        // Automatically assign the new tag to the task (non-blocking)
+        toggleTag(created.id);
         onBroadcast?.();
       }
     } catch (error) {
@@ -403,7 +521,10 @@ export default function TaskModal({
       const res = await fetch(`/api/tags/${tagToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
         setTagsForBoard((prev) => (prev || []).filter((t) => t.id !== tagToDelete.id));
-        if (task) await onUpdate(task.id, {});
+        // remove optimistic assignment if present
+        setOptimisticTagIds((prev) => prev ? prev.filter((id) => id !== tagToDelete.id) : prev);
+        // trigger background sync for the task (non-blocking)
+        if (task) void onUpdate(task.id, {});
       }
     } catch (error) {
       console.error("Failed to delete tag:", error);
@@ -520,9 +641,9 @@ export default function TaskModal({
             ) : (
               <h2
                 className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-column-bg transition-colors"
-                onClick={() => { setDraftTitle(task.title); setIsEditingTitle(true); }}
+                onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
               >
-                {task.title}
+                {optimisticTitle ?? task.title}
               </h2>
             )}
             <div className="flex items-center gap-1 flex-shrink-0">
@@ -603,7 +724,7 @@ export default function TaskModal({
                     key={p}
                     onClick={() => {
                       setPriority(p);
-                      handleUpdateWithFeedback(task.id, { priority: p });
+                      void handleUpdateWithFeedback(task.id, { priority: p });
                     }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
                       isActive ? styles[p].active : styles[p].idle
@@ -624,7 +745,7 @@ export default function TaskModal({
               Tags
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              {task.tags?.map((tag) => (
+              {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
                 <button
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
@@ -653,7 +774,7 @@ export default function TaskModal({
                     <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>
                   )}
                   {allBoardTags.map((tag) => {
-                    const isSelected = task.tags?.some((t) => t.id === tag.id);
+                    const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
                     return (
                       <div
                         key={tag.id}
@@ -870,31 +991,26 @@ export default function TaskModal({
             </label>
             {isEditingDescription ? (
               <div className="space-y-3">
-                <RichTextEditor
-                  content={description}
-                  onChange={(val) => {
-                    userHasEdited.current = true;
-                    setDescription(val);
+                <textarea
+                  ref={descriptionTextareaRef}
+                  value={description}
+                  onChange={(e) => { userHasEdited.current = true; setDescription(e.target.value); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      // revert edits
+                      setDescription(descriptionOriginalRef.current);
+                      userHasEdited.current = false;
+                      setIsEditingDescription(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    setIsEditingDescription(false);
+                    // flush updates on blur (non-blocking)
+                    void flushUpdates();
                   }}
                   placeholder="Add a detailed description…"
+                  className="w-full min-h-[6rem] bg-column-bg rounded-xl p-3 text-sm text-ink border border-transparent focus:border-border focus:outline-none resize-none"
                 />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setDescription(descriptionOriginalRef.current);
-                      setIsEditingDescription(false);
-                    }}
-                    className="text-xs font-bold text-muted hover:text-ink px-3 py-1.5"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setIsEditingDescription(false)}
-                    className="text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-lg shadow-sm"
-                  >
-                    Save
-                  </button>
-                </div>
               </div>
             ) : (
               <div
@@ -902,16 +1018,15 @@ export default function TaskModal({
                   descriptionOriginalRef.current = description;
                   setIsEditingDescription(true);
                 }}
-                className="
-                  min-h-[4rem] px-4 py-3 rounded-xl cursor-text 
-                  bg-column-bg hover:bg-black/[0.05] transition-colors text-ink
-                  prose prose-sm dark:prose-invert max-w-none
-                  prose-headings:font-bold prose-headings:mb-2 prose-p:leading-relaxed
-                  prose-pre:bg-black/10 prose-pre:p-3 prose-pre:rounded-lg
-                "
+                className="min-h-[4rem] px-4 py-3 rounded-xl cursor-text bg-column-bg hover:bg-black/[0.05] transition-colors text-ink max-w-none"
               >
                 {description ? (
-                  <LazyMarkdown content={description} />
+                  <div
+                    className="whitespace-pre-wrap break-words text-sm leading-relaxed"
+                    style={{ whiteSpace: "pre-wrap" }}
+                  >
+                    {description}
+                  </div>
                 ) : (
                   <span className="text-muted italic">Add a description…</span>
                 )}
