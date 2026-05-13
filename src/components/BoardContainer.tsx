@@ -248,6 +248,7 @@ export default function BoardContainer({
             onUpdateBoard={handleUpdateBoard}
             onDelete={handleDeleteBoard}
             onReorder={handleReorderBoards}
+            currentUserId={currentUserId}
           />
         )}
         {activePanel === "profile" && <ProfilePanel />}

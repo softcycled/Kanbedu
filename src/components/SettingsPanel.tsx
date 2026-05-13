@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import useBoardResources from "@/hooks/useBoardResources";
 import { Board } from "@/lib/types";
 import DeleteBoardModal from "./DeleteBoardModal";
@@ -25,6 +26,7 @@ interface Props {
   onUpdateBoard: (boardId: string, data: { name?: string; githubRepo?: string | null }) => Promise<void>;
   onDelete: (boardId: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
+  currentUserId: string;
 }
 
 export default function SettingsPanel({
@@ -32,6 +34,8 @@ export default function SettingsPanel({
   activeBoardId,
   onUpdateBoard,
   onDelete,
+  onReorder,
+  currentUserId,
 }: Props) {
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
@@ -42,8 +46,37 @@ export default function SettingsPanel({
 
   const { members, loadingMembers, reloadMembers, setMembersForBoard } = useBoardResources(board?.id ?? null);
 
+  const router = useRouter();
+
+  const currentUserRole = members.find((m) => m.id === currentUserId)?.role ?? "member";
+
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null);
+  const [transferTarget, setTransferTarget] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const [transferDropdownOpen, setTransferDropdownOpen] = useState(false);
+  const [removeDropdownOpen, setRemoveDropdownOpen] = useState(false);
+  const transferDropdownRef = useRef<HTMLDivElement>(null);
+  const removeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    if (!transferDropdownOpen && !removeDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (transferDropdownOpen && transferDropdownRef.current && !transferDropdownRef.current.contains(e.target as Node)) {
+        setTransferDropdownOpen(false);
+      }
+      if (removeDropdownOpen && removeDropdownRef.current && !removeDropdownRef.current.contains(e.target as Node)) {
+        setRemoveDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [transferDropdownOpen, removeDropdownOpen]);
 
   useEffect(() => {
     setNameValue(board?.name ?? "");
@@ -236,23 +269,246 @@ export default function SettingsPanel({
             </section>
 
             {/* Danger zone */}
-            {boards.length > 1 && (
-              <section>
-                <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500/70 mb-3">Danger Zone</h4>
-                <div className="flex items-center gap-3 p-4 bg-card-bg border border-red-500/20 rounded-xl">
-                  <div className="flex-1">
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500/60 mb-3">Danger Zone</h4>
+              <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+
+                {/* Transfer ownership row */}
+                <div className={`flex items-center justify-between px-4 py-3.5 gap-4 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">Transfer ownership</p>
+                    <p className="text-xs text-muted mt-0.5">Pass board ownership to another member.</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div ref={transferDropdownRef} className="relative w-44">
+                      <button
+                        type="button"
+                        onClick={() => setTransferDropdownOpen((v) => !v)}
+                        disabled={currentUserRole !== "owner"}
+                        className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
+                      >
+                        {transferTarget ? (
+                          (() => {
+                            const m = members.find((m) => m.id === transferTarget);
+                            return m ? (
+                              <>
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
+                                  {m.name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="truncate">{m.name}</span>
+                              </>
+                            ) : <span className="text-muted">Select member</span>;
+                          })()
+                        ) : <span className="text-muted">Select member</span>}
+                        <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
+                      </button>
+                      {transferDropdownOpen && (
+                        <div className="absolute z-20 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                          {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
+                            <p className="px-4 py-2.5 text-xs text-muted">No other members</p>
+                          ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => { setTransferTarget(m.id); setTransferDropdownOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                transferTarget === m.id ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                              }`}
+                            >
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
+                                {m.name.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="truncate">{m.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!transferTarget) return;
+                        if (!confirm("Transfer ownership? This will make the selected member the new owner.")) return;
+                        setIsTransferring(true);
+                        try {
+                          const res = await fetch(`/api/boards/${board.id}/members`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "transfer", toUserId: transferTarget }),
+                          });
+                          if (!res.ok) {
+                            console.error("Transfer failed", await res.text());
+                            alert("Failed to transfer ownership.");
+                            setIsTransferring(false);
+                            return;
+                          }
+                          setMembersForBoard((prev) => prev.map((m) => {
+                            if (m.id === transferTarget) return { ...m, role: "owner" };
+                            if (m.id === currentUserId) return { ...m, role: "member" };
+                            return m;
+                          }));
+                          setTransferTarget(null);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to transfer ownership.");
+                        } finally {
+                          setIsTransferring(false);
+                        }
+                      }}
+                      disabled={!transferTarget || currentUserRole !== "owner" || isTransferring}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isTransferring ? "Transferring…" : "Transfer"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/60 mx-4" />
+
+                {/* Remove member row */}
+                <div className={`flex items-center justify-between px-4 py-3.5 gap-4 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">Remove member</p>
+                    <p className="text-xs text-muted mt-0.5">Revoke a member's access to this board.</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div ref={removeDropdownRef} className="relative w-44">
+                      <button
+                        type="button"
+                        onClick={() => setRemoveDropdownOpen((v) => !v)}
+                        disabled={currentUserRole !== "owner"}
+                        className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
+                      >
+                        {removeTarget ? (
+                          (() => {
+                            const m = members.find((m) => m.id === removeTarget);
+                            return m ? (
+                              <>
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
+                                  {m.name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="truncate">{m.name}</span>
+                              </>
+                            ) : <span className="text-muted">Select member</span>;
+                          })()
+                        ) : <span className="text-muted">Select member</span>}
+                        <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
+                      </button>
+                      {removeDropdownOpen && (
+                        <div className="absolute z-20 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                          {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
+                            <p className="px-4 py-2.5 text-xs text-muted">No other members</p>
+                          ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => { setRemoveTarget(m.id); setRemoveDropdownOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                removeTarget === m.id ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                              }`}
+                            >
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
+                                {m.name.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="truncate">{m.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!removeTarget) return;
+                        if (!confirm("Remove member from board? This will revoke their access.")) return;
+                        setIsRemoving(true);
+                        try {
+                          const res = await fetch(`/api/boards/${board.id}/members`, {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: removeTarget }),
+                          });
+                          if (!res.ok) {
+                            console.error("Remove failed", await res.text());
+                            alert("Failed to remove member.");
+                            setIsRemoving(false);
+                            return;
+                          }
+                          setMembersForBoard((prev) => prev.filter((m) => m.id !== removeTarget));
+                          setRemoveTarget(null);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to remove member.");
+                        } finally {
+                          setIsRemoving(false);
+                        }
+                      }}
+                      disabled={!removeTarget || currentUserRole !== "owner" || isRemoving}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isRemoving ? "Removing…" : "Remove"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/60 mx-4" />
+
+                {/* Leave board row */}
+                <div className="flex items-center justify-between px-4 py-3.5 gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">Leave board</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {currentUserRole === "owner"
+                        ? "Transfer ownership before leaving."
+                        : "You will lose access to this board."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (currentUserRole === "owner") return;
+                      if (!confirm("Are you sure you want to leave this board? You will lose access.")) return;
+                      setIsLeaving(true);
+                      try {
+                        const res = await fetch(`/api/boards/${board.id}/members`, { method: "DELETE" });
+                        if (!res.ok) {
+                          console.error("Failed to leave board", await res.text());
+                          alert("Failed to leave board.");
+                          setIsLeaving(false);
+                          return;
+                        }
+                        setMembersForBoard((prev) => prev.filter((m) => m.id !== currentUserId));
+                        if (activeBoardId === board.id) router.replace("/");
+                      } catch (err) {
+                        console.error(err);
+                        alert("Failed to leave board.");
+                      } finally {
+                        setIsLeaving(false);
+                      }
+                    }}
+                    disabled={currentUserRole === "owner" || isLeaving}
+                    className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isLeaving ? "Leaving…" : "Leave"}
+                  </button>
+                </div>
+
+                <div className="border-t border-border/60 mx-4" />
+
+                {/* Delete board row */}
+                <div className="flex items-center justify-between px-4 py-3.5 gap-4">
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">Delete this board</p>
-                    <p className="text-xs text-muted mt-0.5">Permanently removes the board and all its tasks</p>
+                    <p className="text-xs text-muted mt-0.5">Permanently removes the board and all its tasks.</p>
                   </div>
                   <button
                     onClick={() => setDeletingBoard(board)}
-                    className="px-4 py-2 rounded-lg border border-red-500/30 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-colors flex-shrink-0"
+                    disabled={boards.length <= 1}
+                    title={boards.length <= 1 ? "Create another board first to delete this one" : "Delete board"}
+                    className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Delete
                   </button>
                 </div>
-              </section>
-            )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
