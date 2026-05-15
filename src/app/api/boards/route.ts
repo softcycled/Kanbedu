@@ -98,6 +98,20 @@ export async function PUT(request: NextRequest) {
     }
     const data = result.data;
 
+    // auth: ensure user is authenticated and is a member of all affected boards
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const memberships = await prisma.boardMember.findMany({
+      where: { userId: session.userId, boardId: { in: data.ids } },
+      select: { boardId: true },
+    });
+    const memberBoardIds = memberships.map((m) => m.boardId);
+    const missing = data.ids.filter((id: string) => !memberBoardIds.includes(id));
+    if (missing.length > 0) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await Promise.all(
       data.ids.map((id: string, index: number) =>
         prisma.board.update({ where: { id }, data: { order: index } })

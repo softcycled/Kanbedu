@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import useBoardResources from "@/hooks/useBoardResources";
 import { Board } from "@/lib/types";
 import DeleteBoardModal from "./DeleteBoardModal";
+import ConfirmModal from "./ConfirmModal";
 
 interface Member {
   id: string;
@@ -57,6 +58,9 @@ export default function SettingsPanel({
   const [isTransferring, setIsTransferring] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   const [transferDropdownOpen, setTransferDropdownOpen] = useState(false);
   const [removeDropdownOpen, setRemoveDropdownOpen] = useState(false);
@@ -115,6 +119,81 @@ export default function SettingsPanel({
       setTimeout(() => setInvitingId(null), 2500);
     } catch {
       // ignore
+    }
+  };
+
+  // Perform transfer after user confirms
+  const performTransfer = async () => {
+    if (!transferTarget) return;
+    setIsTransferring(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "transfer", toUserId: transferTarget }),
+      });
+      if (!res.ok) {
+        console.error("Transfer failed", await res.text());
+        alert("Failed to transfer ownership.");
+        setIsTransferring(false);
+        return;
+      }
+      setMembersForBoard((prev) => prev.map((m) => {
+        if (m.id === transferTarget) return { ...m, role: "owner" };
+        if (m.id === currentUserId) return { ...m, role: "member" };
+        return m;
+      }));
+      setTransferTarget(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to transfer ownership.");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+  const performRemove = async () => {
+    if (!removeTarget) return;
+    setIsRemoving(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: removeTarget }),
+      });
+      if (!res.ok) {
+        console.error("Remove failed", await res.text());
+        alert("Failed to remove member.");
+        setIsRemoving(false);
+        return;
+      }
+      setMembersForBoard((prev) => prev.filter((m) => m.id !== removeTarget));
+      setRemoveTarget(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to remove member.");
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const performLeave = async () => {
+    setIsLeaving(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/members`, { method: "DELETE" });
+      if (!res.ok) {
+        console.error("Failed to leave board", await res.text());
+        alert("Failed to leave board.");
+        setIsLeaving(false);
+        return;
+      }
+      setMembersForBoard((prev) => prev.filter((m) => m.id !== currentUserId));
+      if (activeBoardId === board.id) router.replace("/");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to leave board.");
+    } finally {
+      setIsLeaving(false);
     }
   };
 
@@ -325,35 +404,7 @@ export default function SettingsPanel({
                       )}
                     </div>
                     <button
-                      onClick={async () => {
-                        if (!transferTarget) return;
-                        if (!confirm("Transfer ownership? This will make the selected member the new owner.")) return;
-                        setIsTransferring(true);
-                        try {
-                          const res = await fetch(`/api/boards/${board.id}/members`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action: "transfer", toUserId: transferTarget }),
-                          });
-                          if (!res.ok) {
-                            console.error("Transfer failed", await res.text());
-                            alert("Failed to transfer ownership.");
-                            setIsTransferring(false);
-                            return;
-                          }
-                          setMembersForBoard((prev) => prev.map((m) => {
-                            if (m.id === transferTarget) return { ...m, role: "owner" };
-                            if (m.id === currentUserId) return { ...m, role: "member" };
-                            return m;
-                          }));
-                          setTransferTarget(null);
-                        } catch (err) {
-                          console.error(err);
-                          alert("Failed to transfer ownership.");
-                        } finally {
-                          setIsTransferring(false);
-                        }
-                      }}
+                      onClick={() => setTransferConfirmOpen(true)}
                       disabled={!transferTarget || currentUserRole !== "owner" || isTransferring}
                       className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -416,31 +467,7 @@ export default function SettingsPanel({
                       )}
                     </div>
                     <button
-                      onClick={async () => {
-                        if (!removeTarget) return;
-                        if (!confirm("Remove member from board? This will revoke their access.")) return;
-                        setIsRemoving(true);
-                        try {
-                          const res = await fetch(`/api/boards/${board.id}/members`, {
-                            method: "DELETE",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ userId: removeTarget }),
-                          });
-                          if (!res.ok) {
-                            console.error("Remove failed", await res.text());
-                            alert("Failed to remove member.");
-                            setIsRemoving(false);
-                            return;
-                          }
-                          setMembersForBoard((prev) => prev.filter((m) => m.id !== removeTarget));
-                          setRemoveTarget(null);
-                        } catch (err) {
-                          console.error(err);
-                          alert("Failed to remove member.");
-                        } finally {
-                          setIsRemoving(false);
-                        }
-                      }}
+                      onClick={() => setRemoveConfirmOpen(true)}
                       disabled={!removeTarget || currentUserRole !== "owner" || isRemoving}
                       className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -461,33 +488,13 @@ export default function SettingsPanel({
                         : "You will lose access to this board."}
                     </p>
                   </div>
-                  <button
-                    onClick={async () => {
-                      if (currentUserRole === "owner") return;
-                      if (!confirm("Are you sure you want to leave this board? You will lose access.")) return;
-                      setIsLeaving(true);
-                      try {
-                        const res = await fetch(`/api/boards/${board.id}/members`, { method: "DELETE" });
-                        if (!res.ok) {
-                          console.error("Failed to leave board", await res.text());
-                          alert("Failed to leave board.");
-                          setIsLeaving(false);
-                          return;
-                        }
-                        setMembersForBoard((prev) => prev.filter((m) => m.id !== currentUserId));
-                        if (activeBoardId === board.id) router.replace("/");
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to leave board.");
-                      } finally {
-                        setIsLeaving(false);
-                      }
-                    }}
-                    disabled={currentUserRole === "owner" || isLeaving}
-                    className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {isLeaving ? "Leaving…" : "Leave"}
-                  </button>
+                    <button
+                      onClick={() => setLeaveConfirmOpen(true)}
+                      disabled={currentUserRole === "owner" || isLeaving}
+                      className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isLeaving ? "Leaving…" : "Leave"}
+                    </button>
                 </div>
 
                 <div className="border-t border-border/60 mx-4" />
@@ -518,6 +525,35 @@ export default function SettingsPanel({
         isOpen={deletingBoard !== null}
         onClose={() => setDeletingBoard(null)}
         onConfirmDelete={onDelete}
+      />
+      <ConfirmModal
+        isOpen={transferConfirmOpen}
+        title="Transfer ownership?"
+        message="Transfer ownership? This will make the selected member the new owner."
+        confirmLabel="Transfer"
+        danger={false}
+        onClose={() => setTransferConfirmOpen(false)}
+        onConfirm={performTransfer}
+      />
+
+      <ConfirmModal
+        isOpen={removeConfirmOpen}
+        title="Remove member?"
+        message="Remove member from board? This will revoke their access."
+        confirmLabel="Remove"
+        danger={true}
+        onClose={() => setRemoveConfirmOpen(false)}
+        onConfirm={performRemove}
+      />
+
+      <ConfirmModal
+        isOpen={leaveConfirmOpen}
+        title="Leave board?"
+        message="Are you sure you want to leave this board? You will lose access."
+        confirmLabel="Leave"
+        danger={true}
+        onClose={() => setLeaveConfirmOpen(false)}
+        onConfirm={performLeave}
       />
     </>
   );

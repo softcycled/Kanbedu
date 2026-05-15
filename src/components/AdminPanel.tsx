@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ConfirmModal from "./ConfirmModal";
 
 interface BugReport {
   id: string;
@@ -64,17 +65,28 @@ export default function AdminPanel() {
   };
 
   const deleteReport = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this report?")) return;
-    
+    // open confirm modal
+    setConfirmDeleteReportId(id);
+  };
+
+  const [confirmDeleteReportId, setConfirmDeleteReportId] = useState<string | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
+
+  const performDeleteReport = async () => {
+    if (!confirmDeleteReportId) return;
+    setIsDeletingReport(true);
     try {
-      const res = await fetch(`/api/admin/reports/${id}`, {
+      const res = await fetch(`/api/admin/reports/${confirmDeleteReportId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setReports(prev => prev.filter(r => r.id !== id));
+        setReports(prev => prev.filter(r => r.id !== confirmDeleteReportId));
       }
     } catch (error) {
       console.error("Failed to delete report:", error);
+    } finally {
+      setIsDeletingReport(false);
+      setConfirmDeleteReportId(null);
     }
   };
 
@@ -163,6 +175,15 @@ export default function AdminPanel() {
                   >
                     <option value="open">Open</option>
                     <option value="in-progress">In Progress</option>
+              <ConfirmModal
+                isOpen={confirmDeleteReportId !== null}
+                title="Delete report?"
+                message="Are you sure you want to permanently delete this report?"
+                confirmLabel="Delete"
+                danger={true}
+                onClose={() => setConfirmDeleteReportId(null)}
+                onConfirm={performDeleteReport}
+              />
                     <option value="resolved">Resolved</option>
                   </select>
                   

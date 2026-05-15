@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
+import { getSession, isMemberOfBoard } from "@/lib/auth";
 
 // GET columns (optionally scoped by boardId)
 export async function GET(request: NextRequest) {
@@ -51,6 +52,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     const data = result.data;
+
+    // auth: ensure user is signed in and is a member of the board
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const member = await isMemberOfBoard(session.userId, data.boardId);
+    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     // Get max order for this board
     const maxOrder = await prisma.column.aggregate({
