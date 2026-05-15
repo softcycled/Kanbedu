@@ -33,7 +33,9 @@ export default function CreditsPage() {
             </p>
 
             <p className="text-base text-ink/80 leading-relaxed">
-              For months, I kept talking about the idea instead of actually building it, confidently telling people: "I could probably make a better version if I tried."
+              For months, I kept talking about the idea instead of actually building it, confidently telling people:
+              <br /> 
+              "I could probably make a better version if I tried."
             </p>
 
             <p className="text-base text-ink/80 leading-relaxed">
@@ -43,9 +45,11 @@ export default function CreditsPage() {
             </p>
 
             <p className="text-base text-ink/80 leading-relaxed">
-              Then at 4AM before a presentation, something shifted.
-              <br />
-              A random burst of motivation appeared out of nowhere and the first Kanbedu demo was built in around 1.5 hours.
+              Then, one day, a combination of boredom, curiosity, and divine intervention on a random Tuesday occured to me.
+            </p>
+
+            <p className="text-base text-ink/80 leading-relaxed">
+            Next thing you know, the first Kanbedu demo was built in around 1.5 hours with the <span className="text-base leading-relaxed font-bold text-white">slight</span> assistance of AI.
             </p>
 
             <div className="mt-6">
@@ -80,7 +84,7 @@ export default function CreditsPage() {
           <section className="mt-10 space-y-8">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Built By</p>
-              <p className="text-[15px] leading-7 text-muted mt-2">Built by Jorge and the Kanbedu team.</p>
+              <p className="text-[15px] leading-7 text-muted mt-2">Built by Jorge and Isac.</p>
             </div>
 
             <div className="mt-10">

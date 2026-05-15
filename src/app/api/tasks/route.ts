@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTaskSchema, parseBody } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { z } from "zod";
 
@@ -99,6 +99,15 @@ export async function POST(req: Request) {
     prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
     prisma.column.findUnique({ where: { id: data.column } }),
   ]);
+
+  // Validate destination column and membership
+  if (!destinationColumn) {
+    return NextResponse.json({ error: "Invalid column" }, { status: 400 });
+  }
+  const allowed = await isMemberOfBoard(session.userId, destinationColumn.boardId);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const now = new Date();
   // Create the task but avoid heavy includes (comments/activities) — return minimal fields quickly

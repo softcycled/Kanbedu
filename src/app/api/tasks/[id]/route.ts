@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { updateTaskSchema, parseBody } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 
 // GET single task with full details (activities, comments, etc.)
@@ -36,6 +36,21 @@ export async function GET(
   if (!session) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, status: 401 });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Authorization: ensure the requesting user is a member of the task's board
+  const authStart = Date.now();
+  const taskAuth = await prisma.task.findUnique({ where: { id: params.id }, select: { columnRel: { select: { boardId: true } } } });
+  const authMs = Date.now() - authStart;
+  if (!taskAuth || !taskAuth.columnRel) {
+    if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 404 });
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  if (!allowed) {
+    if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 403 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Build lean vs full selects. Default is lean (fast): minimal scalars + tags + assigneeUser.
@@ -160,6 +175,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Authorize: ensure the user is a member of the board this task belongs to
+  const taskAuth = await prisma.task.findUnique({ where: { id }, select: { columnRel: { select: { boardId: true } } } });
+  if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // If moving to a different column, ensure membership for destination column as well
+  if (req && typeof req === "object") {
+    // parse body early to check destination column
+  }
+
   const totalStart = Date.now();
 
   // measure connect + session acquisition
@@ -209,6 +235,16 @@ export async function PATCH(
 
   if (body.column !== undefined) {
     if (current.column !== body.column) {
+      // Verify destination column exists and belongs to a board the user can access
+      try {
+        const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true } });
+        if (!destCol) return NextResponse.json({ error: "Destination column not found" }, { status: 400 });
+        const destAllowed = await isMemberOfBoard(session.userId, destCol.boardId);
+        if (!destAllowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      } catch (err) {
+        console.error("Failed to validate destination column membership:", err);
+        return NextResponse.json({ error: "Failed to validate destination" }, { status: 500 });
+      }
       columnActuallyChanged = true;
       updateData.columnUpdatedAt = new Date();
 
@@ -414,6 +450,21 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  await prisma.task.delete({ where: { id: params.id } });
-  return NextResponse.json({ success: true });
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Ensure the task exists and belongs to a board the user can access
+    const taskAuth = await prisma.task.findUnique({ where: { id: params.id }, select: { columnRel: { select: { boardId: true } } } });
+    if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    await prisma.task.delete({ where: { id: params.id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete task:", error);
+    return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
+  }
 }

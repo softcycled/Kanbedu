@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { prisma } from "./prisma";
 
 const SALT_ROUNDS = 10;
 const COOKIE_NAME = "kanbedu-session";
@@ -55,4 +56,20 @@ export async function destroySession(): Promise<void> {
     path: "/",
     maxAge: 0,
   });
+}
+
+// Utility: check whether a user is a member of a given board.
+// Returns true when a BoardMember record exists for the user/board.
+export async function isMemberOfBoard(userId: string, boardId: string): Promise<boolean> {
+  if (!userId || !boardId) return false;
+  try {
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId, boardId } },
+      select: { id: true },
+    });
+    return !!membership;
+  } catch (err) {
+    console.error("isMemberOfBoard check failed:", err);
+    return false;
+  }
 }
