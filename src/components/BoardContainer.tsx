@@ -7,6 +7,7 @@ import Sidebar, { Panel } from "./Sidebar";
 import dynamic from "next/dynamic";
 const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), { ssr: false, loading: () => <div /> });
 import SettingsPanel from "./SettingsPanel";
+import ClientErrorBoundary from "./ClientErrorBoundary";
 import ProfilePanel from "./ProfilePanel";
 import SupportModal from "./SupportModal";
 import AdminPanel from "./AdminPanel";
@@ -165,6 +166,47 @@ export default function BoardContainer({
     await handleBoardSwitch(board.id);
   }, [handleBoardSwitch]);
 
+  const handleJoinBoard = useCallback(async (inviteInput: string) => {
+    const extractToken = (s: string) => {
+      try {
+        const u = new URL(s);
+        const parts = u.pathname.split("/").filter(Boolean);
+        const idx = parts.indexOf("invite");
+        if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+        return parts[parts.length - 1] || s;
+      } catch {
+        const parts = s.split('/').filter(Boolean);
+        const idx = parts.indexOf('invite');
+        if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+        return s;
+      }
+    };
+
+    const token = extractToken(inviteInput.trim());
+    if (!token) throw new Error('Invalid invite token');
+
+    const res = await fetch(`/api/invites/${token}`, { method: 'POST' });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(body.error || 'Failed to join board');
+    }
+
+    // Response includes boardId on success (or if already a member)
+    const joinedBoardId = body.boardId as string | undefined;
+
+    // Refresh boards list and switch to the joined board
+    const boardsRes = await fetch('/api/boards', { cache: 'no-store' });
+    if (boardsRes.ok) {
+      const newBoards: Board[] = await boardsRes.json();
+      setBoards(newBoards);
+      if (joinedBoardId) {
+        await handleBoardSwitch(joinedBoardId);
+      }
+    }
+
+    return body;
+  }, [handleBoardSwitch]);
+
   const handleUpdateBoard = useCallback(async (boardId: string, data: { name?: string; githubRepo?: string | null }) => {
     const res = await fetch(`/api/boards/${boardId}`, {
       method: "PATCH",
@@ -214,6 +256,7 @@ export default function BoardContainer({
         onPanelChange={handlePanelChange}
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
+        onJoinBoard={handleJoinBoard}
         onReorder={handleReorderBoards}
         onSupportClick={handleSupportClick}
         onBoardHover={prefetchBoard}
@@ -239,7 +282,11 @@ export default function BoardContainer({
           </>
         )}
         {activePanel === "analytics" && (
-          <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} />
+          <ClientErrorBoundary
+            fallback={<div className="flex-1 flex items-center justify-center text-muted text-sm">Failed to load analytics. <button onClick={() => setActivePanel("board")} className="ml-3 text-xs underline">Back</button></div>}
+          >
+            <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} />
+          </ClientErrorBoundary>
         )}
         {activePanel === "settings" && (
           <SettingsPanel

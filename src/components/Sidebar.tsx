@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
+import CreateJoinModal from "./CreateJoinModal";
 
 export type Panel = "board" | "analytics" | "settings" | "profile" | "admin";
 
@@ -27,6 +28,7 @@ interface Props {
   onPanelChange: (panel: Panel) => void;
   onBoardSwitch: (id: string) => void;
   onCreateBoard: (name: string) => Promise<void>;
+  onJoinBoard: (inviteInput: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
   onSupportClick: () => void;
   onBoardHover?: (id: string) => void;
@@ -154,14 +156,15 @@ export default function Sidebar({
   onPanelChange,
   onBoardSwitch,
   onCreateBoard,
+  onJoinBoard,
   onReorder,
   onSupportClick,
   onBoardHover,
   isAdmin = false,
 }: Props) {
-  const [isAddingBoard, setIsAddingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -182,7 +185,7 @@ export default function Sidebar({
     try {
       await onCreateBoard(name);
       setNewBoardName("");
-      setIsAddingBoard(false);
+      setIsCreateJoinOpen(false);
       onPanelChange("board");
       setMobileOpen(false);
     } finally {
@@ -220,7 +223,7 @@ export default function Sidebar({
         <div className="px-3 mb-1">
           <div className="flex items-center justify-between px-1 mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Boards</span>
-            <button onClick={() => setIsAddingBoard(true)} className="text-muted hover:text-ink transition-colors" title="New board">
+            <button onClick={() => setIsCreateJoinOpen(true)} className="text-muted hover:text-ink transition-colors" title="New board">
               <IconPlus />
             </button>
           </div>
@@ -243,24 +246,7 @@ export default function Sidebar({
             </SortableContext>
           </DndContext>
 
-          {isAddingBoard && (
-            <div className="mt-1 pl-[18px]">
-              <input
-                autoFocus
-                type="text"
-                value={newBoardName}
-                onChange={(e) => setNewBoardName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateBoard();
-                  if (e.key === "Escape") { setIsAddingBoard(false); setNewBoardName(""); }
-                }}
-                onBlur={() => { if (!newBoardName.trim()) setIsAddingBoard(false); }}
-                placeholder="Board name…"
-                disabled={isCreating}
-                className="w-full px-2 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30"
-              />
-            </div>
-          )}
+          
         </div>
       </div>
 
@@ -333,6 +319,22 @@ export default function Sidebar({
           ))}
         </div>
       </nav>
+      <CreateJoinModal
+        isOpen={isCreateJoinOpen}
+        onClose={() => setIsCreateJoinOpen(false)}
+        onCreate={async (name: string) => {
+          await onCreateBoard(name);
+          setIsCreateJoinOpen(false);
+          setNewBoardName("");
+          onPanelChange("board");
+          setMobileOpen(false);
+        }}
+        onJoin={async (inviteInput: string) => {
+          await onJoinBoard(inviteInput);
+          setIsCreateJoinOpen(false);
+          setMobileOpen(false);
+        }}
+      />
     </>
   );
 }
