@@ -15,7 +15,8 @@ export async function PATCH(
     }
 
     // Check the user is a member of the board that owns this column
-    const columnInfo = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    // include `isDone` so we can enforce "always have a done column" rules
+    const columnInfo = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true, isDone: true } });
     if (!columnInfo) {
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
@@ -70,8 +71,12 @@ export async function PATCH(
       }
     }
 
-    // If un-marking a done column, clear completedAt on all its tasks
-    if (updateData.isDone === false) {
+    // If un-marking a done column, ensure the board will still have a done column
+    if (updateData.isDone === false && columnInfo.isDone === true) {
+      const otherDone = await prisma.column.findFirst({ where: { boardId: columnInfo.boardId, id: { not: params.id }, isDone: true }, select: { id: true } });
+      if (!otherDone) {
+        return NextResponse.json({ error: "Board must have at least one 'Done' column. Mark another column as done before un-marking this one." }, { status: 400 });
+      }
       await prisma.task.updateMany({
         where: { column: params.id },
         data: { completedAt: null },
@@ -105,7 +110,8 @@ export async function DELETE(
     }
 
     // Check the user is a member of the board that owns this column
-    const col = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    // include `isDone` so we can enforce the "always-have-a-done-column" invariant
+    const col = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true, isDone: true } });
     if (!col) {
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
@@ -130,6 +136,9 @@ export async function DELETE(
 
     // If moveToColumnId provided, move all tasks to that column.
     // If the deleted column was Done but the destination is not, also clear completedAt.
+    // Check whether deleting this column would remove the board's only done column
+    const otherDone = await prisma.column.findFirst({ where: { boardId: col.boardId, id: { not: params.id }, isDone: true }, select: { id: true } });
+
     if (moveToColumnId) {
       const [deletingColumn, destColumn] = await Promise.all([
         prisma.column.findUnique({ where: { id: params.id } }),
@@ -149,6 +158,13 @@ export async function DELETE(
         return NextResponse.json({ error: "Destination column must belong to the same board" }, { status: 400 });
       }
 
+      // If deleting a done column, ensure the board will still have a done column
+      if (deletingColumn.isDone) {
+        if (!otherDone && !destColumn.isDone) {
+          return NextResponse.json({ error: "Cannot delete the only 'Done' column. Mark another column as done or move tasks to a done column first." }, { status: 400 });
+        }
+      }
+
       const clearCompleted = deletingColumn?.isDone && !destColumn?.isDone;
 
       await prisma.task.updateMany({
@@ -158,6 +174,11 @@ export async function DELETE(
           ...(clearCompleted ? { completedAt: null } : {}),
         },
       });
+    } else {
+      // No destination; if this is a done column and there are no other done columns, forbid deletion
+      if (col.isDone && !otherDone) {
+        return NextResponse.json({ error: "Cannot delete the only 'Done' column. Mark another column as done before deleting this one." }, { status: 400 });
+      }
     }
 
     // Delete the column

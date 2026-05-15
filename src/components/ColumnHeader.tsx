@@ -134,7 +134,7 @@ export default function ColumnHeader({
         </button>
       )}
 
-      {isDynamic && (
+      {isDynamic && !isDone && (
         <button
           onClick={onDelete}
           className="ml-1 text-xs text-muted hover:text-red-600 transition-colors flex-shrink-0"
