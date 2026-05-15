@@ -493,15 +493,15 @@ export default function SettingsPanel({
                 <div className="border-t border-border/60 mx-4" />
 
                 {/* Delete board row */}
-                <div className="flex items-center justify-between px-4 py-3.5 gap-4">
+                <div className={`flex items-center justify-between px-4 py-3.5 gap-4 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">Delete this board</p>
                     <p className="text-xs text-muted mt-0.5">Permanently removes the board and all its tasks.</p>
                   </div>
                   <button
                     onClick={() => setDeletingBoard(board)}
-                    disabled={boards.length <= 1}
-                    title={boards.length <= 1 ? "Create another board first to delete this one" : "Delete board"}
+                    disabled={boards.length <= 1 || currentUserRole !== "owner"}
+                    title={boards.length <= 1 ? "Create another board first to delete this one" : currentUserRole !== "owner" ? "Only the board owner can delete this board" : "Delete board"}
                     className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Delete
