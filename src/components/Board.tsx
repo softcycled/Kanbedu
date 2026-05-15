@@ -22,6 +22,7 @@ import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
 import useBoardResources from "@/hooks/useBoardResources";
+import { useToasts } from "@/components/Toasts";
 
 interface Props {
   boardId: string;
@@ -32,9 +33,10 @@ interface Props {
   onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
   broadcastRefresh: (payload?: unknown) => void;
   currentUserId?: string;
+  isLoading?: boolean;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId, isLoading = false }: Props) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -69,6 +71,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   useEffect(() => {
     setAllTags(allTagsFromHook);
   }, [allTagsFromHook]);
+
+  const toasts = useToasts();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -209,8 +213,33 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         }
         setDeleteError(null);
         setDeleteModalOpen(false);
+        // capture label for undo
+        const deletedLabel = columnToDelete.label;
+        const deletedId = columnToDelete.id;
         setColumnToDelete(null);
         broadcastRefresh();
+
+        // Show undo for best-effort recreation
+        toasts.push({
+          title: "Column deleted",
+          description: deletedLabel,
+          actionLabel: "Undo",
+          onAction: async () => {
+            try {
+              const r = await fetch("/api/columns", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ label: deletedLabel, boardId }),
+              });
+              if (!r.ok) throw new Error("Restore failed");
+              const created = await r.json();
+              onColumnsChange((prev) => [...prev, created]);
+              broadcastRefresh();
+            } catch (err) {
+              console.error("Undo restore column failed", err);
+            }
+          },
+        });
       } catch (error) {
         console.error("Failed to delete column:", error);
         setDeleteError("Delete failed. Please try again.");
@@ -547,15 +576,44 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   }, [handleUpdateTask]);
 
   const handleDeleteTask = useCallback(async (id: string) => {
+    const prevTask = tasks.find((t) => t.id === id);
+    if (!prevTask) return;
+
+    // Optimistic removal
+    onTasksChange((prev) => prev.filter((t) => t.id !== id));
+
     try {
       const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Delete task failed: ${res.status}`);
-      onTasksChange((prev) => prev.filter((t) => t.id !== id));
       broadcastRefresh({ type: "task:delete", taskId: id });
+
+      // Show undo toast (best-effort restore)
+      toasts.push({
+        title: "Task deleted",
+        description: prevTask.title,
+        actionLabel: "Undo",
+        onAction: async () => {
+          try {
+            const r = await fetch("/api/tasks", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: prevTask.title, column: prevTask.column }),
+            });
+            if (!r.ok) throw new Error("Restore failed");
+            const restored = await r.json();
+            onTasksChange((prev) => [...prev, restored]);
+            broadcastRefresh({ type: "task:create", task: restored });
+          } catch (err) {
+            console.error("Undo restore failed", err);
+          }
+        },
+      });
     } catch (error) {
       console.error("Failed to delete task:", error);
+      // rollback optimistic removal on failure
+      onTasksChange((prev) => (prevTask ? [...prev, prevTask] : prev));
     }
-  }, [broadcastRefresh]);
+  }, [broadcastRefresh, onTasksChange, tasks, toasts]);
 
   const handleAddComment = useCallback(
     async (taskId: string, content: string, author: string): Promise<Comment> => {
@@ -671,22 +729,36 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         >
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
-            {columns.map((col, index) => (
-              <KanbanColumn
-                key={col.id}
-                columnId={col.id}
-                label={col.label}
-                columnIndex={index}
-                isDone={col.isDone}
-                tasks={getTasksByColumn(col.id)}
-                onTaskClick={handleTaskClick}
-                onAddTask={handleAddTask}
-                onRenameColumn={handleRenameColumn}
-                onDeleteColumn={handleDeleteColumnClick}
-                onSetDoneColumn={handleSetDoneColumn}
-                isDynamic={columns.length > 1}
-              />
-            ))}
+            {isLoading ? (
+              // Render simple skeleton columns while loading
+              Array.from({ length: Math.max(1, columns.length || 3) }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="flex-shrink-0 w-80">
+                  <div className="h-5 w-40 bg-border/30 rounded-md animate-pulse mb-4" />
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((__, j) => (
+                      <div key={j} className="h-14 bg-border/30 rounded-md animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              columns.map((col, index) => (
+                <KanbanColumn
+                  key={col.id}
+                  columnId={col.id}
+                  label={col.label}
+                  columnIndex={index}
+                  isDone={col.isDone}
+                  tasks={getTasksByColumn(col.id)}
+                  onTaskClick={handleTaskClick}
+                  onAddTask={handleAddTask}
+                  onRenameColumn={handleRenameColumn}
+                  onDeleteColumn={handleDeleteColumnClick}
+                  onSetDoneColumn={handleSetDoneColumn}
+                  isDynamic={columns.length > 1}
+                />
+              ))
+            )}
 
             {/* Add column button */}
             <div className="flex-shrink-0 w-[85vw] md:w-96 flex items-start">

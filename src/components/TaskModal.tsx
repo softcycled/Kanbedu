@@ -647,6 +647,8 @@ export default function TaskModal({
                 {optimisticTitle ?? task.title}
               </h2>
             )}
+
+            
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setShowInfo((v) => !v)}

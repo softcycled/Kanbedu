@@ -10,6 +10,7 @@ interface Props {
 export default function AddTask({ column, onAdd }: Props) {
   const [active, setActive] = useState(false);
   const [value, setValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleActivate = () => {
@@ -24,9 +25,16 @@ export default function AddTask({ column, onAdd }: Props) {
       setValue("");
       return;
     }
-    setValue("");
-    setActive(false);
-    await onAdd(trimmed, column);
+    setIsSaving(true);
+    try {
+      await onAdd(trimmed, column);
+      setValue("");
+      setActive(false);
+    } catch (err) {
+      console.error("Failed to add task:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -50,11 +58,11 @@ export default function AddTask({ column, onAdd }: Props) {
           className="
             w-full bg-card-bg rounded-xl px-4 py-3
             text-sm text-ink placeholder:text-muted
-            border border-border focus:border-ink/20 focus:outline-none
+            border border-border focus:outline-none focus-ring
             shadow-card
           "
         />
-        <p className="text-xs text-muted mt-1.5 px-1">Enter to add · Esc to cancel</p>
+        <p className="text-xs text-muted mt-1.5 px-1">{isSaving ? "Adding…" : "Enter to add · Esc to cancel"}</p>
       </div>
     );
   }

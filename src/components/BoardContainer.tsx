@@ -47,6 +47,7 @@ export default function BoardContainer({
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isLoadingBoard, setIsLoadingBoard] = useState(false);
 
   // Per-board cache: boardId → { tasks, columns, fetchedAt }
   const boardCache = useRef<Map<string, BoardCache>>(
@@ -133,6 +134,7 @@ export default function BoardContainer({
 
     if (isStale) {
       // Fetch fresh data (silently if we already rendered from cache)
+      setIsLoadingBoard(true);
       const data = await fetchBoardData(boardId);
       boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
       // Only update if the user hasn't switched away again
@@ -140,6 +142,7 @@ export default function BoardContainer({
         setTasks(data.tasks);
         setColumns(data.columns);
       }
+      setIsLoadingBoard(false);
     }
 
     if (!cached) {
@@ -275,6 +278,7 @@ export default function BoardContainer({
                 columns={columns}
                 onTasksChange={setTasks}
                 onColumnsChange={setColumns}
+                isLoading={isLoadingBoard}
                 broadcastRefresh={broadcastRefresh}
                 currentUserId={currentUserId}
               />

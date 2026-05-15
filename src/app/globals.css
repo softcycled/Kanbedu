@@ -121,3 +121,27 @@ input[type="date"] {
 [data-droppable] {
   min-height: 120px;
 }
+
+/* Motion tokens and focus utilities */
+:root {
+  --motion-micro: 140ms;
+  --motion-default: 220ms;
+  --motion-ease: cubic-bezier(0.25,0.46,0.45,0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-micro: 0ms;
+    --motion-default: 0ms;
+  }
+}
+
+@layer utilities {
+  .trans-micro { transition: transform var(--motion-micro) var(--motion-ease), opacity calc(var(--motion-micro) - 20ms) ease-out; }
+  .trans-default { transition: transform var(--motion-default) var(--motion-ease), opacity var(--motion-default) ease-out; }
+  .focus-ring { outline: none; box-shadow: 0 0 0 4px rgb(var(--c-primary) / 0.12); border-radius: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trans-micro, .trans-default { transition: none !important; }
+}
