@@ -18,6 +18,11 @@
   --c-muted:      120 113 108;  /* #78716C */
   --c-accent:     37  99  235;  /* #2563EB - Kanbedu Blue */
   --c-accent-lt:  239 246 255;  /* #EFF6FF - Light blue tint */
+    /* Primary button color: neutral, theme-aware. Defaults to `--c-ink` so it flips automatically.
+      Light: primary = near-black, on-primary = white
+      Dark:  primary = off-white,   on-primary = near-black */
+    --c-primary:    var(--c-ink);
+    --c-on-primary: 255 255 255;
   --c-column-bg:  239 237 232;  /* #EFEDE8 */
   --c-card-bg:    253 252 250;  /* #FDFCFA */
   --c-border:     226 222 216;  /* #E2DED8 */
@@ -37,6 +42,10 @@
   --c-muted:      168 162 158;  /* #A8A29E lighter muted */
   --c-accent:     59  130 246;  /* #3B82F6 - Brighter blue for dark mode */
   --c-accent-lt:  30  58  138;  /* #1E3A8A - Deep blue tint */
+    /* Primary button color for dark theme (inherits --c-ink which is off-white in dark),
+      and on-primary uses --c-paper (near-black) for high contrast text. */
+    --c-primary:    var(--c-ink);
+    --c-on-primary: var(--c-paper);
   --c-column-bg:  35  32  30;   /* #231E1E increased from 30,28,26 for better separation */
   --c-card-bg:    48  45  42;   /* #302D2A increased from 38,36,33 for clarity */
   --c-border:     70  67  63;   /* #464340 increased from 52,49,46 for visibility */

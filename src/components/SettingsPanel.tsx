@@ -292,7 +292,7 @@ export default function SettingsPanel({
                 <button
                   onClick={() => handleInvite(board.id)}
                   disabled={invitingId === board.id}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-60 flex-shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 flex-shrink-0"
                 >
                   {invitingId === board.id ? (
                     <>

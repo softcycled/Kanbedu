@@ -139,7 +139,7 @@ export default function CreateJoinModal({ isOpen, onClose, onCreate, onJoin }: P
 
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setMode("options")} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50">Back</button>
-              <button onClick={submitCreate} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-50">{loading ? "Creating…" : "Create"}</button>
+              <button onClick={submitCreate} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50">{loading ? "Creating…" : "Create"}</button>
             </div>
           </div>
         )}
@@ -164,7 +164,7 @@ export default function CreateJoinModal({ isOpen, onClose, onCreate, onJoin }: P
 
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setMode("options")} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50">Back</button>
-              <button onClick={submitJoin} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-50">{loading ? "Joining…" : "Join"}</button>
+              <button onClick={submitJoin} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50">{loading ? "Joining…" : "Join"}</button>
             </div>
           </div>
         )}

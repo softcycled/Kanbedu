@@ -20,6 +20,9 @@ module.exports = {
         muted:        "rgb(var(--c-muted)      / <alpha-value>)",
         accent:       "rgb(var(--c-accent)     / <alpha-value>)",
         "accent-light":"rgb(var(--c-accent-lt) / <alpha-value>)",
+        /* Primary button system: neutral, theme-aware */
+        primary:      "rgb(var(--c-primary)   / <alpha-value>)",
+        "on-primary": "rgb(var(--c-on-primary) / <alpha-value>)",
         "column-bg":  "rgb(var(--c-column-bg) / <alpha-value>)",
         "card-bg":    "rgb(var(--c-card-bg)   / <alpha-value>)",
         border:       "rgb(var(--c-border)    / <alpha-value>)",
