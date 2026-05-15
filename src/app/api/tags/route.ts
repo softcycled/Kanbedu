@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTagSchema, parseBody } from "@/lib/validations";
+import { getSession, isMemberOfBoard } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +35,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     const data = result.data;
+
+    // auth: ensure user is signed in and member of the board
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const board = await prisma.board.findUnique({ where: { id: data.boardId } });
+    if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+
+    const allowed = await isMemberOfBoard(session.userId, data.boardId);
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const tag = await prisma.tag.create({
       data: {

@@ -91,8 +91,27 @@ export async function PATCH(request: NextRequest) {
     }
     const data = result.data;
 
+    // auth: ensure user is signed in and is a member of the affected board
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const colIds = data.columns.map((c: any) => c.id);
+    const cols = await prisma.column.findMany({ where: { id: { in: colIds } }, select: { id: true, boardId: true } });
+    if (cols.length !== colIds.length) {
+      return NextResponse.json({ error: "One or more columns not found" }, { status: 404 });
+    }
+
+    const boardIds = Array.from(new Set(cols.map((c) => c.boardId)));
+    if (boardIds.length !== 1) {
+      return NextResponse.json({ error: "Columns must belong to the same board" }, { status: 400 });
+    }
+
+    const boardId = boardIds[0];
+    const allowed = await isMemberOfBoard(session.userId, boardId);
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
     const updated = await prisma.$transaction(
-      data.columns.map((col) =>
+      data.columns.map((col: any) =>
         prisma.column.update({
           where: { id: col.id },
           data: { order: col.order },

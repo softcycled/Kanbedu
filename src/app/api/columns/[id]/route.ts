@@ -136,6 +136,19 @@ export async function DELETE(
         prisma.column.findUnique({ where: { id: moveToColumnId } }),
       ]);
 
+      if (!deletingColumn) {
+        return NextResponse.json({ error: "Column not found" }, { status: 404 });
+      }
+
+      if (!destColumn) {
+        return NextResponse.json({ error: "Destination column not found" }, { status: 404 });
+      }
+
+      // Prevent cross-board moves
+      if (destColumn.boardId !== deletingColumn.boardId) {
+        return NextResponse.json({ error: "Destination column must belong to the same board" }, { status: 400 });
+      }
+
       const clearCompleted = deletingColumn?.isDone && !destColumn?.isDone;
 
       await prisma.task.updateMany({
