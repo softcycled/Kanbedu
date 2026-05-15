@@ -29,7 +29,7 @@ function TaskCard({ task, onClick }: Props) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition ?? "transform 300ms cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 300ms cubic-bezier(0.25,0.46,0.45,0.94), border-color 200ms ease",
+    transition: transition ?? "transform var(--motion-default) var(--motion-ease), box-shadow var(--motion-default) var(--motion-ease), border-color calc(var(--motion-default) - 40ms) ease",
     willChange: "transform",
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,

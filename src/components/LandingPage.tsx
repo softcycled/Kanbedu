@@ -150,15 +150,15 @@ export default function LandingPage() {
         {/* ── Section 2: Hero ───────────────────────────────────── */}
         <section className="text-center pt-16 pb-16 px-6">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] animate-fade-in">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] motion-safe:animate-fade-in">
               Track your group projects <br />
               <span className="text-accent">without the friction.</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted mt-6 max-w-xl mx-auto leading-relaxed animate-fade-in [animation-delay:100ms]">
+            <p className="text-lg md:text-xl text-muted mt-6 max-w-xl mx-auto leading-relaxed motion-safe:animate-fade-in [animation-delay:100ms]">
               The free, minimal Kanban board built for students. <br className="hidden md:block" />
               No bloat. No learning curve. Just cards.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-in [animation-delay:200ms]">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 motion-safe:animate-fade-in [animation-delay:200ms]">
               <Link href="/login?mode=signup" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
                 Get Started
               </Link>
@@ -171,7 +171,7 @@ export default function LandingPage() {
             </div>
 
             {/* Animated Board Preview Mockup */}
-            <div className="mt-20 max-w-4xl mx-auto rounded-2xl border border-border shadow-modal overflow-hidden bg-column-bg p-4 md:p-6 animate-modal-in [animation-delay:300ms]">
+            <div className="mt-20 max-w-4xl mx-auto rounded-2xl border border-border shadow-modal overflow-hidden bg-column-bg p-4 md:p-6 motion-safe:animate-modal-in [animation-delay:300ms]">
               <div className="flex gap-3 md:gap-4 h-[300px] md:h-[400px] overflow-x-auto no-scrollbar pb-2">
                 {/* To Do Column */}
                 <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30">
@@ -454,7 +454,7 @@ function MockCard({
 
         {tag && (
           <span 
-            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white transition-all duration-500 animate-fade-in"
+            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white transition-all duration-500 motion-safe:animate-fade-in"
             style={{ backgroundColor: tag.color }}
           >
             {tag.name}
@@ -463,7 +463,7 @@ function MockCard({
 
         {assignee && (
           <div 
-            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white transition-all duration-500 animate-fade-in"
+            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white transition-all duration-500 motion-safe:animate-fade-in"
             style={{ backgroundColor: assignee.color }}
           >
             {assignee.letter}

@@ -30,7 +30,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const push = useCallback((t: Omit<Toast, "id">) => {
     const id = Math.random().toString(36).slice(2, 9);
-    const toast: Toast = { id, duration: 4000, ...t };
+    const defaultDuration = t.actionLabel ? 6500 : 4000;
+    const toast: Toast = { id, duration: defaultDuration, ...t };
     setToasts((s) => [toast, ...s]);
     if (toast.duration && toast.duration > 0) {
       const timer = window.setTimeout(() => {
@@ -78,16 +79,18 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   return (
     <div
       role="status"
-      className={`max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-modal px-3 py-2 text-ink flex items-center gap-3`}
+      aria-live="polite"
+      className={`pointer-events-auto max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-card px-4 py-3 text-ink flex items-start gap-3`}
       style={{
         transform: mounted ? "translateY(0)" : "translateY(8px)",
         opacity: mounted ? 1 : 0,
-        transition: "transform 220ms cubic-bezier(.25,.46,.45,.94), opacity 180ms ease-out",
+        transition: "transform var(--motion-default) var(--motion-ease), opacity var(--motion-default) ease-out",
+        willChange: "transform, opacity",
       }}
     >
       <div className="flex-1 min-w-0">
         {toast.title && <div className="text-sm font-medium truncate">{toast.title}</div>}
-        {toast.description && <div className="text-xs text-muted truncate">{toast.description}</div>}
+        {toast.description && <div className="text-xs text-muted truncate mt-0.5">{toast.description}</div>}
       </div>
       {toast.actionLabel && (
         <button
@@ -98,12 +101,12 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
               onClose();
             }
           }}
-          className="text-sm font-semibold text-ink/80 hover:underline pl-2"
+          className="text-sm font-semibold text-primary hover:underline px-3 py-1 rounded-md focus:outline-none focus-ring"
         >
           {toast.actionLabel}
         </button>
       )}
-      <button onClick={onClose} className="ml-1 p-1 rounded hover:bg-column-bg transition-colors">
+      <button onClick={onClose} className="ml-2 p-1.5 rounded-md text-muted hover:bg-column-bg transition-colors" aria-label="Dismiss">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />

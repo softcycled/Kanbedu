@@ -6,7 +6,7 @@ export default function Skeleton({ className = "", style = {} }: { className?: s
   return (
     <div
       aria-hidden
-      className={`bg-border/30 dark:bg-border/20 rounded-md animate-pulse ${className}`}
+      className={`bg-border/30 dark:bg-border/20 rounded-md motion-safe:animate-pulse ${className}`}
       style={style}
     />
   );

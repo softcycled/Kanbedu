@@ -95,7 +95,7 @@ export default function AdminPanel() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
     );
   }
@@ -128,7 +128,7 @@ export default function AdminPanel() {
           {health && (
             <div className="flex items-center gap-4 px-4 py-2 bg-card-bg border border-border/60 rounded-xl shadow-sm">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${health.status === "healthy" ? "bg-green-500" : "bg-red-500"}`} />
+                <div className={`w-2 h-2 rounded-full motion-safe:animate-pulse ${health.status === "healthy" ? "bg-green-500" : "bg-red-500"}`} />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted">System Health</span>
               </div>
               <div className="h-3 w-[1px] bg-border/60" />

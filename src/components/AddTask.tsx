@@ -47,7 +47,7 @@ export default function AddTask({ column, onAdd }: Props) {
 
   if (active) {
     return (
-      <div className="mt-2 animate-fade-in">
+      <div className="mt-2 motion-safe:animate-fade-in">
         <input
           ref={inputRef}
           value={value}

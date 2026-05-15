@@ -16,6 +16,7 @@ import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortabl
 import { arrayMove } from "@dnd-kit/sortable";
 import { Task, Comment, ColumnData } from "@/lib/types";
 import KanbanColumn from "./KanbanColumn";
+import Skeleton from "./Skeleton";
 import dynamic from "next/dynamic";
 const TaskModal = dynamic(() => import("./TaskModal"), { ssr: false, loading: () => null });
 import TaskCard from "./TaskCard";
@@ -733,10 +734,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               // Render simple skeleton columns while loading
               Array.from({ length: Math.max(1, columns.length || 3) }).map((_, i) => (
                 <div key={`skeleton-${i}`} className="flex-shrink-0 w-80">
-                  <div className="h-5 w-40 bg-border/30 rounded-md animate-pulse mb-4" />
+                  <Skeleton className="h-5 w-40 mb-4" />
                   <div className="space-y-3">
                     {Array.from({ length: 3 }).map((__, j) => (
-                      <div key={j} className="h-14 bg-border/30 rounded-md animate-pulse" />
+                      <Skeleton key={j} className="h-14 rounded-md" />
                     ))}
                   </div>
                 </div>

@@ -105,6 +105,8 @@ export default function TaskModal({
   const [commentsVisible, setCommentsVisible] = useState(false);
   const descriptionOriginalRef = useRef<string>("");
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const savedIndicatorTimeoutRef = useRef<number | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
   const debouncedDescription = useDebounce(description, 600);
   const debouncedAssigneeId = useDebounce(assigneeId, 600);
@@ -243,6 +245,7 @@ export default function TaskModal({
     return () => {
       isMounted.current = false;
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
+      if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
     };
   }, []);
 
@@ -344,6 +347,13 @@ export default function TaskModal({
     setSaving(true);
     try {
       await onUpdate(id, data);
+      if (!isMounted.current) return;
+      // show a subtle "Saved" badge briefly
+      setJustSaved(true);
+      if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
+      savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);
+    } catch (err) {
+      console.error("Update failed", err);
     } finally {
       if (!isMounted.current) return;
       savingTimeoutRef.current = setTimeout(() => setSaving(false), 400);
@@ -572,14 +582,14 @@ export default function TaskModal({
     <div
       ref={overlayRef}
       onClick={(e) => e.target === overlayRef.current && handleClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in"
     >
-      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col animate-modal-in overflow-hidden">
+      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 motion-safe:animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this task?</p>
                 <p className="text-xs text-muted">This action cannot be undone.</p>
@@ -603,8 +613,8 @@ export default function TaskModal({
         )}
 
         {tagToDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] animate-fade-in">
-            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 animate-modal-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
+            <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 motion-safe:animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this tag?</p>
                 <p className="text-xs text-muted">This removes it from all tasks on this board.</p>
@@ -1201,14 +1211,16 @@ export default function TaskModal({
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>
-                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                <div className="w-1.5 h-1.5 bg-muted rounded-full motion-safe:animate-pulse" />
                 <p className="text-xs text-muted">Saving…</p>
               </>
-            ) : (
+            ) : justSaved ? (
               <>
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                <p className="text-xs text-muted">Saved automatically</p>
+                <div className="w-1.5 h-1.5 bg-muted/80 rounded-full" />
+                <p className="text-xs text-muted">Saved</p>
               </>
+            ) : (
+              <p className="text-xs text-muted">All changes saved</p>
             )}
           </div>
         </div>

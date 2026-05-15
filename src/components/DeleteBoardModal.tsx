@@ -34,8 +34,8 @@ export default function DeleteBoardModal({
   if (!isOpen || !board) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px]">
-      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm animate-modal-in p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
         <p className="text-sm font-semibold text-ink">Delete "{board.name}"?</p>
         <p className="text-xs text-muted mt-1">
           This will permanently delete the board and all its columns, tasks, and comments. This action cannot be undone.

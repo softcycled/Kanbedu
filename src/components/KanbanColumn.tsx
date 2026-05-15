@@ -48,7 +48,7 @@ function KanbanColumn({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : "transform 200ms cubic-bezier(0.2, 0, 0, 1)",
+    transition: isDragging ? "none" : "transform var(--motion-default) var(--motion-ease)",
     opacity: isDragging ? 0.5 : 1,
   };
 

@@ -82,8 +82,8 @@ export default function CreateJoinModal({ isOpen, onClose, onCreate, onJoin }: P
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px]">
-      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md animate-modal-in p-6 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md motion-safe:animate-modal-in p-6 relative">
         <button
           onClick={close}
           aria-label="Close"

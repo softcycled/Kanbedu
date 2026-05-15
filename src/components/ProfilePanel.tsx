@@ -237,7 +237,7 @@ function AppearanceTab() {
               {mounted ? (
                 <Toggle checked={isDark} onChange={(v) => setTheme(v ? "dark" : "light")} />
               ) : (
-                <div className="h-5 w-9 rounded-full bg-border animate-pulse" />
+                <div className="h-5 w-9 rounded-full bg-border motion-safe:animate-pulse" />
               )}
             </SettingRow>
           </SectionItem>
@@ -562,7 +562,7 @@ export default function ProfilePanel() {
                       disabled={saving}
                       className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
                     >
-                      {saved ? "Saved!" : saving ? "Saving…" : "Save"}
+                      {saved ? "Saved" : saving ? "Saving…" : "Save"}
                     </button>
                   </div>
                 </SectionItem>

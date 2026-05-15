@@ -59,7 +59,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm motion-safe:animate-fade-in">
       <div className="bg-card-bg w-full max-w-lg rounded-2xl border border-border shadow-modal overflow-hidden">
         
         <div className="px-6 py-5 border-b border-border flex items-center justify-between">
@@ -79,7 +79,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {status === "success" ? (
-            <div className="py-8 text-center space-y-4 animate-scale-in">
+            <div className="py-8 text-center space-y-4 motion-safe:animate-scale-in">
               <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <polyline points="20 6 9 17 4 12" />
@@ -117,7 +117,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
               </div>
 
               {status === "error" && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 animate-shake">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 motion-safe:animate-shake">
                   <svg className="text-red-500 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
                   </svg>
@@ -133,7 +133,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
                 >
                   {isSubmitting ? (
                     <>
-                      <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <svg className="motion-safe:animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                       </svg>
                       Sending...
