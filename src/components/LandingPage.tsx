@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { getTextColorForBg } from "@/lib/labelPalette";
 
 // ── Icons ─────────────────────────────────────────────────────
 
@@ -454,8 +455,8 @@ function MockCard({
 
         {tag && (
           <span 
-            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white transition-all duration-500 motion-safe:animate-fade-in"
-            style={{ backgroundColor: tag.color }}
+            className="px-1.5 py-0.5 rounded text-[8px] font-bold transition-all duration-500 motion-safe:animate-fade-in"
+            style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
           >
             {tag.name}
           </span>

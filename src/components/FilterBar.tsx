@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { BoardMemberData, Tag } from "@/lib/types";
+import { getTextColorForBg } from "@/lib/labelPalette";
 
 interface Props {
   searchQuery: string;
@@ -120,7 +121,7 @@ export default function FilterBar({
                 className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold" style={{ backgroundColor: m.color }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: m.color, color: getTextColorForBg(m.color) }}>
                     {m.name.charAt(0)}
                   </div>
                   <span className="text-sm text-ink">{m.name}</span>

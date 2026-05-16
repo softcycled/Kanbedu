@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
 import { timeInColumn, isOverdue, formatDeadlineLabel } from "@/lib/utils";
+import { getTextColorForBg } from "@/lib/labelPalette";
 
 interface Props {
   task: Task;
@@ -77,8 +78,8 @@ function TaskCard({ task, onClick }: Props) {
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white"
-              style={{ backgroundColor: tag.color }}
+              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold"
+              style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
             >
               {tag.name}
             </span>
