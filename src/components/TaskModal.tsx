@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
@@ -13,6 +13,7 @@ import {
   dateInputToISOString,
 } from "@/lib/utils";
 import useBoardResources from "@/hooks/useBoardResources";
+import { LABEL_PALETTE, getTextColorForBg } from "@/lib/labelPalette";
 
 interface Props {
   task: Task | null;
@@ -518,6 +519,51 @@ export default function TaskModal({
     }
   };
 
+    const handleCreateTagWithColor = async (colorHex: string) => {
+      const name = newTagName.trim();
+      if (!name || !task) return;
+
+      // optimistic local tag
+      const tempId = `local-tag-${Date.now()}`;
+      const optimisticTag = { id: tempId, name, color: colorHex } as import("@/lib/types").Tag;
+      setTagsForBoard((prev) => [...(prev || []), optimisticTag]);
+
+      // optimistically assign to task
+      const base = optimisticTagIds ?? (task.tags?.map((t) => t.id) ?? []);
+      const newIds = [...base, tempId];
+      setOptimisticTagIds(newIds);
+
+      setNewTagName("");
+      setIsCreatingTag(false);
+
+      try {
+        const res = await fetch("/api/tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, color: colorHex, boardId }),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          // replace temp tag with server tag in shared cache
+          setTagsForBoard((prev) => (prev || []).map((t) => (t.id === tempId ? created : t)));
+
+          // replace temp id in optimistic tag ids and sync with server
+          const replaced = (optimisticTagIds ?? base).map((id) => (id === tempId ? created.id : id));
+          setOptimisticTagIds(replaced);
+          if (task) void handleUpdateWithFeedback(task.id, { tagIds: replaced } as any);
+          onBroadcast?.();
+        } else {
+          // revert
+          setTagsForBoard((prev) => (prev || []).filter((t) => t.id !== tempId));
+          setOptimisticTagIds((prev) => (prev || []).filter((id) => id !== tempId));
+        }
+      } catch (err) {
+        console.error(err);
+        setTagsForBoard((prev) => (prev || []).filter((t) => t.id !== tempId));
+        setOptimisticTagIds((prev) => (prev || []).filter((id) => id !== tempId));
+      }
+    };
+
   const handleDeleteTag = (e: React.MouseEvent, tag: import("@/lib/types").Tag) => {
     e.stopPropagation();
     setTagDropdownOpen(false);
@@ -762,8 +808,8 @@ export default function TaskModal({
                 <button
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: tag.color }}
+                  className="px-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
                   title="Click to remove"
                 >
                   {tag.name}
@@ -801,11 +847,6 @@ export default function TaskModal({
                         <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
                         <span className="truncate">{tag.name}</span>
                         <div className="ml-auto flex items-center gap-2">
-                          {isSelected && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M2 6l3 3 5-5" />
-                            </svg>
-                          )}
                           <button
                             onClick={(e) => handleDeleteTag(e, tag)}
                             className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -830,35 +871,25 @@ export default function TaskModal({
                         placeholder="Tag name…"
                         className="w-full bg-column-bg border-none rounded-lg px-2 py-1.5 text-xs text-ink outline-none"
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") handleCreateTag();
                           if (e.key === "Escape") setIsCreatingTag(false);
                         }}
                       />
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          {["#4A90A4", "#E8854A", "#5BAD6F", "#D4706A", "#7B68EE", "#A078C8"].map((c) => (
-                            <button
-                              key={c}
-                              onClick={() => setNewTagColor(c)}
-                              className={`w-4 h-4 rounded-full transition-transform ${newTagColor === c ? "scale-125 ring-1 ring-offset-1 ring-muted" : "hover:scale-110"}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                        <div className="flex gap-1">
+                      <div className="flex flex-col divide-y rounded-md overflow-hidden border border-border mt-1">
+                        {LABEL_PALETTE.map((p) => (
                           <button
-                            onClick={() => setIsCreatingTag(false)}
-                            className="text-[10px] font-bold text-muted hover:text-ink px-2 py-1"
+                            key={p.id}
+                            onClick={() => handleCreateTagWithColor(p.hex)}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-ink hover:bg-column-bg transition-colors"
                           >
-                            Cancel
+                            <span className="w-4 h-4 rounded-sm" style={{ backgroundColor: p.hex }} />
+                            <span className="truncate">{p.name}</span>
                           </button>
-                          <button
-                            onClick={handleCreateTag}
-                            className="text-[10px] font-bold text-ink hover:bg-column-bg px-2 py-1 rounded"
-                          >
-                            Create
-                          </button>
-                        </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={() => { setIsCreatingTag(false); setNewTagName(""); }} className="text-[10px] font-bold text-muted hover:text-ink px-2 py-1">
+                          Cancel
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1021,7 +1052,7 @@ export default function TaskModal({
                     // flush updates on blur (non-blocking)
                     void flushUpdates();
                   }}
-                  placeholder="Add a detailed description…"
+                  placeholder="Add a detailed descriptionΓÇª"
                   className="w-full min-h-[6rem] bg-column-bg rounded-xl p-3 text-sm text-ink border border-transparent focus:border-border focus:outline-none resize-none"
                 />
               </div>
@@ -1041,7 +1072,7 @@ export default function TaskModal({
                     {description}
                   </div>
                 ) : (
-                  <span className="text-muted italic">Add a description…</span>
+                  <span className="text-muted italic">Add a descriptionΓÇª</span>
                 )}
               </div>
             )}
@@ -1113,7 +1144,7 @@ export default function TaskModal({
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   onKeyDown={handleCommentKey}
-                  placeholder="Write a comment…"
+                  placeholder="Write a commentΓÇª"
                   disabled={addingComment}
                   className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
                 />
@@ -1212,7 +1243,7 @@ export default function TaskModal({
             {saving ? (
               <>
                 <div className="w-1.5 h-1.5 bg-muted rounded-full motion-safe:animate-pulse" />
-                <p className="text-xs text-muted">Saving…</p>
+                <p className="text-xs text-muted">SavingΓÇª</p>
               </>
             ) : justSaved ? (
               <>
@@ -1228,3 +1259,4 @@ export default function TaskModal({
     </div>
   );
 }
+
