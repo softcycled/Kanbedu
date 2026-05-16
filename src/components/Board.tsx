@@ -18,7 +18,7 @@ import { Task, Comment, ColumnData } from "@/lib/types";
 import KanbanColumn from "./KanbanColumn";
 import Skeleton from "./Skeleton";
 import dynamic from "next/dynamic";
-const TaskModal = dynamic(() => import("./TaskModal"), { ssr: false, loading: () => null });
+const TaskModal = dynamic(() => import("./TaskModal_fixed"), { ssr: false, loading: () => null });
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";

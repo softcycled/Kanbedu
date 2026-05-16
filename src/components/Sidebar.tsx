@@ -162,6 +162,7 @@ export default function Sidebar({
   onBoardHover,
   isAdmin = false,
 }: Props) {
+  console.log("[DEBUG Sidebar] isAdmin prop received:", isAdmin);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
