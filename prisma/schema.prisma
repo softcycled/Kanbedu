@@ -27,15 +27,16 @@ model User {
 }
 
 model Board {
-  id         String        @id @default(cuid())
-  name       String
-  githubRepo String?
-  order      Int           @default(0)
-  createdAt  DateTime      @default(now())
-  columns    Column[]
-  members    BoardMember[]
-  invites    BoardInvite[]
-  tags       Tag[]
+  id             String        @id @default(cuid())
+  name           String
+  githubRepo     String?
+  order          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  realtimeSecret String        @unique @default(cuid())
+  columns        Column[]
+  members        BoardMember[]
+  invites        BoardInvite[]
+  tags           Tag[]
 }
 
 model BoardMember {

@@ -109,7 +109,7 @@ export default function BoardContainer({
     }
   }, [fetchBoardData]);
 
-  const { broadcastRefresh } = useRealtime(activeBoardId, handleRefresh);
+  useRealtime(activeBoard?.realtimeSecret ?? null, handleRefresh);
 
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
@@ -280,7 +280,6 @@ export default function BoardContainer({
                 onTasksChange={setTasks}
                 onColumnsChange={setColumns}
                 isLoading={isLoadingBoard}
-                broadcastRefresh={broadcastRefresh}
                 currentUserId={currentUserId}
               />
             </main>

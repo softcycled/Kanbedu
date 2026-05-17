@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createCommentSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
+import { broadcastToBoard } from "@/lib/broadcast";
 
 export async function POST(req: Request) {
   const raw = await req.json();
@@ -32,6 +33,13 @@ export async function POST(req: Request) {
   });
 
   await recordActivity(data.taskId, session.userId, "COMMENT", "Added a comment");
+
+  prisma.board.findUnique({
+    where: { id: taskRow.columnRel.boardId },
+    select: { realtimeSecret: true },
+  }).then((board) => {
+    if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+  }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
 
   return NextResponse.json(comment);
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
+import { broadcastToBoard } from "@/lib/broadcast";
 
 // PATCH update column (rename, set done)
 export async function PATCH(
@@ -87,6 +88,13 @@ export async function PATCH(
       where: { id: params.id },
       data: updateData,
     });
+
+    prisma.board.findUnique({
+      where: { id: columnInfo.boardId },
+      select: { realtimeSecret: true },
+    }).then((board) => {
+      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
 
     return NextResponse.json(column);
   } catch (error) {
@@ -185,6 +193,13 @@ export async function DELETE(
     const deleted = await prisma.column.delete({
       where: { id: params.id },
     });
+
+    prisma.board.findUnique({
+      where: { id: col.boardId },
+      select: { realtimeSecret: true },
+    }).then((board) => {
+      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
 
     return NextResponse.json(deleted);
   } catch (error) {

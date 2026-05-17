@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { broadcastToBoard } from "@/lib/broadcast";
 
 // GET columns (optionally scoped by boardId)
 export async function GET(request: NextRequest) {
@@ -71,6 +72,13 @@ export async function POST(request: NextRequest) {
       data: { label: data.label, order: newOrder, boardId: data.boardId },
     });
 
+    prisma.board.findUnique({
+      where: { id: data.boardId },
+      select: { realtimeSecret: true },
+    }).then((board) => {
+      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+
     return NextResponse.json(column, { status: 201 });
   } catch (error) {
     console.error("Failed to create column:", error);
@@ -118,6 +126,13 @@ export async function PATCH(request: NextRequest) {
         })
       )
     );
+
+    prisma.board.findUnique({
+      where: { id: boardId },
+      select: { realtimeSecret: true },
+    }).then((board) => {
+      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
 
     return NextResponse.json(updated);
   } catch (error) {

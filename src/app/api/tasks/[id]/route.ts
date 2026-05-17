@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { updateTaskSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
+import { broadcastToBoard } from "@/lib/broadcast";
 
 // GET single task with full details (activities, comments, etc.)
 export async function GET(
@@ -443,6 +444,17 @@ export async function PATCH(
     console.info(`[perf] PATCH /api/tasks/${id}`, { totalMs, connectMs, findMs, updateMs, serializeMs, timestamp: new Date().toISOString() });
   }
 
+  // Fetch the board's cryptographic channel secret to broadcast the update securely
+  // We do this asynchronously so it doesn't block the API response
+  prisma.board.findUnique({
+    where: { id: taskAuth.columnRel.boardId },
+    select: { realtimeSecret: true }
+  }).then((board) => {
+    if (board?.realtimeSecret) {
+      broadcastToBoard(board.realtimeSecret, { type: "task:update", task: response });
+    }
+  }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+
   return new NextResponse(bodyString, { headers: { "Content-Type": "application/json" } });
 }
 
@@ -462,6 +474,17 @@ export async function DELETE(
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     await prisma.task.delete({ where: { id: params.id } });
+
+    // Fetch the board's cryptographic channel secret to broadcast the deletion
+    prisma.board.findUnique({
+      where: { id: taskAuth.columnRel.boardId },
+      select: { realtimeSecret: true }
+    }).then((board) => {
+      if (board?.realtimeSecret) {
+        broadcastToBoard(board.realtimeSecret, { type: "task:delete", taskId: params.id });
+      }
+    }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete task:", error);
