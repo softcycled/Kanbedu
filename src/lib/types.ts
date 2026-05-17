@@ -47,7 +47,10 @@ export interface Task {
   order: number;
   priority: string;
   movedByNonAssignee: boolean;
-  comments: Comment[];
+  comments?: Comment[];
+  _count?: {
+    comments: number;
+  };
   tags: Tag[];
   activities?: TaskActivity[];
 }

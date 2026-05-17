@@ -127,11 +127,11 @@ function TaskCard({ task, onClick }: Props) {
           </>
         )}
 
-        {task.comments.length > 0 && (
+        {(task._count?.comments ?? task.comments?.length ?? 0) > 0 && (
           <>
             <span className="text-muted text-xs">·</span>
             <span className="text-xs text-muted">
-              {task.comments.length} {task.comments.length === 1 ? "note" : "notes"}
+              {task._count?.comments ?? task.comments?.length} {((task._count?.comments ?? task.comments?.length) === 1) ? "note" : "notes"}
             </span>
           </>
         )}
@@ -152,7 +152,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.deadline === next.task.deadline &&
     prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
     prev.task.completedAt === next.task.completedAt &&
-    prev.task.comments.length === next.task.comments.length &&
+    (prev.task._count?.comments === next.task._count?.comments || prev.task.comments?.length === next.task.comments?.length) &&
     prev.task.tags?.length === next.task.tags?.length &&
     prev.onClick === next.onClick
   );

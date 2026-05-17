@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
@@ -152,12 +152,15 @@ export default function TaskModal({
       setComments(task.comments ?? []);
       setActivities(task.activities ?? []);
 
-      // Lazy-load activities when opening a new task (not included in the board list fetch)
-      if (!task.activities || task.activities.length === 0) {
-        // Request activities explicitly to avoid fetching heavy relations by default
-        fetch(`/api/tasks/${task.id}?include=activities`)
+      // Lazy-load activities and comments when opening a new task (not included in the board list fetch)
+      if (!task.activities || task.activities.length === 0 || task.comments === undefined) {
+        // Request activities and comments explicitly to avoid fetching heavy relations by default
+        fetch(`/api/tasks/${task.id}?include=activities,comments`)
           .then((r) => r.ok ? r.json() : null)
-          .then((data) => { if (data?.activities) setActivities(data.activities); })
+          .then((data) => { 
+            if (data?.activities) setActivities(data.activities); 
+            if (data?.comments) setComments(data.comments);
+          })
           .catch(() => {});
       }
     } else {

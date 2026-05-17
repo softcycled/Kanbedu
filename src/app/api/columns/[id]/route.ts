@@ -147,6 +147,8 @@ export async function DELETE(
     // Check whether deleting this column would remove the board's only done column
     const otherDone = await prisma.column.findFirst({ where: { boardId: col.boardId, id: { not: params.id }, isDone: true }, select: { id: true } });
 
+    let deletedCol;
+
     if (moveToColumnId) {
       const [deletingColumn, destColumn] = await Promise.all([
         prisma.column.findUnique({ where: { id: params.id } }),
@@ -175,24 +177,30 @@ export async function DELETE(
 
       const clearCompleted = deletingColumn?.isDone && !destColumn?.isDone;
 
-      await prisma.task.updateMany({
-        where: { column: params.id },
-        data: {
-          column: moveToColumnId,
-          ...(clearCompleted ? { completedAt: null } : {}),
-        },
-      });
+      // WRAP IN TRANSACTION
+      const [_, deleted] = await prisma.$transaction([
+        prisma.task.updateMany({
+          where: { column: params.id },
+          data: {
+            column: moveToColumnId,
+            ...(clearCompleted ? { completedAt: null } : {}),
+          },
+        }),
+        prisma.column.delete({
+          where: { id: params.id },
+        })
+      ]);
+      deletedCol = deleted;
     } else {
       // No destination; if this is a done column and there are no other done columns, forbid deletion
       if (col.isDone && !otherDone) {
         return NextResponse.json({ error: "Cannot delete the only 'Done' column. Mark another column as done before deleting this one." }, { status: 400 });
       }
+      // Delete the column directly
+      deletedCol = await prisma.column.delete({
+        where: { id: params.id },
+      });
     }
-
-    // Delete the column
-    const deleted = await prisma.column.delete({
-      where: { id: params.id },
-    });
 
     prisma.board.findUnique({
       where: { id: col.boardId },
@@ -201,7 +209,7 @@ export async function DELETE(
       if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
     }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
 
-    return NextResponse.json(deleted);
+    return NextResponse.json(deletedCol);
   } catch (error) {
     console.error("Failed to delete column:", error);
     return NextResponse.json(

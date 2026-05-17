@@ -77,9 +77,8 @@ export async function GET(request: NextRequest) {
   const tasks = await prisma.task.findMany({
     where: { columnRel: { boardId } },
     include: {
-      comments: {
-        select: { id: true, content: true, author: true, createdAt: true, taskId: true },
-        orderBy: { createdAt: "asc" },
+      _count: {
+        select: { comments: true },
       },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
