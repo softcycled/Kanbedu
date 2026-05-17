@@ -1292,16 +1292,14 @@ export default function TaskModal({
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>
-                <div className="w-1.5 h-1.5 bg-muted rounded-full motion-safe:animate-pulse" />
-                <p className="text-xs text-muted">SavingΓÇª</p>
-              </>
-            ) : justSaved ? (
-              <>
-                <div className="w-1.5 h-1.5 bg-muted/80 rounded-full" />
-                <p className="text-xs text-muted">Saved</p>
+                <div className="w-1.5 h-1.5 bg-sky-300 rounded-full motion-safe:animate-pulse" />
+                <p className="text-xs text-muted">Saving...</p>
               </>
             ) : (
-              <p className="text-xs text-muted">All changes saved</p>
+              <>
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                <p className="text-xs text-muted">All changes saved automatically</p>
+              </>
             )}
           </div>
         </div>
