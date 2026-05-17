@@ -22,6 +22,7 @@ const TaskModal = dynamic(() => import("./TaskModal"), { ssr: false, loading: ()
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
+import ListView from "./ListView";
 import useBoardResources from "@/hooks/useBoardResources";
 import { useToasts } from "@/components/Toasts";
 
@@ -51,6 +52,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
+  // View mode state
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
 
   // use shared board resources (members, tags) to avoid duplicate fetches
   const {
@@ -712,24 +715,67 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           totalTasks={tasks.length}
           filteredTasksCount={filteredTasks.length}
         />
+        {/* View mode toggle */}
+        <div className="flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/40 flex-shrink-0">
+          <button
+            onClick={() => setViewMode("board")}
+            title="Board view"
+            className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+              viewMode === "board"
+                ? "bg-ink text-paper"
+                : "text-muted hover:text-ink hover:bg-border/40"
+            }`}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="1" y="1" width="5" height="5" rx="1"/>
+              <rect x="8" y="1" width="5" height="5" rx="1"/>
+              <rect x="1" y="8" width="5" height="5" rx="1"/>
+              <rect x="8" y="8" width="5" height="5" rx="1"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            title="List view"
+            className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+              viewMode === "list"
+                ? "bg-ink text-paper"
+                : "text-muted hover:text-ink hover:bg-border/40"
+            }`}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <line x1="1" y1="3" x2="13" y2="3"/>
+              <line x1="1" y1="7" x2="13" y2="7"/>
+              <line x1="1" y1="11" x2="13" y2="11"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
-        style={{ cursor: isPanning ? 'grabbing' : 'grab', userSelect: isPanning ? 'none' : undefined }}
-        onMouseDown={handlePanMouseDown}
-      >
-        <DndContext
-          id="kanban-board"
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
+      {viewMode === "list" ? (
+        <ListView
+          tasks={filteredTasks}
+          columns={columns}
+          boardMembers={boardMembers}
+          onTaskClick={setSelectedTask}
+          onAddTask={handleAddTask}
+        />
+      ) : (
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
+          style={{ cursor: isPanning ? 'grabbing' : 'grab', userSelect: isPanning ? 'none' : undefined }}
+          onMouseDown={handlePanMouseDown}
         >
-          <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
+          <DndContext
+            id="kanban-board"
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+              <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
             {isLoading ? (
               // Render simple skeleton columns while loading
               Array.from({ length: Math.max(1, columns.length || 3) }).map((_, i) => (
@@ -793,6 +839,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           </DragOverlay>
         </DndContext>
       </div>
+      )}
 
       <TaskModal
         task={selectedTask}
