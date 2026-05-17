@@ -1194,7 +1194,7 @@ export default function TaskModal({
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   onKeyDown={handleCommentKey}
-                  placeholder="Write a comment"
+                  placeholder="Write a comment..."
                   disabled={addingComment}
                   className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
                 />
