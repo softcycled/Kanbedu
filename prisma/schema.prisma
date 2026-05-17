@@ -176,3 +176,14 @@ model BugReport {
 
   @@index([userId])
 }
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  identifier String   // IP address, session ID, or email
+  route      String   // e.g., "auth", "api_mutations"
+  hits       Int      @default(1)
+  expiresAt  DateTime // When the rate limit window resets
+
+  @@unique([identifier, route])
+  @@index([expiresAt])
+}
