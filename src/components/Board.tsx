@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -54,6 +54,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
   // View mode state
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+
+  // Toggle slider refs/state for animated highlight
+  const toggleRef = useRef<HTMLDivElement | null>(null);
+  const boardBtnRef = useRef<HTMLButtonElement | null>(null);
+  const listBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [sliderPos, setSliderPos] = useState({ left: 0, width: 0 });
 
   // use shared board resources (members, tags) to avoid duplicate fetches
   const {
@@ -126,6 +132,23 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     (columnId: string) => tasksByColumn.get(columnId) ?? [],
     [tasksByColumn]
   );
+
+  // Position the toggle slider under the active button and update on resize/view change
+  useLayoutEffect(() => {
+    const update = () => {
+      const container = toggleRef.current;
+      const target = viewMode === "board" ? boardBtnRef.current : listBtnRef.current;
+      if (!container || !target) return;
+      const cRect = container.getBoundingClientRect();
+      const tRect = target.getBoundingClientRect();
+      const left = Math.round(tRect.left - cRect.left);
+      const width = Math.round(tRect.width);
+      setSliderPos({ left, width });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [viewMode]);
 
   // ── Column actions ─────────────────────────────────────────────
 
@@ -715,18 +738,25 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           totalTasks={tasks.length}
           filteredTasksCount={filteredTasks.length}
         />
-        {/* View mode toggle */}
-        <div className="flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/40 flex-shrink-0">
+        {/* View mode toggle (animated slider) */}
+        <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/40 flex-shrink-0">
+          {/* Sliding indicator */}
+          <div
+            aria-hidden
+            style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
+            className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink transition-all duration-180 ease-out pointer-events-none"
+          />
           <button
+            ref={boardBtnRef}
             onClick={() => setViewMode("board")}
             title="Board view"
-            className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+            className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "board"
-                ? "bg-ink text-paper"
-                : "text-muted hover:text-ink hover:bg-border/40"
+                ? "text-paper"
+                : "text-muted hover:text-ink"
             }`}
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.3px)', transformOrigin: 'center center' }}>
               <rect x="1" y="1" width="5" height="5" rx="1"/>
               <rect x="8" y="1" width="5" height="5" rx="1"/>
               <rect x="1" y="8" width="5" height="5" rx="1"/>
@@ -734,15 +764,16 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             </svg>
           </button>
           <button
+            ref={listBtnRef}
             onClick={() => setViewMode("list")}
             title="List view"
-            className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+            className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "list"
-                ? "bg-ink text-paper"
-                : "text-muted hover:text-ink hover:bg-border/40"
+                ? "text-paper"
+                : "text-muted hover:text-ink"
             }`}
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.2px)', transformOrigin: 'center center' }}>
               <line x1="1" y1="3" x2="13" y2="3"/>
               <line x1="1" y1="7" x2="13" y2="7"/>
               <line x1="1" y1="11" x2="13" y2="11"/>
