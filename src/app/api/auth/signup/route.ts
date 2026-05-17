@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    
+    // Strict rate limit: Max 5 signups per IP per hour to prevent bot mass-creation
+    const ipLimit = await checkRateLimit(ip, "signup_ip", 5, 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json({ error: "Too many accounts created from this IP. Please try again later." }, { status: 429 });
+    }
+
     const raw = await req.json();
     const result = parseBody(signupSchema, raw);
     if (!result.data) {
