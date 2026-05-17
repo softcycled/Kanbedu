@@ -1102,7 +1102,7 @@ export default function TaskModal({
                     // flush updates on blur (non-blocking)
                     void flushUpdates();
                   }}
-                  placeholder="Write a detailed description"
+                  placeholder="Write a detailed description..."
                   className="w-full min-h-[6rem] bg-column-bg rounded-xl p-3 text-sm text-ink border border-transparent focus:border-border focus:outline-none resize-none"
                 />
               </div>
@@ -1122,7 +1122,7 @@ export default function TaskModal({
                     {description}
                   </div>
                 ) : (
-                  <span className="text-muted italic">Write a description</span>
+                  <span className="text-muted">Write a detailed description...</span>
                 )}
               </div>
             )}
