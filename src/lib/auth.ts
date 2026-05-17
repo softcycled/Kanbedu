@@ -5,8 +5,10 @@ import { prisma } from "./prisma";
 
 const SALT_ROUNDS = 10;
 const COOKIE_NAME = "kanbedu-session";
-// In production, set KANBEDU_JWT_SECRET in .env
-const SECRET_RAW = process.env.KANBEDU_JWT_SECRET ?? "kanbedu-dev-secret-change-in-prod";
+const SECRET_RAW = process.env.KANBEDU_JWT_SECRET;
+if (!SECRET_RAW) {
+  throw new Error("CRITICAL SECURITY FATAL: KANBEDU_JWT_SECRET environment variable is missing.");
+}
 const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 export async function hashPassword(plain: string): Promise<string> {

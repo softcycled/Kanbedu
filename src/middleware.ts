@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const COOKIE_NAME = "kanbedu-session";
-const SECRET_RAW = process.env.KANBEDU_JWT_SECRET ?? "kanbedu-dev-secret-change-in-prod";
+const SECRET_RAW = process.env.KANBEDU_JWT_SECRET;
+if (!SECRET_RAW) {
+  throw new Error("CRITICAL SECURITY FATAL: KANBEDU_JWT_SECRET environment variable is missing.");
+}
 const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 // Routes that don't require authentication
