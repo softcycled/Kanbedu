@@ -5,7 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
-import { timeInColumn, isOverdue, formatDeadlineLabel } from "@/lib/utils";
+import { timeInColumn, formatDeadlineLabel } from "@/lib/utils";
 import { getTextColorForBg } from "@/lib/labelPalette";
 
 interface Props {
@@ -36,8 +36,8 @@ function TaskCard({ task, onClick }: Props) {
     zIndex: isDragging ? 999 : undefined,
   } as React.CSSProperties;
 
-  const overdue = isOverdue(task.deadline, task.completedAt);
   const deadlineInfo = formatDeadlineLabel(task.deadline, task.completedAt);
+  const overdue = deadlineInfo.severity === "overdue";
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
   const priorityDot: Record<string, string> = {
@@ -51,7 +51,7 @@ function TaskCard({ task, onClick }: Props) {
   };
   const p = task.priority ?? "medium";
 
-  const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border ${deadlineInfo.severity === 'overdue' ? 'border-l-2 border-red-200' : ''}`;
+  const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border ${deadlineInfo.severity === 'overdue' ? 'border-l-2 border-l-red-300' : ''}`;
 
   return (
     <div

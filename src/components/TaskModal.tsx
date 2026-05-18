@@ -1264,7 +1264,7 @@ export default function TaskModal({
         </div>
 
         {/* Jump to comments floating button */}
-        {!commentsVisible && (
+        {viewMode === "comments" && !commentsVisible && (
           <div className="absolute bottom-[52px] left-0 right-0 flex justify-center pointer-events-none">
             <button
               onClick={() => {
