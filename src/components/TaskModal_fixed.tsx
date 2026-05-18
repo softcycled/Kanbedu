@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
 import {
   isOverdue,
+  timeInColumn,
   formatDateForInput,
   formatDateTime,
   formatTimeAgo,
@@ -18,6 +19,7 @@ import { LABEL_PALETTE, getTextColorForBg } from "@/lib/labelPalette";
 interface Props {
   task: Task | null;
   boardMembers?: import("@/lib/types").BoardMemberData[];
+  columns?: import("@/lib/types").ColumnData[];
   onClose: () => void;
   onUpdate: (id: string, data: Partial<Task>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -48,6 +50,7 @@ function nameToColor(name: string): string {
 export default function TaskModal({ 
   task, 
   boardMembers = [], 
+  columns = [],
   onClose, 
   onUpdate, 
   onDelete, 
@@ -108,6 +111,8 @@ export default function TaskModal({
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const savedIndicatorTimeoutRef = useRef<number | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const debouncedDescription = useDebounce(description, 600);
   const debouncedAssigneeId = useDebounce(assigneeId, 600);
@@ -133,6 +138,8 @@ export default function TaskModal({
       setDraftTitle(task.title);
       setOptimisticTitle(null);
       setOptimisticTagIds(null);
+      setShowActivity(false);
+      setShowHistory(false);
       setAssigneeId(task.assigneeId ?? "");
       setDeadline(formatDateForInput(task.deadline));
 
@@ -630,8 +637,7 @@ export default function TaskModal({
       onClick={(e) => e.target === overlayRef.current && handleClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in"
     >
-      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
-
+      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-[860px] h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
         {/* Delete confirmation overlay */}
         {confirmDelete && (
           <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
@@ -657,7 +663,6 @@ export default function TaskModal({
             </div>
           </div>
         )}
-
         {tagToDelete && (
           <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
             <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 motion-safe:animate-modal-in">
@@ -683,468 +688,186 @@ export default function TaskModal({
           </div>
         )}
 
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            {isEditingTitle ? (
-              <input
-                ref={titleInputRef}
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.target.value)}
-                onKeyDown={handleTitleKeyDown}
-                onBlur={commitTitle}
-                className="flex-1 text-base font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-0.5 outline-none border-none shadow-none ring-0 appearance-none"
-              />
-            ) : (
-              <h2
-                className="text-base font-semibold text-ink leading-snug flex-1 cursor-text rounded-lg px-2 py-0.5 -mx-2 hover:bg-column-bg transition-colors"
-                onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
-              >
-                {optimisticTitle ?? task.title}
-              </h2>
-            )}
-
-            
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => setShowInfo((v) => !v)}
-                className={`p-2 rounded-lg transition-colors text-xs ${
-                  showInfo ? "text-ink bg-column-bg" : "text-muted hover:text-ink hover:bg-column-bg"
-                }`}
-                title="Task info"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="7" cy="7" r="6"/>
-                  <path d="M7 6.5v4M7 4.5v.5"/>
-                </svg>
-              </button>
-              <button
-                onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
-                className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                title="Delete task"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
-                </svg>
-              </button>
-              <button
-                onClick={handleClose}
-                className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M1 1l12 12M13 1L1 13"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {showInfo && (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="text-xs text-muted">
-                Created {formatDateTime(task.createdAt)}
-              </span>
-              <span className="text-xs text-muted">
-                Updated {formatTimeAgo(
-                  task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
-                    ? task.updatedAt
-                    : task.createdAt
-                )}
-              </span>
-              {task.completedAt && (
-                <span className="text-xs text-muted">
-                  Completed {formatDateTime(task.completedAt)}
-                </span>
-              )}
-              {/* overdue label moved to a more prominent header badge */}
-            </div>
-          )}
-          
+        {/* -- Header � action buttons only, spans full width -- */}
+        <div className="flex-shrink-0 flex items-center justify-end gap-1 px-4 py-2 border-b border-border/30">
+          <button
+            onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
+            className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+            title="Delete task"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
+            </svg>
+          </button>
+          <button
+            onClick={handleClose}
+            className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M1 1l12 12M13 1L1 13"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Body - scrollable */}
-        <div ref={modalBodyRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-          {/* Priority */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-              Priority
-            </label>
-            <div className="flex gap-2">
-              {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                const styles = {
-                  low:    { active: "bg-blue-500/25 text-blue-600 ring-1 ring-blue-500/60 font-semibold",    idle: "text-muted hover:bg-blue-500/10 hover:text-blue-500" },
-                  medium: { active: "bg-yellow-500/25 text-yellow-700 ring-1 ring-yellow-500/60 font-semibold", idle: "text-muted hover:bg-yellow-500/10 hover:text-yellow-600" },
-                  high:   { active: "bg-orange-500/25 text-orange-600 ring-1 ring-orange-500/60 font-semibold", idle: "text-muted hover:bg-orange-500/10 hover:text-orange-500" },
-                  urgent: { active: "bg-red-500/25 text-red-600 ring-1 ring-red-500/60 font-semibold",       idle: "text-muted hover:bg-red-500/10 hover:text-red-500" },
-                };
-                const isActive = priority === p;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => {
-                      setPriority(p);
-                      void handleUpdateWithFeedback(task.id, { priority: p });
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                      isActive ? styles[p].active : styles[p].idle
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-
-
-          {/* Tags */}
-          <div ref={tagDropdownRef} className="relative">
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-              Tags
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleTag(tag.id)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
-                  title="Click to remove"
-                >
-                  {tag.name}
-                </button>
-              ))}
-              <button
-                onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
-                className="w-8 h-8 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-border transition-colors"
-                title="Manage tags"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M7 3v8M3 7h8"/>
-                </svg>
-              </button>
-            </div>
-
-            {tagDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                <div className="max-h-48 overflow-y-auto">
-                  {allBoardTags.length === 0 && !isCreatingTag && (
-                    <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>
-                  )}
-                  {allBoardTags.map((tag) => {
-                    const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
-                    return (
-                      <div
-                        key={tag.id}
-                        onClick={() => toggleTag(tag.id)}
-                        className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                          isSelected
-                            ? "bg-column-bg text-ink font-medium"
-                            : "text-ink hover:bg-column-bg"
-                        }`}
-                      >
-                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                        <span className="truncate">{tag.name}</span>
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            onClick={(e) => handleDeleteTag(e, tag)}
-                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                              <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="border-t border-border p-2">
-                  {isCreatingTag ? (
-                    <div className="space-y-2 p-1">
-                      <input
-                        autoFocus
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        placeholder="Tag name…"
-                        className="w-full bg-column-bg border-none rounded-lg px-2 py-1.5 text-xs text-ink outline-none"
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") setIsCreatingTag(false);
-                        }}
-                      />
-                      <div className="flex flex-col divide-y rounded-md overflow-hidden border border-border mt-1">
-                        {LABEL_PALETTE.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleCreateTagWithColor(p.hex)}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-ink hover:bg-column-bg transition-colors"
-                          >
-                            <span className="w-4 h-4 rounded-sm" style={{ backgroundColor: p.hex }} />
-                            <span className="truncate">{p.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex justify-end">
-                        <button onClick={() => { setIsCreatingTag(false); setNewTagName(""); }} className="text-[10px] font-bold text-muted hover:text-ink px-2 py-1">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsCreatingTag(true)}
-                      className="w-full flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-muted hover:text-ink hover:bg-column-bg rounded-lg transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M7 3v8M3 7h8" />
-                      </svg>
-                      Create new tag
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Assignee + Deadline row */}
-          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
-            <div ref={assigneeDropdownRef} className="relative">
-              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-                Assignee
-              </label>
-              {/* Custom assignee dropdown trigger */}
-              <button
-                type="button"
-                onClick={() => setAssigneeDropdownOpen((v) => !v)}
-                className="
-                  w-full bg-column-bg rounded-xl px-4 py-3
-                  text-sm text-ink
-                  border border-transparent hover:border-border
-                  transition-colors cursor-pointer text-left
-                  flex items-center gap-2
-                "
-              >
-                {(() => {
-                  const m = boardMembers.find((bm) => bm.id === assigneeId);
-                  if (!m) return <span className="text-muted">Unassigned</span>;
-                  return (
-                    <>
-                      <span
-                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{ backgroundColor: m.color }}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
-                      <span className="truncate">{m.name}</span>
-                    </>
-                  );
-                })()}
-                <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M2 4l4 4 4-4"/>
-                </svg>
-              </button>
-
-              {/* Dropdown panel */}
-              {assigneeDropdownOpen && (
-                <div
-                  className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
-                >
-                  {[{ id: "", name: "Unassigned", color: "" }, ...boardMembers].map((m) => {
-                    const isSelected = m.id === assigneeId;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => {
-                          userHasEdited.current = true;
-                          setAssigneeId(m.id);
-                          setAssigneeDropdownOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                          isSelected
-                            ? "bg-column-bg text-ink font-medium"
-                            : "text-ink hover:bg-column-bg"
-                        }`}
-                      >
-                        {m.id === "" ? (
-                          <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                          </span>
-                        ) : (
-                          <span
-                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                            style={{ backgroundColor: m.color }}
-                          >
-                            {m.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                        <span className="truncate">{m.name}</span>
-                        {isSelected && (
-                          <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M2 6l3 3 5-5"/>
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-                Deadline
-              </label>
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-                className="
-                  w-full bg-column-bg rounded-xl px-4 py-2.5
-                  text-sm text-ink
-                  border border-transparent focus:border-border focus:outline-none
-                  transition-colors
-                "
-              />
-              {showDeadlineStatus && (
-                <p className={`mt-1 flex items-center gap-2 text-xs ${
-                  deadlineInfo.severity === "overdue"
-                    ? "text-red-600 dark:text-red-400"
-                    : deadlineInfo.severity === "due-soon"
-                    ? "text-orange-500 dark:text-orange-400"
-                    : "text-muted"
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${
-                    deadlineInfo.severity === "overdue"
-                      ? "bg-red-500"
-                      : deadlineInfo.severity === "due-soon"
-                      ? "bg-orange-500"
-                      : "bg-muted/40"
-                  }`} />
-                  {deadlineInfo.label}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
-              Description
-            </label>
-            {isEditingDescription ? (
-              <div className="space-y-3">
-                <textarea
-                  ref={descriptionTextareaRef}
-                  value={description}
-                  onChange={(e) => { userHasEdited.current = true; setDescription(e.target.value); }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      // revert edits
-                      setDescription(descriptionOriginalRef.current);
-                      userHasEdited.current = false;
-                      setIsEditingDescription(false);
-                    }
-                  }}
-                  onBlur={() => {
-                    setIsEditingDescription(false);
-                    // flush updates on blur (non-blocking)
-                    void flushUpdates();
-                  }}
-                  placeholder="Add a detailed descriptionΓÇª"
-                  className="w-full min-h-[6rem] bg-column-bg rounded-xl p-3 text-sm text-ink border border-transparent focus:border-border focus:outline-none resize-none"
-                />
-              </div>
-            ) : (
-              <div
-                onClick={() => {
-                  descriptionOriginalRef.current = description;
-                  setIsEditingDescription(true);
-                }}
-                className="min-h-[4rem] px-4 py-3 rounded-xl cursor-text bg-column-bg hover:bg-black/[0.05] transition-colors text-ink max-w-none"
-              >
-                {description ? (
-                  <div
-                    className="whitespace-pre-wrap break-words text-sm leading-relaxed"
-                    style={{ whiteSpace: "pre-wrap" }}
-                  >
-                    {description}
-                  </div>
+        {/* -- Two-column body -- */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* -- LEFT COLUMN � task workspace -- */}
+          <div className="flex flex-col border-r border-border/30" style={{ width: "58%" }}>
+            <div ref={modalBodyRef} className="flex-1 overflow-y-auto px-7 py-6 space-y-4 antialiased">
+              {/* Title */}
+              <div>
+                {isEditingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    onKeyDown={handleTitleKeyDown}
+                    onBlur={commitTitle}
+                    className="w-full text-[18px] font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
+                  />
                 ) : (
-                  <span className="text-muted italic">Add a descriptionΓÇª</span>
+                  <h2
+                    onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
+                    className="text-[18px] font-semibold text-ink leading-snug cursor-text rounded-lg px-2 py-1 -mx-2 hover:bg-column-bg transition-colors"
+                  >
+                    {optimisticTitle ?? task.title}
+                  </h2>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Comments Section Divider */}
-          <div className="border-t border-border pt-8" />          {/* Tabs for Comments vs Activity */}
-          <div className="flex items-center gap-6 border-b border-border mb-4">
-            <button
-              onClick={() => setViewMode("comments")}
-              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
-                viewMode === "comments" ? "text-ink" : "text-muted hover:text-ink"
-              }`}
-            >
-              Comments {comments.length > 0 && <span className="normal-case font-normal text-muted ml-1">({comments.length})</span>}
-              {viewMode === "comments" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
-            </button>
-            <button
-              onClick={() => setViewMode("activity")}
-              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
-                viewMode === "activity" ? "text-ink" : "text-muted hover:text-ink"
-              }`}
-            >
-              Activity {activities.length > 0 && <span className="normal-case font-normal text-muted ml-1">({activities.length})</span>}
-              {viewMode === "activity" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
-            </button>
-            <button
-              onClick={() => setViewMode("history")}
-              className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors relative ${
-                viewMode === "history" ? "text-ink" : "text-muted hover:text-ink"
-              }`}
-            >
-              History {versions.length > 0 && <span className="normal-case font-normal text-muted ml-1">({versions.length})</span>}
-              {viewMode === "history" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />}
-            </button>
-          </div>
+              {/* Metadata row � compact read-only summary */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(() => {
+                  const colLabel = columns.find((c) => c.id === task.column)?.label;
+                  if (!colLabel) return null;
+                  return (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-column-bg text-muted">
+                      {colLabel}
+                    </span>
+                  );
+                })()
+                }
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                  priority === "urgent" ? "bg-red-500/10 text-red-500 dark:text-red-400" :
+                  priority === "high"   ? "bg-orange-500/10 text-orange-500 dark:text-orange-400" :
+                  priority === "low"    ? "bg-blue-500/10 text-blue-500 dark:text-blue-400" :
+                                          "bg-yellow-500/10 text-yellow-600 dark:text-yellow-300"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                    priority === "urgent" ? "bg-red-500" :
+                    priority === "high"   ? "bg-orange-500" :
+                    priority === "low"    ? "bg-blue-500" : "bg-yellow-500"
+                  }`} />
+                  <span className="capitalize">{priority}</span>
+                </span>
+                {(() => {
+                  const m = boardMembers.find((bm) => bm.id === assigneeId);
+                  if (!m) return (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] text-muted bg-column-bg">Unassigned</span>
+                  );
+                  return (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-column-bg text-ink">
+                      <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style={{ backgroundColor: m.color }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      {m.name}
+                    </span>
+                  );
+                })()}
+                {deadlineInfo.severity !== "none" && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                    deadlineInfo.severity === "overdue"  ? "bg-red-500/10 text-red-600 dark:text-red-400" :
+                    deadlineInfo.severity === "due-soon" ? "bg-orange-500/10 text-orange-500 dark:text-orange-400" :
+                                                           "bg-column-bg text-muted"
+                  }`}>
+                    {deadlineInfo.label}
+                  </span>
+                )}
+              </div>
 
-          {viewMode === "comments" ? (
-            <div ref={commentsRef}>
-              {comments.length > 0 && (
-                <div className="space-y-3 mb-6">
-                  {comments.map((c) => (
-                    <div key={c.id} className="bg-column-bg/40 rounded-lg px-3 py-2.5 border border-border/30">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
+              {/* Description */}
+              <div className="pt-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
+                  Description
+                </label>
+                {isEditingDescription ? (
+                  <textarea
+                    ref={descriptionTextareaRef}
+                    value={description}
+                    onChange={(e) => { userHasEdited.current = true; setDescription(e.target.value); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setDescription(descriptionOriginalRef.current);
+                        userHasEdited.current = false;
+                        setIsEditingDescription(false);
+                      }
+                    }}
+                    onBlur={() => {
+                      setIsEditingDescription(false);
+                      void flushUpdates();
+                    }}
+                    placeholder="What needs to be done?"
+                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm text-ink border border-transparent focus:border-border/60 focus:outline-none resize-none"
+                  />
+                ) : (
+                  <div
+                    onClick={() => {
+                      descriptionOriginalRef.current = description;
+                      setIsEditingDescription(true);
+                    }}
+                    className="min-h-[4rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
+                  >
+                    {description ? (
+                      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
+                        {description}
+                      </div>
+                    ) : (
+                      <span className="text-muted text-sm">What needs to be done?</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Comments */}
+              <div ref={commentsRef} className="pt-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
+                  Comments{comments.length > 0 && <span className="normal-case font-normal ml-1">({comments.length})</span>}
+                </label>
+                {comments.length > 0 ? (
+                  <div className="space-y-4">
+                    {comments.map((c) => (
+                      <div key={c.id} className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span
-                            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
-                            style={{ backgroundColor: nameToColor(c.author) }}
+                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                            style={{ backgroundColor: nameToColor(c.author || "A") }}
                           >
-                            {c.author.charAt(0).toUpperCase()}
+                            {(c.author || "A").charAt(0).toUpperCase()}
                           </span>
-                          <span className="text-sm font-semibold text-ink">
+                          <span className="text-xs font-semibold text-ink">
                             {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
                           </span>
+                          <span className="text-[10px] text-muted">{formatTimeAgo(c.createdAt)}</span>
                         </div>
-                        <span className="text-[10px] font-medium text-muted">
-                          {formatTimeAgo(c.createdAt)}
-                        </span>
+                        <p className="text-sm text-ink/80 leading-relaxed pl-7">{c.content}</p>
                       </div>
-                      <p className="text-sm text-ink leading-relaxed pl-8">{c.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted italic">No comments yet.</p>
+                )}
+              </div>
+            </div>
 
+            {/* Comment input � pinned to bottom of left column */}
+            <div className="flex-shrink-0 px-7 py-4 border-t border-border/30">
               <div className="flex gap-2 bg-column-bg/60 rounded-xl p-2 ring-1 ring-border/40 focus-within:ring-accent/30 transition-all">
                 <input
                   ref={commentInputRef}
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   onKeyDown={handleCommentKey}
-                  placeholder="Write a commentΓÇª"
+                  placeholder="Write a comment..."
                   disabled={addingComment}
                   className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
                 />
@@ -1157,101 +880,411 @@ export default function TaskModal({
                 </button>
               </div>
             </div>
-          ) : viewMode === "activity" ? (
-            <div className="space-y-4 py-2">
-              {activities.length === 0 && (
-                <p className="text-center py-8 text-xs text-muted">No activity recorded yet.</p>
-              )}
-              {activities.map((a) => (
-                <div key={a.id} className="flex gap-3 items-start">
-                  <div 
-                    className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white shadow-sm mt-0.5"
-                    style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
-                  >
-                    {a.user?.name.charAt(0).toUpperCase() || "?"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-ink truncate max-w-[120px]">{a.user?.name || "System"}</span>
-                      <span className="text-xs text-muted leading-snug">{a.content}</span>
-                    </div>
-                    <span className="text-[10px] text-muted font-medium">{formatTimeAgo(a.createdAt)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-6 py-2">
-              {versions.length === 0 && (
-                <p className="text-center py-8 text-xs text-muted italic">No description history available.</p>
-              )}
-              {versions.map((v, idx) => {
-                const nextVersion = versions[idx + 1];
-                const prevContent = nextVersion ? nextVersion.content : "";
-                
-                return (
-                  <div key={v.id} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
-                          style={{ backgroundColor: v.user.color }}
+          </div>
+
+          {/* -- RIGHT COLUMN � metadata panel -- */}
+          <div className="flex flex-col min-h-0" style={{ width: "42%" }}>
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 antialiased">
+              {/* Assignee */}
+              <div ref={assigneeDropdownRef} className="relative">
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
+                  Assignee
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAssigneeDropdownOpen((v) => !v)}
+                  className="w-full bg-column-bg rounded-xl px-4 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
+                >
+                  {(() => {
+                    const m = boardMembers.find((bm) => bm.id === assigneeId);
+                    if (!m) return <span className="text-muted">Unassigned</span>;
+                    return (
+                      <>
+                        <span
+                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                          style={{ backgroundColor: m.color }}
                         >
-                          {v.user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-xs font-bold text-ink">{v.user.name}</span>
-                        <span className="text-[10px] text-muted">updated this task</span>
-                      </div>
-                      <span className="text-[10px] text-muted font-mono">{new Date(v.createdAt).toLocaleString()}</span>
-                    </div>
-                    
-                    <DiffViewer oldText={prevContent} newText={v.content} />
+                          {m.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="truncate">{m.name}</span>
+                      </>
+                    );
+                  })()}
+                  <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 4l4 4 4-4"/>
+                  </svg>
+                </button>
+                {assigneeDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                    {[{ id: "", name: "Unassigned", color: "" }, ...boardMembers].map((m) => {
+                      const isSelected = m.id === assigneeId;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            userHasEdited.current = true;
+                            setAssigneeId(m.id);
+                            setAssigneeDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                            isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                          }`}
+                        >
+                          {m.id === "" ? (
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                            </span>
+                          ) : (
+                            <span
+                              className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                              style={{ backgroundColor: m.color }}
+                            >
+                              {m.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          <span className="truncate">{m.name}</span>
+                          {isSelected && (
+                            <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M2 6l3 3 5-5"/>
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                )}
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
+                  Priority
+                </label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                    const styles = {
+                      low:    { active: "bg-blue-500/25 text-blue-600 ring-1 ring-blue-500/60 font-semibold",    idle: "text-muted hover:bg-blue-500/10 hover:text-blue-500" },
+                      medium: { active: "bg-yellow-500/25 text-yellow-700 ring-1 ring-yellow-500/60 font-semibold", idle: "text-muted hover:bg-yellow-500/10 hover:text-yellow-600" },
+                      high:   { active: "bg-orange-500/25 text-orange-600 ring-1 ring-orange-500/60 font-semibold", idle: "text-muted hover:bg-orange-500/10 hover:text-orange-500" },
+                      urgent: { active: "bg-red-500/25 text-red-600 ring-1 ring-red-500/60 font-semibold",       idle: "text-muted hover:bg-red-500/10 hover:text-red-500" },
+                    };
+                    const isActive = priority === p;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setPriority(p);
+                          void handleUpdateWithFeedback(task.id, { priority: p });
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                          isActive ? styles[p].active : styles[p].idle
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Deadline */}
+              <div>
+                <label className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
+                  Deadline
+                  {overdue && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500 normal-case tracking-normal">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      Overdue
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                  className="w-full bg-column-bg rounded-xl px-4 py-2.5 text-sm text-ink border border-transparent focus:border-border focus:outline-none transition-colors"
+                />
+                {showDeadlineStatus && (
+                  <p className={`mt-1.5 flex items-center gap-1.5 text-xs ${
+                    deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
+                    deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
+                                                           "text-muted"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      deadlineInfo.severity === "overdue"  ? "bg-red-500" :
+                      deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
+                    }`} />
+                    {deadlineInfo.label}
+                  </p>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div ref={tagDropdownRef} className="relative">
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
+                  Tags
+                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTag(tag.id)}
+                      className="px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
+                      title="Click to remove"
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+                    className="w-7 h-7 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-column-bg/40 transition-colors"
+                    title="Manage tags"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M7 3v8M3 7h8"/>
+                    </svg>
+                  </button>
+                </div>
+                {tagDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                    <div className="max-h-48 overflow-y-auto">
+                      {allBoardTags.length === 0 && !isCreatingTag && (
+                        <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
+                      )}
+                      {allBoardTags.map((tag) => {
+                        const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
+                        return (
+                          <div
+                            key={tag.id}
+                            onClick={() => toggleTag(tag.id)}
+                            className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                              isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                            }`}
+                          >
+                            <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                            <span className="truncate flex-1">{tag.name}</span>
+                            <div className="ml-auto flex items-center gap-1">
+                              {isSelected && (
+                                <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M2 6l3 3 5-5"/>
+                                </svg>
+                              )}
+                              <button
+                                onClick={(e) => handleDeleteTag(e, tag)}
+                                className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                  <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="border-t border-border p-2">
+                      {isCreatingTag ? (
+                        <div className="space-y-2 p-1">
+                          <input
+                            autoFocus
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            placeholder="Tag name..."
+                            className="w-full bg-column-bg border-none rounded-lg px-2 py-1.5 text-xs text-ink outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setIsCreatingTag(false);
+                            }}
+                          />
+                          <div className="flex flex-col divide-y rounded-md overflow-hidden border border-border mt-1">
+                            {LABEL_PALETTE.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => handleCreateTagWithColor(p.hex)}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-ink hover:bg-column-bg transition-colors"
+                              >
+                                <span className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: p.hex }} />
+                                <span className="truncate">{p.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => { setIsCreatingTag(false); setNewTagName(""); }}
+                              className="text-[11px] font-medium text-muted hover:text-ink px-2 py-1"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setIsCreatingTag(true)}
+                          className="w-full flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-muted hover:text-ink hover:bg-column-bg rounded-lg transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M7 3v8M3 7h8" />
+                          </svg>
+                          Create new tag
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border/30" />
+
+              {/* Info */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
+                  Info
+                </label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted">Created</span>
+                    <span className="text-xs text-ink">{formatDateTime(task.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted">In this column</span>
+                    <span className="text-xs text-ink">{timeInColumn(task.columnUpdatedAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted">Last updated</span>
+                    <span className="text-xs text-ink">
+                      {formatTimeAgo(
+                        task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
+                          ? task.updatedAt
+                          : task.createdAt
+                      )}
+                    </span>
+                  </div>
+                  {task.completedAt && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted">Completed</span>
+                      <span className="text-xs text-ink">{formatDateTime(task.completedAt)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Activity */}
+              <div>
+                <button
+                  onClick={() => setShowActivity((v) => !v)}
+                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+                >
+                  <svg
+                    className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
+                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+                  >
+                    <path d="M3 2l4 3-4 3"/>
+                  </svg>
+                  {showActivity
+                    ? "Hide activity"
+                    : `Show activity${activities.length > 0 ? ` (${activities.length})` : ""}`}
+                </button>
+                {showActivity && (
+                  <div className="mt-3 space-y-3">
+                    {activities.length === 0 ? (
+                      <p className="text-xs text-muted italic">No activity recorded yet.</p>
+                    ) : (
+                      activities.map((a) => (
+                        <div key={a.id} className="flex gap-2.5 items-start">
+                          <div
+                            className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
+                            style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
+                          >
+                            {a.user?.name.charAt(0).toUpperCase() || "?"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <span className="text-xs font-semibold text-ink">{a.user?.name || "System"}</span>
+                              <span className="text-xs text-muted leading-snug">{a.content}</span>
+                            </div>
+                            <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* History */}
+              <div>
+                <button
+                  onClick={() => {
+                    const next = !showHistory;
+                    setShowHistory(next);
+                    if (next && versions.length === 0) void fetchVersions();
+                  }}
+                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+                >
+                  <svg
+                    className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}
+                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+                  >
+                    <path d="M3 2l4 3-4 3"/>
+                  </svg>
+                  {showHistory
+                    ? "Hide history"
+                    : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
+                </button>
+                {showHistory && (
+                  <div className="mt-3 space-y-5">
+                    {versions.length === 0 ? (
+                      <p className="text-xs text-muted italic">No description history available.</p>
+                    ) : (
+                      versions.map((v, idx) => {
+                        const nextVersion = versions[idx + 1];
+                        const prevContent = nextVersion ? nextVersion.content : "";
+                        return (
+                          <div key={v.id} className="space-y-2">
+                            <div className="flex items-center justify-between flex-wrap gap-1">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                                  style={{ backgroundColor: v.user.color }}
+                                >
+                                  {v.user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-semibold text-ink">{v.user.name}</span>
+                              </div>
+                              <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
+                            </div>
+                            <DiffViewer oldText={prevContent} newText={v.content} />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Jump to comments floating button */}
-        {!commentsVisible && (
-          <div className="absolute bottom-[52px] left-0 right-0 flex justify-center pointer-events-none">
-            <button
-              onClick={() => {
-                const body = modalBodyRef.current;
-                const target = commentsRef.current;
-                if (body && target) {
-                  body.scrollTo({
-                    top: target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 16,
-                    behavior: "smooth",
-                  });
-                }
-              }}
-              className="pointer-events-auto flex items-center justify-center w-7 h-7 rounded-full bg-ink/80 text-paper shadow-md hover:bg-ink transition-colors"
-              title="Jump to comments"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2v8M2 7l4 4 4-4"/>
-              </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Footer - Auto-save status */}
-        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
+        {/* -- Footer � auto-save status, spans full width -- */}
+        <div className="flex-shrink-0 px-6 py-3 border-t border-border flex items-center justify-between">
           <div className="flex items-center gap-2 min-h-5">
             {saving ? (
               <>
-                <div className="w-1.5 h-1.5 bg-muted rounded-full motion-safe:animate-pulse" />
-                <p className="text-xs text-muted">SavingΓÇª</p>
+                <div className="w-1.5 h-1.5 bg-sky-300 rounded-full motion-safe:animate-pulse" />
+                <p className="text-xs text-muted">Saving...</p>
               </>
             ) : justSaved ? (
               <>
-                <div className="w-1.5 h-1.5 bg-muted/80 rounded-full" />
+                <div className="w-1.5 h-1.5 bg-green-400/80 rounded-full" />
                 <p className="text-xs text-muted">Saved</p>
               </>
             ) : (
-              <p className="text-xs text-muted">All changes saved</p>
+              <>
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                <p className="text-xs text-muted">All changes saved</p>
+              </>
             )}
           </div>
         </div>
@@ -1259,4 +1292,3 @@ export default function TaskModal({
     </div>
   );
 }
-
