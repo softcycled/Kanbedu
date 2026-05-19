@@ -84,6 +84,8 @@ export default function BoardContainer({
   const columnsRef = useRef(columns);
   useEffect(() => { columnsRef.current = columns; }, [columns]);
 
+  const activeBoard = boards.find((b) => b.id === activeBoardId);
+
   const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
     // If other clients broadcasted a patch with the changed task, apply it surgically
@@ -109,7 +111,7 @@ export default function BoardContainer({
     }
   }, [fetchBoardData]);
 
-  const { broadcastRefresh } = useRealtime(activeBoardId, handleRefresh);
+  useRealtime(activeBoard?.realtimeSecret ?? null, handleRefresh);
 
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
@@ -249,8 +251,6 @@ export default function BoardContainer({
 
   const handleSupportClick = useCallback(() => setIsSupportOpen(true), []);
 
-  const activeBoard = boards.find((b) => b.id === activeBoardId);
-
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
@@ -280,7 +280,6 @@ export default function BoardContainer({
                 onTasksChange={setTasks}
                 onColumnsChange={setColumns}
                 isLoading={isLoadingBoard}
-                broadcastRefresh={broadcastRefresh}
                 currentUserId={currentUserId}
               />
             </main>

@@ -33,12 +33,13 @@ interface Props {
   columns: ColumnData[];
   onTasksChange: (update: Task[] | ((prev: Task[]) => Task[])) => void;
   onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
-  broadcastRefresh: (payload?: unknown) => void;
   currentUserId?: string;
   isLoading?: boolean;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, broadcastRefresh, currentUserId, isLoading = false }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false }: Props) {
+  // Dummy function to satisfy dependencies since broadcasting is now server-side
+  const broadcastRefresh = useCallback((payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -653,7 +654,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       const comment: Comment = await res.json();
       onTasksChange((prev) =>
         prev.map((t) =>
-          t.id === taskId ? { ...t, comments: [...t.comments, comment] } : t
+          t.id === taskId ? { ...t, comments: [...(t.comments ?? []), comment] } : t
         )
       );
       broadcastRefresh();

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createTaskSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
+import { broadcastToBoard } from "@/lib/broadcast";
 import { z } from "zod";
 
 const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }));
@@ -39,6 +40,16 @@ export async function PUT(req: Request) {
       .filter(({ id }) => validTaskIds.has(id))
       .map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
   );
+
+  // Broadcast refresh to all affected boards
+  const affectedBoards = await prisma.board.findMany({
+    where: { id: { in: boardIds } },
+    select: { realtimeSecret: true },
+  });
+  affectedBoards.forEach((board) => {
+    if (board.realtimeSecret) broadcastToBoard(board.realtimeSecret);
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -167,6 +178,16 @@ export async function POST(req: Request) {
   if (process.env.NODE_ENV !== "production") {
     console.info(`[perf] POST /api/tasks total ${Date.now() - start}ms`);
   }
+
+  // Broadcast task creation securely using the board's realtimeSecret
+  prisma.board.findUnique({
+    where: { id: destinationColumn.boardId },
+    select: { realtimeSecret: true }
+  }).then((board) => {
+    if (board?.realtimeSecret) {
+      broadcastToBoard(board.realtimeSecret, { type: "task:create", task: responseTask });
+    }
+  }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
 
   return NextResponse.json(responseTask);
 }

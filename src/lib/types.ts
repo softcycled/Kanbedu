@@ -3,6 +3,7 @@ export interface Board {
   name: string;
   order: number;
   createdAt: string | Date;
+  realtimeSecret?: string;
 }
 
 export interface ColumnData {
@@ -47,8 +48,12 @@ export interface Task {
   order: number;
   priority: string;
   movedByNonAssignee: boolean;
-  comments: Comment[];
-  tags: Tag[];
+  comments?: Comment[];
+  commentCount?: number;
+  _count?: {
+    comments?: number;
+  };
+  tags?: Tag[];
   activities?: TaskActivity[];
 }
 

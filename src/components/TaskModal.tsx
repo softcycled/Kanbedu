@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity } from "@/lib/types";
@@ -170,7 +170,7 @@ export default function TaskModal({
       setComments(task.comments ?? []);
       setActivities(task.activities ?? []);
 
-      // Do not eagerly fetch heavy relations while opening the modal. Instead:
+  // Do not eagerly fetch heavy relations while opening the modal. Instead:
       // - schedule a background fetch for comments (non-blocking, idle-friendly)
       // - avoid fetching activities immediately; fetch on-demand or after idle
       if (!task.activities || task.activities.length === 0) {

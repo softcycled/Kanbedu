@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     prisma.task.findMany({
       where: { columnRel: { boardId } },
       include: {
-        comments: true,
+        _count: { select: { comments: true } },
         columnHistory: { orderBy: { enteredAt: "asc" } },
         assigneeUser: { select: { id: true, name: true, color: true } },
       },
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       updatedAt: t.updatedAt.toISOString(),
       completedAt: t.completedAt?.toISOString() ?? null,
       deadline: t.deadline?.toISOString() ?? null,
-      commentCount: t.comments.length,
+      commentCount: (t as any).commentCount ?? (t as any)._count?.comments ?? ((t as any).comments?.length ?? 0),
       cycleTimeMs,
       currentPhaseMs,
       totalAgeMs,
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
   const stagnantCount = activeTasks.filter((t) => t.currentPhaseMs > THREE_DAYS_MS).length;
 
   // Comment density: avg comments per task
-  const totalComments = tasks.reduce((sum, t) => sum + t.comments.length, 0);
+  const totalComments = tasks.reduce((sum, t) => sum + ((t as any).commentCount ?? (t as any)._count?.comments ?? ((t as any).comments?.length ?? 0)), 0);
   const commentDensity = tasks.length > 0 ? totalComments / tasks.length : 0;
 
   // Integrity check: flag completed tasks that look like last-minute fabrication.

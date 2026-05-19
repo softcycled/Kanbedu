@@ -97,7 +97,7 @@ describe('Authorization - integration (light)', () => {
 
   it('POST /api/columns returns 403 when user is not a member', async () => {
     (auth.getSession as any).mockResolvedValue({ userId: 'u1' });
-    (auth.isMemberOfBoard as unknown as jest.Mock).mockResolvedValue(false);
+    (auth.isMemberOfBoard as any).mockResolvedValue(false);
     const req = new Request('http://localhost/api/columns', { method: 'POST', body: JSON.stringify({ label: 'X', boardId: 'b1' }), headers: { 'Content-Type': 'application/json' } });
     const res: any = await columnsRoute.POST(req as any);
     expect(res.status).toBe(403);

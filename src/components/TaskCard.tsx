@@ -157,7 +157,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.deadline === next.task.deadline &&
     prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
     prev.task.completedAt === next.task.completedAt &&
-    prevCount === nextCount &&
+  prevCount === nextCount &&
     prev.task.tags?.length === next.task.tags?.length &&
     prev.onClick === next.onClick
   );
