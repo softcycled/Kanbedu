@@ -173,6 +173,14 @@ export default function TaskModal({
           .then((data) => { if (data?.activities) setActivities(data.activities); })
           .catch(() => {});
       }
+
+      // Lazy-load comments if the board payload did not include comment bodies
+      if (!task.comments || task.comments.length === 0) {
+        fetch(`/api/tasks/${task.id}?include=comments`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => { if (data?.comments) setComments(data.comments); })
+          .catch(() => {});
+      }
     } else {
       // Same task id: do not clobber local edits. Only sync comments/activities when the server shows
       // new entries (compare last item id) or when we have no local content.

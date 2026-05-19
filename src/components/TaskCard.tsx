@@ -40,6 +40,9 @@ function TaskCard({ task, onClick }: Props) {
   const overdue = deadlineInfo.severity === "overdue";
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
+  // Compute comment count without requiring full comment bodies on board payloads
+  const commentCount = (task.comments && task.comments.length) || (task as any).commentCount || ((task as any)._count?.comments) || 0;
+
   const priorityDot: Record<string, string> = {
     low:    "bg-blue-500",
     medium: "bg-yellow-500",
@@ -127,11 +130,11 @@ function TaskCard({ task, onClick }: Props) {
           </>
         )}
 
-        {task.comments.length > 0 && (
+        {commentCount > 0 && (
           <>
             <span className="text-muted text-xs">·</span>
             <span className="text-xs text-muted">
-              {task.comments.length} {task.comments.length === 1 ? "note" : "notes"}
+              {commentCount} {commentCount === 1 ? "note" : "notes"}
             </span>
           </>
         )}
@@ -143,6 +146,8 @@ function TaskCard({ task, onClick }: Props) {
 // Memoize: only re-render when task data or click handler actually changes.
 // During DnD drags this prevents the entire column from re-rendering on every frame.
 export default memo(TaskCard, (prev, next) => {
+  const prevCount = (prev.task.comments && prev.task.comments.length) || (prev.task as any).commentCount || ((prev.task as any)._count?.comments) || 0;
+  const nextCount = (next.task.comments && next.task.comments.length) || (next.task as any).commentCount || ((next.task as any)._count?.comments) || 0;
   return (
     prev.task.id === next.task.id &&
     prev.task.title === next.task.title &&
@@ -152,7 +157,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.deadline === next.task.deadline &&
     prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
     prev.task.completedAt === next.task.completedAt &&
-    prev.task.comments.length === next.task.comments.length &&
+    prevCount === nextCount &&
     prev.task.tags?.length === next.task.tags?.length &&
     prev.onClick === next.onClick
   );

@@ -66,16 +66,22 @@ export async function GET(request: NextRequest) {
   const tasks = await prisma.task.findMany({
     where: { columnRel: { boardId } },
     include: {
-      comments: {
-        select: { id: true, content: true, author: true, createdAt: true, taskId: true },
-        orderBy: { createdAt: "asc" },
-      },
+      _count: { select: { comments: true } },
       assigneeUser: { select: { id: true, name: true, color: true } },
       tags: true,
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],
   });
-  return NextResponse.json(tasks);
+  // Return lean payload for board/list: do not include full comment bodies here.
+  const mapped = tasks.map((t) => ({
+    ...t,
+    // preserve shape expected by UI but keep comments empty to avoid payload bloat
+    comments: [],
+    // expose a compact comment count
+    commentCount: (t as any)._count?.comments ?? 0,
+  }));
+
+  return NextResponse.json(mapped);
 }
 
 export async function POST(req: Request) {

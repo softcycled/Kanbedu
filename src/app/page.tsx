@@ -72,10 +72,7 @@ export default async function Home() {
     prisma.task.findMany({
       where: { columnRel: { boardId: firstBoard.id } },
       include: {
-        comments: {
-          select: { id: true, content: true, author: true, createdAt: true, taskId: true },
-          orderBy: { createdAt: "asc" },
-        },
+        _count: { select: { comments: true } },
         assigneeUser: { select: { id: true, name: true, color: true } },
         tags: true,
       },
@@ -90,10 +87,10 @@ export default async function Home() {
     completedAt: t.completedAt?.toISOString() ?? null,
     columnUpdatedAt: t.columnUpdatedAt.toISOString(),
     deadline: t.deadline?.toISOString() ?? null,
-    comments: t.comments.map((c) => ({
-      ...c,
-      createdAt: c.createdAt.toISOString(),
-    })),
+    // Do NOT serialize full comments for board payloads - keep empty array to preserve shape
+    comments: [],
+    // Expose a compact comment count for UI
+    commentCount: (t as any)._count?.comments ?? 0,
   }));
 
   const serializedBoards = boards.map((b) => ({
