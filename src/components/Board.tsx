@@ -740,12 +740,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           filteredTasksCount={filteredTasks.length}
         />
         {/* View mode toggle (animated slider) */}
-        <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/40 flex-shrink-0">
+        <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
           {/* Sliding indicator */}
           <div
             aria-hidden
             style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
-            className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink transition-all duration-180 ease-out pointer-events-none"
+            className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
           />
           <button
             ref={boardBtnRef}
@@ -753,8 +753,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             title="Board view"
             className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "board"
-                ? "text-paper"
-                : "text-muted hover:text-ink"
+                ? "text-ink/90"
+                : "text-muted/70 hover:text-ink/80"
             }`}
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.3px)', transformOrigin: 'center center' }}>
@@ -770,8 +770,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             title="List view"
             className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "list"
-                ? "text-paper"
-                : "text-muted hover:text-ink"
+                ? "text-ink/90"
+                : "text-muted/70 hover:text-ink/80"
             }`}
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.2px)', transformOrigin: 'center center' }}>
@@ -877,6 +877,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         task={selectedTask}
         boardId={boardId}
         boardMembers={boardMembers}
+        columns={columns}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}
