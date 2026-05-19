@@ -100,12 +100,17 @@ export default function TaskModal({
   }, []);
   const [comments, setComments] = useState<Comment[]>([]);
   const [addingComment, setAddingComment] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const modalBodyRef = useRef<HTMLDivElement>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const pendingRequestsRef = useRef<{ comments?: Promise<any> | null; activities?: Promise<any> | null; versions?: Promise<any> | null }>({ comments: null, activities: null, versions: null });
+  const activityIdleTimerRef = useRef<number | null>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const descriptionOriginalRef = useRef<string>("");
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -153,21 +158,32 @@ export default function TaskModal({
       setComments(task.comments ?? []);
       setActivities(task.activities ?? []);
 
-      // Lazy-load activities when opening a new task (not included in the board list fetch)
+      // Do not eagerly fetch heavy relations while opening the modal. Instead:
+      // - schedule a background fetch for comments (non-blocking, idle-friendly)
+      // - avoid fetching activities immediately; fetch on-demand or after idle
       if (!task.activities || task.activities.length === 0) {
-        // Request activities explicitly to avoid fetching heavy relations by default
-        fetch(`/api/tasks/${task.id}?include=activities`)
-          .then((r) => r.ok ? r.json() : null)
-          .then((data) => { if (data?.activities) setActivities(data.activities); })
-          .catch(() => {});
+        // schedule an idle fallback to fetch activities after the modal settles
+        if (typeof window !== "undefined") {
+          if (activityIdleTimerRef.current) window.clearTimeout(activityIdleTimerRef.current);
+          activityIdleTimerRef.current = window.setTimeout(() => {
+            if (!task) return;
+            if (!showActivity && (activities.length === 0 || !activities)) {
+              void fetchActivitiesForTask(task.id);
+            }
+          }, 2500);
+        }
       }
 
-      // Lazy-load comments if the board payload did not include comment bodies
+      // Schedule a non-blocking, idle-friendly comments fetch so the modal paints first
       if (!task.comments || task.comments.length === 0) {
-        fetch(`/api/tasks/${task.id}?include=comments`)
-          .then((r) => r.ok ? r.json() : null)
-          .then((data) => { if (data?.comments) setComments(data.comments); })
-          .catch(() => {});
+        if (typeof window !== "undefined") {
+          const run = () => { if (task) void fetchCommentsForTask(task.id); };
+          if ((window as any).requestIdleCallback) {
+            try { (window as any).requestIdleCallback(run, { timeout: 1000 }); } catch { setTimeout(run, 50); }
+          } else {
+            setTimeout(run, 50);
+          }
+        }
       }
     } else {
       // Same task id: do not clobber local edits. Only sync comments/activities when the server shows
@@ -196,6 +212,63 @@ export default function TaskModal({
       // if server-side title matches optimistic title, clear optimistic overlay
       if (optimisticTitle && task.title === optimisticTitle) setOptimisticTitle(null);
     }
+  }, [task]);
+
+  // Cleanup any idle timers on unmount
+  useEffect(() => {
+    return () => {
+      if (activityIdleTimerRef.current) window.clearTimeout(activityIdleTimerRef.current);
+    };
+  }, []);
+
+  // ----- DEDUPED FETCH HELPERS (comments / activities / versions) -----
+  const fetchCommentsForTask = useCallback(async (taskId?: string) => {
+    if (!taskId) return null;
+    if (pendingRequestsRef.current.comments) return pendingRequestsRef.current.comments;
+    setCommentsLoading(true);
+    const p = fetch(`/api/tasks/${taskId}?include=comments`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.comments) setComments(data.comments); return data; })
+      .catch(() => null)
+      .finally(() => {
+        if (isMounted.current) setCommentsLoading(false);
+        pendingRequestsRef.current.comments = null;
+      });
+    pendingRequestsRef.current.comments = p;
+    return p;
+  }, []);
+
+  const fetchActivitiesForTask = useCallback(async (taskId?: string) => {
+    if (!taskId) return null;
+    if (pendingRequestsRef.current.activities) return pendingRequestsRef.current.activities;
+    setActivitiesLoading(true);
+    const p = fetch(`/api/tasks/${taskId}?include=activities`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.activities) setActivities(data.activities); return data; })
+      .catch(() => null)
+      .finally(() => {
+        if (isMounted.current) setActivitiesLoading(false);
+        pendingRequestsRef.current.activities = null;
+      });
+    pendingRequestsRef.current.activities = p;
+    return p;
+  }, []);
+
+  // reuse existing fetchVersions but dedupe via the same ref
+  const fetchVersionsDeduped = useCallback(async () => {
+    if (!task) return null;
+    if (pendingRequestsRef.current.versions) return pendingRequestsRef.current.versions;
+    setVersionsLoading(true);
+    const p = fetch(`/api/tasks/${task.id}/versions`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setVersions(data); return data; })
+      .catch(() => null)
+      .finally(() => {
+        if (isMounted.current) setVersionsLoading(false);
+        pendingRequestsRef.current.versions = null;
+      });
+    pendingRequestsRef.current.versions = p;
+    return p;
   }, [task]);
 
   // Auto-focus title input when editing
@@ -239,20 +312,11 @@ export default function TaskModal({
     }
   };
 
-  const fetchVersions = useCallback(async () => {
-    if (!task) return;
-    const res = await fetch(`/api/tasks/${task.id}/versions`);
-    if (res.ok) {
-      const data = await res.json();
-      setVersions(data);
-    }
-  }, [task]);
-
   useEffect(() => {
     if (viewMode === "history") {
-      fetchVersions();
+      void fetchVersionsDeduped();
     }
-  }, [viewMode, fetchVersions]);
+  }, [viewMode, fetchVersionsDeduped]);
 
 
 
@@ -841,7 +905,20 @@ export default function TaskModal({
                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
                   Comments{comments.length > 0 && <span className="normal-case font-normal ml-1">({comments.length})</span>}
                 </label>
-                {comments.length > 0 ? (
+                {commentsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="space-y-0.5 animate-pulse">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-column-bg/40" />
+                          <div className="h-3 w-24 bg-column-bg/40 rounded" />
+                          <div className="h-3 w-12 bg-column-bg/40 rounded ml-auto" />
+                        </div>
+                        <div className="h-4 bg-column-bg/40 rounded w-full ml-7" />
+                      </div>
+                    ))}
+                  </div>
+                ) : comments.length > 0 ? (
                   <div className="space-y-4">
                     {comments.map((c) => (
                       <div key={c.id} className="space-y-0.5">
@@ -1181,7 +1258,11 @@ export default function TaskModal({
               {/* Activity */}
               <div>
                 <button
-                  onClick={() => setShowActivity((v) => !v)}
+                  onClick={() => {
+                    const next = !showActivity;
+                    setShowActivity(next);
+                    if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
+                  }}
                   className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
                 >
                   <svg
@@ -1196,7 +1277,13 @@ export default function TaskModal({
                 </button>
                 {showActivity && (
                   <div className="mt-3 space-y-3">
-                    {activities.length === 0 ? (
+                    {activitiesLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="h-8 rounded bg-column-bg/40 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : activities.length === 0 ? (
                       <p className="text-xs text-muted italic">No activity recorded yet.</p>
                     ) : (
                       activities.map((a) => (
@@ -1227,7 +1314,7 @@ export default function TaskModal({
                   onClick={() => {
                     const next = !showHistory;
                     setShowHistory(next);
-                    if (next && versions.length === 0) void fetchVersions();
+                    if (next && versions.length === 0) void fetchVersionsDeduped();
                   }}
                   className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
                 >
@@ -1243,7 +1330,13 @@ export default function TaskModal({
                 </button>
                 {showHistory && (
                   <div className="mt-3 space-y-5">
-                    {versions.length === 0 ? (
+                    {versionsLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="h-12 rounded bg-column-bg/40 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : versions.length === 0 ? (
                       <p className="text-xs text-muted italic">No description history available.</p>
                     ) : (
                       versions.map((v, idx) => {
