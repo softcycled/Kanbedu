@@ -2,492 +2,541 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { getTextColorForBg } from "@/lib/labelPalette";
+import Image from "next/image";
 
-// ── Icons ─────────────────────────────────────────────────────
+// ── Placeholder frame ─────────────────────────────────────────────────────────
 
-const Icons = {
-  Sun: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-  ),
-  Moon: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
-  ),
-  Kanban: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="4" height="18" />
-      <rect x="10" y="3" width="4" height="12" />
-      <rect x="17" y="3" width="4" height="15" />
-    </svg>
-  ),
-  User: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 4-7 8-7s8 3 8 7" />
-    </svg>
-  ),
-  Chart: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="12" width="4" height="8" />
-      <rect x="10" y="6" width="4" height="14" />
-      <rect x="17" y="9" width="4" height="11" />
-    </svg>
-  ),
-  Link: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 14l-2 2a3 3 0 004 0l2-2m-4-4l2-2a3 3 0 014 0l2 2" />
-    </svg>
-  ),
-  Calendar: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  ),
-  Realtime: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
-      <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4" />
-      <circle cx="12" cy="12" r="2" />
-      <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4" />
-      <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
-    </svg>
-  ),
-  DarkMode: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  ),
-  Activity: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  ),
-};
+const GLOW_COLORS = [
+  "rgba(59,130,246,0.08)",
+  "rgba(124,58,237,0.08)",
+  "rgba(16,185,129,0.07)",
+  "rgba(245,158,11,0.07)",
+  "rgba(236,72,153,0.07)",
+  "rgba(20,184,166,0.07)",
+];
 
-// ── Components ────────────────────────────────────────────────
+function PlaceholderFrame({
+  label,
+  caption,
+  aspect = "video",
+  index = 0,
+  className = "",
+}: {
+  label: string;
+  caption?: string;
+  aspect?: "video" | "square" | "tall";
+  index?: number;
+  className?: string;
+}) {
+  const aspectClass =
+    aspect === "video"
+      ? "aspect-video"
+      : aspect === "square"
+      ? "aspect-square"
+      : "aspect-[3/4]";
+
+  const glow = GLOW_COLORS[index % GLOW_COLORS.length];
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border border-white/[0.07] ${aspectClass} ${className}`}
+      style={{ background: "#131110" }}
+    >
+      {/* Dot grid */}
+      <div
+        className="absolute inset-0 opacity-70"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      {/* Radial accent tint */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse 70% 55% at 50% 35%, ${glow}, transparent 70%)`,
+        }}
+      />
+      {/* Corner marks */}
+      <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-white/[0.12]" />
+      <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-white/[0.12]" />
+      <div className="absolute bottom-11 left-4 w-5 h-5 border-b border-l border-white/[0.12]" />
+      <div className="absolute bottom-11 right-4 w-5 h-5 border-b border-r border-white/[0.12]" />
+      {/* Label bar */}
+      <div
+        className="absolute bottom-0 inset-x-0 px-4 py-2.5 border-t border-white/[0.06] flex items-center gap-2.5"
+        style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-white/20 animate-pulse flex-shrink-0" />
+        <span className="text-[11px] text-white/30 font-medium tracking-wide leading-none">
+          {label}
+        </span>
+        {caption && (
+          <span className="text-[10px] text-white/15 ml-auto font-medium tracking-wider uppercase">
+            {caption}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Capability grid cell ──────────────────────────────────────────────────────
+
+function CapabilityCell({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div
+      className="p-7 transition-colors duration-200 hover:bg-white/[0.025] group"
+      style={{
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <h3 className="text-sm font-semibold text-ink mb-2 leading-snug">{title}</h3>
+      <p className="text-xs text-muted leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+
+const CAPABILITIES = [
+  {
+    title: "Kanban Boards",
+    description:
+      "Visual columns that map to your workflow. Drag tasks to reprioritize in real time.",
+  },
+  {
+    title: "Task Assignment",
+    description:
+      "Every card has a clear owner. No ambiguity about who handles what.",
+  },
+  {
+    title: "Real-time Sync",
+    description:
+      "Changes propagate instantly to all board members. No refreshing, no stale state.",
+  },
+  {
+    title: "One-link Invites",
+    description:
+      "Share a link. Your team joins the board. No approval flow required.",
+  },
+  {
+    title: "Activity History",
+    description:
+      "Full audit trail on every task. Know exactly who changed what and when.",
+  },
+  {
+    title: "Priority Labels",
+    description:
+      "Mark urgency with color labels. Filter for what actually needs attention now.",
+  },
+  {
+    title: "Due Dates",
+    description:
+      "Attach deadlines to tasks and see them in a shared calendar view.",
+  },
+  {
+    title: "Team Analytics",
+    description:
+      "Cycle time breakdowns, contribution views, and workflow summaries.",
+  },
+  {
+    title: "Dark Mode",
+    description:
+      "Thoughtfully designed dark theme. Easy on the eyes during late-night work sessions.",
+  },
+];
+
+const WORKFLOW_ITEMS = [
+  {
+    index: "01",
+    category: "Boards",
+    headline: "Visual boards that match\nhow your team thinks.",
+    body: "Drag cards between columns as work progresses. Every status visible at a glance — no status meetings required.",
+    bullets: [
+      "Drag-and-drop task management",
+      "Priority levels and color labels",
+      "Assignee tracking per card",
+      "Board-level activity feed",
+    ],
+    frameLabel: "Board and list synchronization",
+    frameIndex: 1,
+    frameAspect: "video" as const,
+    flip: false,
+  },
+  {
+    index: "02",
+    category: "Task detail",
+    headline: "Every task has the\nfull context it needs.",
+    body: "Open any task to see its description, comments, activity history, due date, and assignee — all in one focused view.",
+    bullets: [
+      "Inline comments and discussion",
+      "Full activity history per task",
+      "Due dates and deadline tracking",
+      "Rich description with markdown",
+    ],
+    frameLabel: "Task modal workflow",
+    frameIndex: 2,
+    frameAspect: "square" as const,
+    flip: true,
+  },
+  {
+    index: "03",
+    category: "Collaboration",
+    headline: "Your team stays in sync\nwithout the overhead.",
+    body: "Changes appear instantly for everyone on the board. Invite teammates with a single link — no approval flow, no friction.",
+    bullets: [
+      "Live updates across all members",
+      "One-link team invitations",
+      "Per-member contribution tracking",
+      "Shared board workspace",
+    ],
+    frameLabel: "Realtime collaboration activity",
+    frameIndex: 3,
+    frameAspect: "video" as const,
+    flip: false,
+  },
+];
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
-
-  // Animation state for hero mockup
-  const [animStep, setAnimStep] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Hero board animation loop
   useEffect(() => {
-    const timings = [2000, 2000, 2000, 2000, 3000, 1000]; // ms per step
-    const timer = setTimeout(() => {
-      setAnimStep((prev) => (prev + 1) % 6);
-    }, timings[animStep]);
-    return () => clearTimeout(timer);
-  }, [animStep]);
+    const reveals = Array.from(
+      document.querySelectorAll<HTMLElement>(".reveal")
+    );
 
-  // Intersection Observer for fade-in animations
-  useEffect(() => {
+    // Only hide elements that start below the visible viewport so above-fold
+    // content is never invisible on initial load.
+    reveals.forEach((el) => {
+      if (el.getBoundingClientRect().top > window.innerHeight * 0.9) {
+        el.style.opacity = "0";
+        el.style.transform = "translateY(20px)";
+        el.style.transition = "opacity 0.7s ease-out, transform 0.7s ease-out";
+      }
+    });
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("opacity-100", "translate-y-0");
-            entry.target.classList.remove("opacity-0", "translate-y-4");
+            const el = entry.target as HTMLElement;
+            el.style.opacity = "1";
+            el.style.transform = "translateY(0)";
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.05, rootMargin: "0px 0px 300px 0px" }
     );
 
-    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    reveals.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
-  const scrollToFeatures = () => {
-    document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
-    <div className="bg-paper min-h-screen font-sans selection:bg-accent selection:text-white">
-      
-      {/* ── Section 1: Navigation Bar ──────────────────────────── */}
-      {/* Dark mode only: gradient fades in on scroll */}
+    // Force dark mode for the landing page regardless of user theme preference
+    <div className="dark">
       <div
-        className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-32 transition-opacity duration-500 hidden dark:block ${isScrolled ? "opacity-100" : "opacity-0"}`}
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.18) 55%, transparent 100%)" }}
-      />
-      <nav className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        isScrolled ? "py-3" : "py-5"
-      }`}>
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/landing" className="text-xl font-bold text-ink tracking-tight">
-            kanbedu
-          </Link>
-          <div className="flex items-center gap-4 md:gap-6">
-            <Link href="/login" className="text-sm font-medium text-muted hover:text-ink transition-colors">
-              Sign in
-            </Link>
-            <Link href="/login?mode=signup" className="bg-ink text-paper px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
-              Get Started
-            </Link>
-          </div>
-        </div>
-      </nav>
+        className="min-h-screen font-sans antialiased text-ink bg-paper selection:bg-accent/30 selection:text-white"
+      >
 
-      <main>
-        {/* ── Section 2: Hero ───────────────────────────────────── */}
-        <section className="text-center pt-16 pb-16 px-6">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-ink leading-[1.1] motion-safe:animate-fade-in">
-              Track your group projects <br />
-              <span className="text-accent">without the friction.</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted mt-6 max-w-xl mx-auto leading-relaxed motion-safe:animate-fade-in [animation-delay:100ms]">
-              The free, minimal Kanban board built for students. <br className="hidden md:block" />
-              No bloat. No learning curve. Just cards.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 motion-safe:animate-fade-in [animation-delay:200ms]">
-              <Link href="/login?mode=signup" className="w-full sm:w-auto bg-ink text-paper px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
+        {/* ── Navigation ──────────────────────────────────────────────── */}
+        <nav
+          className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
+            scrolled
+              ? "border-b border-white/[0.06] backdrop-blur-md"
+              : "bg-transparent"
+          }`}
+          style={scrolled ? { background: "rgba(22,20,18,0.90)" } : undefined}
+        >
+          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+            <Link
+              href="/landing"
+              className="text-[15px] font-semibold tracking-tight text-ink"
+            >
+              kanbedu
+            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/login"
+                className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/login?mode=signup"
+                className="text-sm font-medium px-4 py-1.5 rounded-lg border border-white/10 text-ink hover:border-white/20 hover:bg-white/[0.04] transition-all duration-150"
+              >
                 Get Started
               </Link>
-              <button 
-                onClick={scrollToFeatures}
-                className="w-full sm:w-auto border border-border text-ink px-8 py-3.5 rounded-xl text-sm font-medium hover:bg-column-bg transition-colors"
+            </div>
+          </div>
+        </nav>
+
+        <main>
+
+          {/* ── Hero ──────────────────────────────────────────────────── */}
+          <section className="pt-40 pb-24 px-6">
+            <div className="max-w-5xl mx-auto text-center">
+  
+              {/* Headline */}
+              <h1 className="text-5xl sm:text-6xl md:text-[72px] font-bold tracking-[-0.03em] leading-[1.02] text-ink mb-5 motion-safe:animate-fade-in [animation-delay:80ms]">
+                Task management
+                <br className="hidden sm:block" />
+                {" "}teams actually use.
+              </h1>
+
+              {/* Sub */}
+              <p className="text-[15px] md:text-[17px] text-muted max-w-[340px] mx-auto leading-relaxed mb-10 motion-safe:animate-fade-in [animation-delay:160ms]">
+                Boards, tasks, and real-time collaboration — without the setup overhead.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-20 motion-safe:animate-fade-in [animation-delay:240ms]">
+                <Link
+                  href="/login?mode=signup"
+                  className="w-full sm:w-auto bg-white text-[#161412] px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors"
+                >
+                  Get Started — it&apos;s free
+                </Link>
+                <Link
+                  href="/login"
+                  className="w-full sm:w-auto text-sm text-muted hover:text-ink transition-colors px-6 py-2.5 border border-white/10 rounded-lg hover:border-white/20"
+                >
+                  Sign in
+                </Link>
+              </div>
+
+              {/* Hero screenshot */}
+              <div
+                className="relative rounded-2xl overflow-hidden border border-white/[0.07] motion-safe:animate-modal-in [animation-delay:300ms]"
+                style={{
+                  boxShadow:
+                    "0 0 0 1px rgba(255,255,255,0.03), 0 40px 100px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.4)",
+                }}
               >
-                See How It Works
-              </button>
-            </div>
-
-            {/* Animated Board Preview Mockup */}
-            <div className="mt-20 max-w-4xl mx-auto rounded-2xl border border-border shadow-modal overflow-hidden bg-column-bg p-4 md:p-6 motion-safe:animate-modal-in [animation-delay:300ms]">
-              <div className="flex gap-3 md:gap-4 h-[300px] md:h-[400px] overflow-x-auto no-scrollbar pb-2">
-                {/* To Do Column */}
-                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">To Do</span>
-                  <div className="relative flex-1 flex flex-col gap-3">
-                    <MockCard 
-                      title="Draft proposal outline" 
-                      priority="medium" 
-                      time="2d" 
-                      tag={{ name: "RESEARCH", color: "#3B82F6" }}
-                    />
-                    <MockCard 
-                      title="Research competitor analysis" 
-                      priority="high" 
-                      time="4h"
-                      isVisible={animStep === 0 || animStep === 5}
-                      exitDir="bottom"
-                    />
-                  </div>
-                </div>
-
-                {/* In Progress Column */}
-                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">In Progress</span>
-                  <div className="relative flex-1 flex flex-col gap-3">
-                    <MockCard 
-                      title="Design wireframes" 
-                      priority="urgent" 
-                      time="1d"
-                      isVisible={animStep < 4 || animStep === 5}
-                      tag={animStep >= 2 && animStep < 5 ? { name: "DESIGN", color: "#7B68EE" } : undefined}
-                      exitDir="right"
-                    />
-                    <MockCard 
-                      title="Research competitor analysis" 
-                      priority="high" 
-                      time="4h"
-                      isVisible={animStep >= 1 && animStep < 5}
-                      enterDir="top"
-                      assignee={animStep >= 3 && animStep < 5 ? { letter: "A", color: "#4A90A4" } : undefined}
-                    />
-                  </div>
-                </div>
-
-                {/* Done Column */}
-                <div className="flex-1 min-w-[140px] bg-column-bg/50 rounded-xl flex flex-col gap-3 p-2 border border-border/30 flex">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">Done</span>
-                  <div className="relative flex-1 flex flex-col gap-3">
-                    <MockCard 
-                      title="Set up project repo" 
-                      priority="low" 
-                      time="3d" 
-                    />
-                    <MockCard 
-                      title="Design wireframes" 
-                      priority="urgent" 
-                      time="1d"
-                      isVisible={animStep >= 4 && animStep < 5}
-                      enterDir="left"
-                      isComplete={animStep === 4}
-                    />
-                  </div>
-                </div>
+                <Image
+                  src="/kanbeduhero.png"
+                  alt="Kanbedu board view — tasks organized across columns with assignees, priorities, and labels"
+                  width={1200}
+                  height={750}
+                  className="w-full h-auto block"
+                  priority
+                  unoptimized
+                />
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Section 3: Before / After Strip ─────────────────── */}
-        <section className="py-16 px-6 reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-semibold text-ink text-center mb-12">
-              We&apos;ve all been there.
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Before */}
-              <div className="bg-red-500/5 border border-red-500/15 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-red-500">Without Kanbedu</span>
-                </div>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> &quot;I&apos;ll do this part&quot; said in the group chat. Never written down.</li>
-                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> Deadlines pass. Work overlaps. Nobody tracks anything.</li>
-                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> Half the team has no idea what the other half is doing.</li>
-                  <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">-</span> The night before: &quot;Wait, who was doing the slides?&quot;</li>
-                </ul>
-              </div>
-              {/* After */}
-              <div className="bg-green-500/5 border border-green-500/15 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-green-600">With Kanbedu</span>
-                </div>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Every task is a card. Assigned, prioritized, tracked.</li>
-                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Drag cards across columns as work progresses.</li>
-                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> See who completed what and when, at a glance.</li>
-                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">+</span> Deadlines on a calendar. Nothing falls through the cracks.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Section 4: Feature Strip ──────────────────────────── */}
-        <section id="features" className="py-24 px-6 bg-column-bg/30">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-semibold text-ink text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
-              Everything you need. Nothing you don&apos;t.
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
-              <FeatureCard 
-                icon={<Icons.Kanban />} 
-                title="Drag & Drop Boards" 
-                description="Organize tasks into columns that make sense for your workflow. Drag to reprioritize." 
-                delay="0ms"
-              />
-              <FeatureCard 
-                icon={<Icons.User />} 
-                title="Assign & Track" 
-                description="Know exactly who is doing what. No more 'I thought you were handling that.'" 
-                delay="50ms"
-              />
-              <FeatureCard 
-                icon={<Icons.Chart />} 
-                title="Built-in Analytics" 
-                description="Workflow overview, cycle times, team breakdown, and contribution heatmaps." 
-                delay="100ms"
-              />
-              <FeatureCard 
-                icon={<Icons.Link />} 
-                title="One-click Invites" 
-                description="Share a link. Your team joins the board. No emails, no approvals." 
-                delay="150ms"
-              />
-              <FeatureCard 
-                icon={<Icons.Calendar />} 
-                title="Deadline Calendar" 
-                description="See every deadline across all your boards in one calendar view. Never miss a due date." 
-                delay="200ms"
-              />
-              <FeatureCard 
-                icon={<Icons.Realtime />} 
-                title="Real-time Sync" 
-                description="Changes appear instantly for everyone on the board. No refreshing needed." 
-                delay="250ms"
-              />
-              <FeatureCard 
-                icon={<Icons.DarkMode />} 
-                title="Dark Mode" 
-                description="Easy on the eyes during late-night deadline crunches. Toggleable with one click." 
-                delay="300ms"
-              />
-              <FeatureCard 
-                icon={<Icons.Activity />} 
-                title="Activity Tracking" 
-                description="Full audit trail of every task change. Know who did what and when." 
-                delay="350ms"
+              {/* Glow under screenshot */}
+              <div
+                className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-1/2 h-24 rounded-full blur-3xl pointer-events-none"
+                style={{ background: "rgba(138, 130, 121, 0)" }}
               />
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ── Section 5: CTA Banner ─────────────────────────────── */}
-        <section className="py-20 px-6 text-center reveal opacity-0 translate-y-4 transition-all duration-700 ease-out">
-          <h2 className="text-3xl md:text-4xl font-bold text-ink">
-            Ready to stop losing track?
-          </h2>
-          <p className="text-lg text-muted mt-4">
-            Free forever. No credit card. No catch.
-          </p>
-          <Link href="/login?mode=signup" className="inline-block bg-ink text-paper px-10 py-4 rounded-xl text-base font-semibold hover:opacity-90 transition-opacity mt-8 shadow-lg">
-            Get Started Free
-          </Link>
-          <p className="text-xs text-muted mt-6">Built by students, for students.</p>
-        </section>
-      </main>
-
-      {/* ── Section 6: Footer ─────────────────────────────────── */}
-      <footer className="border-t border-border py-12 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-8">
-          <div className="text-center sm:text-left">
-            <span className="text-sm font-bold text-ink block mb-1">kanbedu</span>
-            <span className="text-xs text-muted">Built for students, by students.</span>
-          </div>
-          <div className="flex items-center flex-wrap justify-center sm:justify-end gap-x-4 gap-y-2 text-xs text-muted">
-            <Link href="/terms" className="hover:text-ink transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/privacy" className="hover:text-ink transition-colors">
-              Privacy Policy
-            </Link>
-            <a href="mailto:support@kanbedu.com" className="hover:text-ink transition-colors">
-              Contact
-            </a>
-            <Link href="/credits" className="hover:text-ink transition-colors">
-              Credits
-            </Link>
-            <span>© 2026 Kanbedu</span>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-// ── Sub-components ───────────────────────────────────────────
-
-interface MockCardProps {
-  title: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  time: string;
-  tag?: { name: string; color: string };
-  assignee?: { letter: string; color: string };
-  isVisible?: boolean;
-  enterDir?: "top" | "left" | "right" | "bottom";
-  exitDir?: "top" | "left" | "right" | "bottom";
-  isComplete?: boolean;
-}
-
-function MockCard({ 
-  title, 
-  priority, 
-  time, 
-  tag, 
-  assignee, 
-  isVisible = true, 
-  enterDir = "bottom",
-  exitDir = "bottom",
-  isComplete = false
-}: MockCardProps) {
-  const dotColor = {
-    low: "bg-blue-400",
-    medium: "bg-yellow-400",
-    high: "bg-amber-500",
-    urgent: "bg-red-500"
-  }[priority];
-
-  const getTransform = () => {
-    if (isVisible) return "translate-x-0 translate-y-0 scale-100";
-    
-    // Position when hidden
-    const dir = isVisible ? enterDir : exitDir;
-    switch(dir) {
-      case "top": return "-translate-y-8 scale-95";
-      case "bottom": return "translate-y-8 scale-95";
-      case "left": return "-translate-x-8 scale-95";
-      case "right": return "translate-x-8 scale-95";
-      default: return "translate-y-4 scale-95";
-    }
-  };
-
-  return (
-    <div 
-      className={`bg-card-bg rounded-xl p-3 shadow-card border transition-all duration-500 ease-smooth-out ${
-        isVisible ? "opacity-100" : "opacity-0 pointer-events-none absolute w-full"
-      } ${isComplete ? "ring-2 ring-done-dot/50 border-done-dot/50" : "border-border/50"} ${getTransform()}`}
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-[11px] font-medium text-ink leading-tight">{title}</p>
-        {isComplete && (
-          <div className="text-done-dot flex-shrink-0">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 mr-auto">
-          <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-          <span className="text-[8px] font-mono text-muted uppercase tracking-wider">{priority}</span>
-        </div>
-
-        {tag && (
-          <span 
-            className="px-1.5 py-0.5 rounded text-[8px] font-bold transition-all duration-500 motion-safe:animate-fade-in"
-            style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
+          {/* ── Workflow Features ────────────────────────────────────── */}
+          <section
+            className="py-32 px-6"
+            style={{ borderTop: "1px solid rgba(40, 40, 40, 0.05)" }}
           >
-            {tag.name}
-          </span>
-        )}
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <div className="mb-24 reveal">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
+                  How it works
+                </p>
+                <h2 className="text-3xl md:text-[42px] font-bold tracking-[-0.025em] text-ink leading-[1.07]">
+                  Everything your team
+                  <br />needs in one workspace.
+                </h2>
+              </div>
 
-        {assignee && (
-          <div 
-            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white transition-all duration-500 motion-safe:animate-fade-in"
-            style={{ backgroundColor: assignee.color }}
+              {/* Feature rows */}
+              <div className="space-y-32">
+                {WORKFLOW_ITEMS.map((item) => (
+                  <div
+                    key={item.index}
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center reveal"
+                  >
+                    {/* Text */}
+                    <div className={item.flip ? "order-last lg:order-last" : ""}>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
+                        {item.index} — {item.category}
+                      </p>
+                      <h3 className="text-[22px] font-bold text-ink mb-4 tracking-tight leading-snug whitespace-pre-line">
+                        {item.headline}
+                      </h3>
+                      <p className="text-sm text-muted leading-relaxed mb-8 max-w-sm">
+                        {item.body}
+                      </p>
+                      <ul className="space-y-2.5">
+                        {item.bullets.map((b) => (
+                          <li key={b} className="flex items-center gap-2.5 text-sm text-muted">
+                            <span className="w-[3px] h-[3px] rounded-full bg-accent/60 flex-shrink-0" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Frame */}
+                    <div className={item.flip ? "order-first lg:order-first" : ""}>
+                      <PlaceholderFrame
+                        label={item.frameLabel}
+                        aspect={item.frameAspect}
+                        index={item.frameIndex}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── Capabilities ─────────────────────────────────────────── */}
+          <section
+            className="py-28 px-6"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
-            {assignee.letter}
+            <div className="max-w-6xl mx-auto">
+              <div className="mb-16 reveal">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
+                  Capabilities
+                </p>
+                <h2 className="text-3xl md:text-[42px] font-bold tracking-[-0.025em] text-ink">
+                  Everything you need.
+                  <br />Nothing you don&apos;t.
+                </h2>
+              </div>
+
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 reveal"
+                style={{
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  borderLeft: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                {CAPABILITIES.map((cap) => (
+                  <CapabilityCell key={cap.title} {...cap} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── Coming soon previews ──────────────────────────────────── */}
+          <section
+            className="py-28 px-6"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center max-w-lg mx-auto mb-16 reveal">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
+                  In development
+                </p>
+                <h2 className="text-3xl font-bold tracking-tight text-ink mb-4">
+                  More views on the way.
+                </h2>
+                <p className="text-sm text-muted leading-relaxed">
+                  Analytics, calendar views, and educator workspace features are actively being developed.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 reveal">
+                <PlaceholderFrame
+                  label="Task analytics dashboard"
+                  caption="Coming soon"
+                  aspect="square"
+                  index={4}
+                />
+                <PlaceholderFrame
+                  label="Educator workspace overview"
+                  caption="Coming soon"
+                  aspect="square"
+                  index={5}
+                />
+                <PlaceholderFrame
+                  label="Mobile experience preview"
+                  caption="Coming soon"
+                  aspect="square"
+                  index={0}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* ── Final CTA ────────────────────────────────────────────── */}
+          <section
+            className="py-36 px-6 reveal"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <div className="max-w-2xl mx-auto text-center">
+              <h2 className="text-4xl md:text-[54px] font-bold tracking-[-0.03em] text-ink leading-[1.05] mb-5">
+                Built for the work
+                <br />that matters.
+              </h2>
+              <p className="text-[15px] text-muted mb-10 max-w-xs mx-auto leading-relaxed">
+                Free to use. No credit card. Start coordinating your team today.
+              </p>
+              <Link
+                href="/login?mode=signup"
+                className="inline-block bg-white text-[#161412] px-7 py-3 rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors"
+              >
+                Get Started Free
+              </Link>
+              <p className="text-[11px] text-white/20 mt-6 font-medium tracking-wide">
+                Built by students, for students.
+              </p>
+            </div>
+          </section>
+
+        </main>
+
+        {/* ── Footer ──────────────────────────────────────────────────── */}
+        <footer
+          className="py-10 px-6"
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            background: "#0f0e0c",
+          }}
+        >
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">
+            <span className="text-sm font-semibold text-white/30">kanbedu</span>
+            <div className="flex items-center flex-wrap justify-center sm:justify-end gap-x-5 gap-y-2 text-xs text-white/25">
+              <Link href="/terms" className="hover:text-white/45 transition-colors">
+                Terms
+              </Link>
+              <Link href="/privacy" className="hover:text-white/45 transition-colors">
+                Privacy
+              </Link>
+              <a
+                href="mailto:support@kanbedu.com"
+                className="hover:text-white/45 transition-colors"
+              >
+                Contact
+              </a>
+              <Link href="/credits" className="hover:text-white/45 transition-colors">
+                Credits
+              </Link>
+              <span>© 2026 Kanbedu</span>
+            </div>
           </div>
-        )}
+        </footer>
 
-        <span className="text-[8px] text-muted font-medium">{time}</span>
       </div>
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, description, delay }: { icon: React.ReactNode, title: string, description: string, delay: string }) {
-  return (
-    <div 
-      className="bg-card-bg rounded-2xl p-8 border border-border shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 reveal opacity-0 translate-y-4"
-      style={{ transitionDelay: delay }}
-    >
-      <div className="text-accent mb-6 w-10 h-10 flex items-center justify-center bg-accent/5 rounded-xl">
-        {icon}
-      </div>
-      <h3 className="text-lg font-semibold text-ink mb-3">{title}</h3>
-      <p className="text-sm text-muted leading-relaxed">{description}</p>
     </div>
   );
 }

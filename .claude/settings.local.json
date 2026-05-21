@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PGPASSWORD = \"Password1710\"; $query = 'SELECT email, name FROM \"User\" LIMIT 10;'; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -h localhost -d kanbedu_dev -c $query 2>&1)"
+    ]
+  }
+}
