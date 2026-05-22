@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BoardMemberData, Tag } from "@/lib/types";
 
 // In-memory caches and in-flight dedupe maps
@@ -55,6 +55,12 @@ export function useBoardResources(boardId: string | null) {
   const [tags, setTags] = useState<Tag[]>(() => (boardId && tagsCache.has(id) ? tagsCache.get(id)! : []));
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!boardId) {
@@ -111,6 +117,7 @@ export function useBoardResources(boardId: string | null) {
     membersCache.delete(id);
     setLoadingMembers(true);
     const m = await fetchMembersForBoard(id).catch(() => []);
+    if (!isMounted.current) return;
     setMembers(m);
     setLoadingMembers(false);
   };
@@ -120,6 +127,7 @@ export function useBoardResources(boardId: string | null) {
     tagsCache.delete(id);
     setLoadingTags(true);
     const t = await fetchTagsForBoard(id).catch(() => []);
+    if (!isMounted.current) return;
     setTags(t);
     setLoadingTags(false);
   };

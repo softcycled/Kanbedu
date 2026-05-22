@@ -162,7 +162,6 @@ export default function Sidebar({
   onBoardHover,
   isAdmin = false,
 }: Props) {
-  console.log("[DEBUG Sidebar] isAdmin prop received:", isAdmin);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
@@ -208,7 +207,7 @@ export default function Sidebar({
 
   const sidebarContent = (
     <>
-      <div className="px-4 pb-5 border-b border-border/60 flex items-center justify-between" style={{ paddingTop: 25.5 }}>
+      <div className="px-4 border-b border-border/60 flex items-center justify-between" style={{ paddingTop: 29, paddingBottom: 24.75 }}>
         <span className="text-lg font-bold tracking-tight text-ink">kanbedu</span>
         <button
           onClick={() => setMobileOpen(false)}

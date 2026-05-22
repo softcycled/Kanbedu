@@ -39,7 +39,6 @@ export default function BoardContainer({
   currentUserId,
   isAdmin = false,
 }: Props) {
-  console.log("[DEBUG BoardContainer] isAdmin prop received:", isAdmin);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [columns, setColumns] = useState<ColumnData[]>(initialColumns);
   const [boards, setBoards] = useState<Board[]>(initialBoards);

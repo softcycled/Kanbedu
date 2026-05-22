@@ -38,21 +38,19 @@ interface Props {
 }
 
 export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false }: Props) {
-  // Dummy function to satisfy dependencies since broadcasting is now server-side
-  const broadcastRefresh = useCallback((payload?: unknown) => {}, []);
+  // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
+  const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<ColumnData | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [boardMembersLocal, setBoardMembersLocal] = useState<import("@/lib/types").BoardMemberData[]>([]);
   // Filtering state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
-  const [allTags, setAllTags] = useState<import("@/lib/types").Tag[]>([]);
   // View mode state
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
 
@@ -63,25 +61,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [sliderPos, setSliderPos] = useState({ left: 0, width: 0 });
 
   // use shared board resources (members, tags) to avoid duplicate fetches
-  const {
-    members: boardMembers,
-    tags: allTagsFromHook,
-    loadingMembers,
-    loadingTags,
-    reloadMembers,
-    reloadTags,
-    setMembersForBoard,
-    setTagsForBoard,
-  } = useBoardResources(boardId);
+  const { members: boardMembers, tags: allBoardTags } = useBoardResources(boardId);
 
-  // Keep a local placeholder so existing code that may have referenced setBoardMembers
-  // earlier doesn't break; but the hook-backed `boardMembers` is the source of truth.
-  useEffect(() => {
-    setBoardMembersLocal(boardMembers);
-  }, [boardMembers]);
-  useEffect(() => {
-    setAllTags(allTagsFromHook);
-  }, [allTagsFromHook]);
+  // Stable ref so callbacks can read the latest tasks without being recreated on every change
+  const tasksRef = useRef(tasks);
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
 
   const toasts = useToasts();
 
@@ -171,7 +155,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     } catch (error) {
       console.error("Failed to rename column:", error);
     }
-  }, [broadcastRefresh, tasks, onTasksChange]);
+  }, [broadcastRefresh, onColumnsChange]);
 
   const handleSetDoneColumn = useCallback(async (columnId: string) => {
     const col = columns.find((c) => c.id === columnId);
@@ -241,9 +225,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         }
         setDeleteError(null);
         setDeleteModalOpen(false);
-        // capture label for undo
+        // capture label for undo toast before clearing state
         const deletedLabel = columnToDelete.label;
-        const deletedId = columnToDelete.id;
         setColumnToDelete(null);
         broadcastRefresh();
 
@@ -273,7 +256,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         setDeleteError("Delete failed. Please try again.");
       }
     },
-    [columnToDelete, broadcastRefresh]
+    [columnToDelete, broadcastRefresh, onColumnsChange, onTasksChange, boardId, toasts]
   );
 
   const handleAddColumn = useCallback(async () => {
@@ -523,7 +506,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     // Optimistic UI: insert a temporary task locally immediately
     const tempId = `temp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
     const now = new Date();
-    const colTasks = tasks.filter((t) => t.column === column);
+    const colTasks = tasksRef.current.filter((t) => t.column === column);
     const maxOrder = colTasks.length ? Math.max(...colTasks.map((t) => t.order)) : -1;
     const tempTask: Task = {
       id: tempId,
@@ -563,10 +546,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       // Rollback optimistic insert
       onTasksChange((prev) => prev.filter((t) => t.id !== tempId));
     }
-  }, [broadcastRefresh, tasks, onTasksChange]);
+  }, [broadcastRefresh, onTasksChange]);
 
   const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
-    const prevTask = tasks.find((t) => t.id === id);
+    const prevTask = tasksRef.current.find((t) => t.id === id);
     // Optimistic update locally
     onTasksChange((prev) => prev.map((t) => (t.id === id ? { ...t, ...data, updatedAt: new Date() } : t)));
     try {
@@ -591,20 +574,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
   }, [broadcastRefresh]);
 
-  const handleUpdateTaskTitle = useCallback(async (id: string, title: string) => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-
-    onTasksChange((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, title: trimmed } : t))
-    );
-    setSelectedTask((prev) => (prev?.id === id ? { ...prev, title: trimmed } : prev));
-
-    await handleUpdateTask(id, { title: trimmed });
-  }, [handleUpdateTask]);
-
   const handleDeleteTask = useCallback(async (id: string) => {
-    const prevTask = tasks.find((t) => t.id === id);
+    const prevTask = tasksRef.current.find((t) => t.id === id);
     if (!prevTask) return;
 
     // Optimistic removal
@@ -641,7 +612,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       // rollback optimistic removal on failure
       onTasksChange((prev) => (prevTask ? [...prev, prevTask] : prev));
     }
-  }, [broadcastRefresh, onTasksChange, tasks, toasts]);
+  }, [broadcastRefresh, onTasksChange, toasts]);
 
   const handleAddComment = useCallback(
     async (taskId: string, content: string, author: string): Promise<Comment> => {
@@ -660,7 +631,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       broadcastRefresh();
       return comment;
     },
-    [broadcastRefresh]
+    [broadcastRefresh, onTasksChange]
   );
 
   const handleTaskClick = useCallback((task: Task) => {
@@ -735,7 +706,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           selectedPriorities={selectedPriorities}
           setSelectedPriorities={setSelectedPriorities}
           members={boardMembers}
-          tags={allTags}
+          tags={allBoardTags}
           totalTasks={tasks.length}
           filteredTasksCount={filteredTasks.length}
         />

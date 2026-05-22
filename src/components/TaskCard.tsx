@@ -143,8 +143,8 @@ function TaskCard({ task, onClick }: Props) {
   );
 }
 
-// Memoize: only re-render when task data or click handler actually changes.
-// During DnD drags this prevents the entire column from re-rendering on every frame.
+// Memoize on task data only. KanbanColumn passes an inline arrow `() => onTaskClick(task)` which
+// is always a new reference — comparing onClick would defeat the memo on every render.
 export default memo(TaskCard, (prev, next) => {
   const prevCount = (prev.task.comments && prev.task.comments.length) || (prev.task as any).commentCount || ((prev.task as any)._count?.comments) || 0;
   const nextCount = (next.task.comments && next.task.comments.length) || (next.task as any).commentCount || ((next.task as any)._count?.comments) || 0;
@@ -157,8 +157,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.deadline === next.task.deadline &&
     prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
     prev.task.completedAt === next.task.completedAt &&
-  prevCount === nextCount &&
-    prev.task.tags?.length === next.task.tags?.length &&
-    prev.onClick === next.onClick
+    prevCount === nextCount &&
+    prev.task.tags?.length === next.task.tags?.length
   );
 });

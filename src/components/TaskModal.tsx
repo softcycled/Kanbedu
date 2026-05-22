@@ -75,7 +75,6 @@ export default function TaskModal({
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
-  const [viewMode, setViewMode] = useState<"comments" | "activity" | "history">("comments");
   const [activities, setActivities] = useState<TaskActivity[]>([]);
   const [versions, setVersions] = useState<any[]>([]);
 
@@ -140,6 +139,9 @@ export default function TaskModal({
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
   const isEditingDescriptionRef = useRef(isEditingDescription);
+  // Stable ref so the idle-activity timer doesn't capture stale showActivity state
+  const showActivityRef = useRef(showActivity);
+  useEffect(() => { showActivityRef.current = showActivity; }, [showActivity]);
 
   useEffect(() => {
     if (!task) return;
@@ -148,6 +150,10 @@ export default function TaskModal({
     if (task.id !== prevTask.current) {
       prevTask.current = task.id;
       userHasEdited.current = false;
+      // Cancel any in-flight fetches for the previous task so they don't block this task's fetches
+      pendingRequestsRef.current.comments = null;
+      pendingRequestsRef.current.activities = null;
+      pendingRequestsRef.current.versions = null;
       setDescription(task.description ?? "");
       setIsEditingDescription(false);
       setIsEditingTitle(false);
@@ -179,7 +185,8 @@ export default function TaskModal({
           if (activityIdleTimerRef.current) window.clearTimeout(activityIdleTimerRef.current);
           activityIdleTimerRef.current = window.setTimeout(() => {
             if (!task) return;
-            if (!showActivity && (activities.length === 0 || !activities)) {
+            // Use ref to read current showActivity — avoids stale closure from effect capture
+            if (!showActivityRef.current && (activities.length === 0 || !activities)) {
               void fetchActivitiesForTask(task.id);
             }
           }, 2500);
@@ -340,14 +347,6 @@ export default function TaskModal({
       setIsEditingTitle(false);
     }
   };
-
-  useEffect(() => {
-    if (viewMode === "history") {
-      void fetchVersionsDeduped();
-    }
-  }, [viewMode, fetchVersionsDeduped]);
-
-
 
   useEffect(() => {
     isMounted.current = true;
