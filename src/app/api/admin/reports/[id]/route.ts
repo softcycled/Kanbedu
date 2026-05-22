@@ -5,8 +5,9 @@ import { getSession } from "@/lib/auth";
 // Status Update
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -28,7 +29,7 @@ export async function PATCH(
     }
 
     const report = await prisma.bugReport.update({
-      where: { id: params.id },
+      where: { id },
       data: { status },
     });
 
@@ -42,8 +43,9 @@ export async function PATCH(
 // Permanent Deletion
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -60,7 +62,7 @@ export async function DELETE(
     }
 
     await prisma.bugReport.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

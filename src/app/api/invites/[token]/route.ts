@@ -5,8 +5,9 @@ import { getSession } from "@/lib/auth";
 // POST: accept an invite (add user to board)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
+  const { token } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -14,7 +15,7 @@ export async function POST(
     }
 
     const invite = await prisma.boardInvite.findUnique({
-      where: { token: params.token },
+      where: { token },
       include: { board: true },
     });
 
@@ -58,11 +59,12 @@ export async function POST(
 // GET: check invite validity without accepting
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
+  const { token } = await params;
   try {
     const invite = await prisma.boardInvite.findUnique({
-      where: { token: params.token },
+      where: { token },
       include: { board: { select: { name: true } } },
     });
 

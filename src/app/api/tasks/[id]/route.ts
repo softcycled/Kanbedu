@@ -8,10 +8,11 @@ import { broadcastToBoard } from "@/lib/broadcast";
 // GET single task with full details (activities, comments, etc.)
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const totalStart = Date.now();
-  const logPrefix = `[perf] GET /api/tasks/${params.id}`;
+  const logPrefix = `[perf] GET /api/tasks/${id}`;
 
   // parse include hint: ?include=activities,comments,all
   const url = new URL(_req.url);
@@ -41,7 +42,7 @@ export async function GET(
 
   // Authorization: ensure the requesting user is a member of the task's board
   const authStart = Date.now();
-  const taskAuth = await prisma.task.findUnique({ where: { id: params.id }, select: { columnRel: { select: { boardId: true } } } });
+  const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
   const authMs = Date.now() - authStart;
   if (!taskAuth || !taskAuth.columnRel) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 404 });
@@ -104,7 +105,7 @@ export async function GET(
 
   // Fetch the main task row with a lean select (no nested activities/comments by default)
   const taskQueryStart = Date.now();
-  const task = await prisma.task.findUnique({ where: { id: params.id }, select: leanSelect });
+  const task = await prisma.task.findUnique({ where: { id: id }, select: leanSelect });
   const taskQueryMs = Date.now() - taskQueryStart;
 
   if (!task) {
@@ -122,7 +123,7 @@ export async function GET(
     const activitiesStart = Date.now();
     // fetch only the small set of fields the UI renders; include minimal user info
     activities = await prisma.taskActivity.findMany({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {
@@ -140,7 +141,7 @@ export async function GET(
 
   if (wantComments) {
     const commentsStart = Date.now();
-    comments = await prisma.comment.findMany({ where: { taskId: params.id }, orderBy: { createdAt: "asc" } , select: { id: true, content: true, author: true, createdAt: true, taskId: true } });
+    comments = await prisma.comment.findMany({ where: { taskId: id }, orderBy: { createdAt: "asc" } , select: { id: true, content: true, author: true, createdAt: true, taskId: true } });
     commentsMs = Date.now() - commentsStart;
     task.comments = comments;
   }
@@ -162,7 +163,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const raw = await req.json();
   const result = parseBody(updateTaskSchema, raw);
@@ -170,7 +171,7 @@ export async function PATCH(
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
   const body = result.data;
-  const { id } = params;
+  const { id } = await params;
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -460,20 +461,21 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Ensure the task exists and belongs to a board the user can access
-    const taskAuth = await prisma.task.findUnique({ where: { id: params.id }, select: { columnRel: { select: { boardId: true } } } });
+    const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
     if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    await prisma.task.delete({ where: { id: params.id } });
+    await prisma.task.delete({ where: { id: id } });
 
     // Fetch the board's cryptographic channel secret to broadcast the deletion
     prisma.board.findUnique({
@@ -481,7 +483,7 @@ export async function DELETE(
       select: { realtimeSecret: true }
     }).then((board) => {
       if (board?.realtimeSecret) {
-        broadcastToBoard(board.realtimeSecret, { type: "task:delete", taskId: params.id });
+        broadcastToBoard(board.realtimeSecret, { type: "task:delete", taskId: id });
       }
     }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
 

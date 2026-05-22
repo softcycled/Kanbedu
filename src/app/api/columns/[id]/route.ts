@@ -7,8 +7,9 @@ import { broadcastToBoard } from "@/lib/broadcast";
 // PATCH update column (rename, set done)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -17,7 +18,7 @@ export async function PATCH(
 
     // Check the user is a member of the board that owns this column
     // include `isDone` so we can enforce "always have a done column" rules
-    const columnInfo = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true, isDone: true } });
+    const columnInfo = await prisma.column.findUnique({ where: { id: id }, select: { boardId: true, isDone: true } });
     if (!columnInfo) {
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
@@ -42,17 +43,17 @@ export async function PATCH(
     // Enforce only one done column per board: clear isDone on all siblings first,
     // and clear completedAt on any tasks that were in those sibling "done" columns.
     if (updateData.isDone === true) {
-      const current = await prisma.column.findUnique({ where: { id: params.id } });
+      const current = await prisma.column.findUnique({ where: { id: id } });
       if (current) {
         // Find sibling done columns before clearing them
         const siblingDoneColumns = await prisma.column.findMany({
-          where: { boardId: current.boardId, id: { not: params.id }, isDone: true },
+          where: { boardId: current.boardId, id: { not: id }, isDone: true },
           select: { id: true },
         });
         const siblingIds = siblingDoneColumns.map((c) => c.id);
 
         await prisma.column.updateMany({
-          where: { boardId: current.boardId, id: { not: params.id } },
+          where: { boardId: current.boardId, id: { not: id } },
           data: { isDone: false },
         });
 
@@ -66,7 +67,7 @@ export async function PATCH(
 
         // Mark all current tasks in THIS column as completed now
         await prisma.task.updateMany({
-          where: { column: params.id },
+          where: { column: id },
           data: { completedAt: new Date() },
         });
       }
@@ -74,18 +75,18 @@ export async function PATCH(
 
     // If un-marking a done column, ensure the board will still have a done column
     if (updateData.isDone === false && columnInfo.isDone === true) {
-      const otherDone = await prisma.column.findFirst({ where: { boardId: columnInfo.boardId, id: { not: params.id }, isDone: true }, select: { id: true } });
+      const otherDone = await prisma.column.findFirst({ where: { boardId: columnInfo.boardId, id: { not: id }, isDone: true }, select: { id: true } });
       if (!otherDone) {
         return NextResponse.json({ error: "Board must have at least one 'Done' column. Mark another column as done before un-marking this one." }, { status: 400 });
       }
       await prisma.task.updateMany({
-        where: { column: params.id },
+        where: { column: id },
         data: { completedAt: null },
       });
     }
 
     const column = await prisma.column.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
     });
 
@@ -109,8 +110,9 @@ export async function PATCH(
 // DELETE delete column
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -119,7 +121,7 @@ export async function DELETE(
 
     // Check the user is a member of the board that owns this column
     // include `isDone` so we can enforce the "always-have-a-done-column" invariant
-    const col = await prisma.column.findUnique({ where: { id: params.id }, select: { boardId: true, isDone: true } });
+    const col = await prisma.column.findUnique({ where: { id: id }, select: { boardId: true, isDone: true } });
     if (!col) {
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
@@ -145,13 +147,13 @@ export async function DELETE(
     // If moveToColumnId provided, move all tasks to that column.
     // If the deleted column was Done but the destination is not, also clear completedAt.
     // Check whether deleting this column would remove the board's only done column
-    const otherDone = await prisma.column.findFirst({ where: { boardId: col.boardId, id: { not: params.id }, isDone: true }, select: { id: true } });
+    const otherDone = await prisma.column.findFirst({ where: { boardId: col.boardId, id: { not: id }, isDone: true }, select: { id: true } });
 
     let deletedCol;
 
     if (moveToColumnId) {
       const [deletingColumn, destColumn] = await Promise.all([
-        prisma.column.findUnique({ where: { id: params.id } }),
+        prisma.column.findUnique({ where: { id: id } }),
         prisma.column.findUnique({ where: { id: moveToColumnId } }),
       ]);
 
@@ -180,14 +182,14 @@ export async function DELETE(
       // WRAP IN TRANSACTION
       const [_, deleted] = await prisma.$transaction([
         prisma.task.updateMany({
-          where: { column: params.id },
+          where: { column: id },
           data: {
             column: moveToColumnId,
             ...(clearCompleted ? { completedAt: null } : {}),
           },
         }),
         prisma.column.delete({
-          where: { id: params.id },
+          where: { id: id },
         })
       ]);
       deletedCol = deleted;
@@ -198,7 +200,7 @@ export async function DELETE(
       }
       // Delete the column directly
       deletedCol = await prisma.column.delete({
-        where: { id: params.id },
+        where: { id: id },
       });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -190,16 +190,16 @@ const WORKFLOW_ITEMS = [
   },
   {
     index: "03",
-    category: "Collaboration",
-    headline: "Your team stays in sync\nwithout the overhead.",
-    body: "Changes appear instantly for everyone on the board. Invite teammates with a single link — no approval flow, no friction.",
+    category: "Analytics",
+    headline: "Real-time analytics surface\nblockers and bottlenecks.",
+    body: "Built-in analytics surfaces blockers and bottlenecks so you can keep work flowing without manual check-ins or status updates.",
     bullets: [
-      "Live updates across all members",
-      "One-link team invitations",
-      "Per-member contribution tracking",
-      "Shared board workspace",
+      "Cycle time breakdowns",
+      "Overall workflow efficiency",
+      "Individual contribution views",
+      "Custom task filtering",
     ],
-    frameLabel: "Realtime collaboration activity",
+    frameLabel: "Realtime analytics page",
     frameIndex: 3,
     frameAspect: "video" as const,
     flip: false,
@@ -209,14 +209,6 @@ const WORKFLOW_ITEMS = [
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   useEffect(() => {
     const reveals = Array.from(
       document.querySelectorAll<HTMLElement>(".reveal")
@@ -258,32 +250,28 @@ export default function LandingPage() {
 
         {/* ── Navigation ──────────────────────────────────────────────── */}
         <nav
-          className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
-            scrolled
-              ? "border-b border-white/[0.06] backdrop-blur-md"
-              : "bg-transparent"
-          }`}
-          style={scrolled ? { background: "rgba(22,20,18,0.90)" } : undefined}
+          className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] backdrop-blur-md"
+          style={{ background: "rgba(22,20,18,0.90)" }}
         >
-          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
             <Link
               href="/landing"
-              className="text-[15px] font-semibold tracking-tight text-ink"
+              className="text-lg font-semibold tracking-tight text-ink"
             >
               kanbedu
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               <Link
                 href="/login"
                 className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150"
               >
-                Sign in
+                Log in
               </Link>
               <Link
                 href="/login?mode=signup"
-                className="text-sm font-medium px-4 py-1.5 rounded-lg border border-white/10 text-ink hover:border-white/20 hover:bg-white/[0.04] transition-all duration-150"
+                className="text-sm font-medium px-4 pt-[4px] pb-[8px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-[#FFFFFF] transition-colors duration-150"
               >
-                Get Started
+                Sign Up
               </Link>
             </div>
           </div>
@@ -297,9 +285,9 @@ export default function LandingPage() {
   
               {/* Headline */}
               <h1 className="text-5xl sm:text-6xl md:text-[72px] font-bold tracking-[-0.03em] leading-[1.02] text-ink mb-5 motion-safe:animate-fade-in [animation-delay:80ms]">
-                Task management
+                Built for teams
                 <br className="hidden sm:block" />
-                {" "}teams actually use.
+                {" "}that actually ship.
               </h1>
 
               {/* Sub */}
@@ -311,13 +299,13 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-20 motion-safe:animate-fade-in [animation-delay:240ms]">
                 <Link
                   href="/login?mode=signup"
-                  className="w-full sm:w-auto bg-white text-[#161412] px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors"
+                  className="w-full sm:w-auto bg-[#EBEBEB] text-[#161412] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-white transition-colors"
                 >
-                  Get Started — it&apos;s free
+                  Get started free
                 </Link>
                 <Link
                   href="/login"
-                  className="w-full sm:w-auto text-sm text-muted hover:text-ink transition-colors px-6 py-2.5 border border-white/10 rounded-lg hover:border-white/20"
+                  className="w-full sm:w-auto text-sm text-muted hover:text-ink transition-colors px-6 py-2.5 border border-white/10 rounded-full hover:border-white/20"
                 >
                   Sign in
                 </Link>
@@ -484,7 +472,7 @@ export default function LandingPage() {
             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
             <div className="max-w-2xl mx-auto text-center">
-              <h2 className="text-4xl md:text-[54px] font-bold tracking-[-0.03em] text-ink leading-[1.05] mb-5">
+              <h2 className="text-4xl md:text-[64px] font-bold tracking-[-0.03em] text-ink leading-[1.05] mb-5">
                 Built for the work
                 <br />that matters.
               </h2>
@@ -493,13 +481,10 @@ export default function LandingPage() {
               </p>
               <Link
                 href="/login?mode=signup"
-                className="inline-block bg-white text-[#161412] px-7 py-3 rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors"
+                className="inline-block bg-[#EBEBEB] text-[#161412] px-7 py-3 rounded-full text-sm font-semibold hover:bg-white transition-colors"
               >
-                Get Started Free
+                Sign Up 
               </Link>
-              <p className="text-[11px] text-white/20 mt-6 font-medium tracking-wide">
-                Built by students, for students.
-              </p>
             </div>
           </section>
 

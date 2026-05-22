@@ -6,8 +6,9 @@ import { getSession } from "@/lib/auth";
 // PATCH update board
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -15,7 +16,7 @@ export async function PATCH(
     }
 
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: params.id } },
+      where: { userId_boardId: { userId: session.userId, boardId: id } },
     });
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -29,10 +30,10 @@ export async function PATCH(
     const data = result.data;
 
     const board = await prisma.board.update({
-      where: { id: params.id },
-      data: { 
+      where: { id },
+      data: {
         name: data.name,
-        githubRepo: data.githubRepo 
+        githubRepo: data.githubRepo
       },
     });
 
@@ -46,8 +47,9 @@ export async function PATCH(
 // DELETE board (cascade columns + tasks)
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
@@ -55,14 +57,14 @@ export async function DELETE(
     }
 
     const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: params.id } },
+      where: { userId_boardId: { userId: session.userId, boardId: id } },
     });
     if (!membership || membership.role !== "owner") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const columns = await prisma.column.findMany({
-      where: { boardId: params.id },
+      where: { boardId: id },
       select: { id: true },
     });
 
@@ -73,10 +75,10 @@ export async function DELETE(
         where: { task: { column: { in: columnIds } } },
       });
       await prisma.task.deleteMany({ where: { column: { in: columnIds } } });
-      await prisma.column.deleteMany({ where: { boardId: params.id } });
+      await prisma.column.deleteMany({ where: { boardId: id } });
     }
 
-    await prisma.board.delete({ where: { id: params.id } });
+    await prisma.board.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

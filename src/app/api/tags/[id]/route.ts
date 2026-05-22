@@ -5,15 +5,16 @@ import { getSession } from "@/lib/auth";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tagInfo = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    const tagInfo = await prisma.tag.findUnique({ where: { id }, select: { boardId: true } });
     if (!tagInfo) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
@@ -32,7 +33,7 @@ export async function PATCH(
     const data = result.data;
 
     const tag = await prisma.tag.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: data.name,
         color: data.color,
@@ -51,15 +52,16 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tagToDelete = await prisma.tag.findUnique({ where: { id: params.id }, select: { boardId: true } });
+    const tagToDelete = await prisma.tag.findUnique({ where: { id }, select: { boardId: true } });
     if (!tagToDelete) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
@@ -71,7 +73,7 @@ export async function DELETE(
     }
 
     const deleted = await prisma.tag.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json(deleted);

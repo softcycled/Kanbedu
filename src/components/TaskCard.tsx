@@ -54,7 +54,7 @@ function TaskCard({ task, onClick }: Props) {
   };
   const p = task.priority ?? "medium";
 
-  const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border ${deadlineInfo.severity === 'overdue' ? 'border-l-2 border-l-red-300' : ''}`;
+  const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border`;
 
   return (
     <div
