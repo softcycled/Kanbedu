@@ -60,8 +60,8 @@ function TaskCard({ task, onClick }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(mounted ? attributes : {})}
+      {...(mounted ? listeners : {})}
       onClick={onClick}
       data-task
       className={rootClass}

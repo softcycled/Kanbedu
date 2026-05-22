@@ -15,7 +15,7 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isApiRoute = pathname.startsWith("/api/");
@@ -47,14 +47,14 @@ export async function middleware(req: NextRequest) {
   if (isApiRoute && isMutation) {
     const csrfCookie = req.cookies.get(CSRF_COOKIE_NAME)?.value;
     const csrfHeader = req.headers.get(CSRF_HEADER_NAME);
-    
+
     if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
       return NextResponse.json({ error: "CSRF Validation Failed" }, { status: 403 });
     }
   }
 
   const res = NextResponse.next();
-  
+
   // Ensure every client gets a CSRF token for future mutations
   if (!req.cookies.has(CSRF_COOKIE_NAME)) {
     res.cookies.set(CSRF_COOKIE_NAME, crypto.randomUUID(), {
