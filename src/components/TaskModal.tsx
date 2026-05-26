@@ -548,12 +548,13 @@ export default function TaskModal({
     // optimistic UI: add a local comment and activity immediately
     setCommentInput("");
     const localId = `local-comment-${Date.now()}`;
+    const localActId = `local-act-comment-${Date.now()}`;
     const optimistic: Comment = { id: localId, content: trimmed, author: commentAuthor.trim() || "Anonymous", createdAt: new Date().toISOString(), taskId: task.id };
     setComments((prev) => [...prev, optimistic]);
     setActivities((prev) => [
       ...prev,
       {
-        id: `local-act-${Date.now()}`,
+        id: localActId,
         type: "comment",
         content: trimmed,
         userId: "",
@@ -569,6 +570,7 @@ export default function TaskModal({
     }).catch((err) => {
       console.error(err);
       setComments((prev) => prev.filter((c) => c.id !== localId));
+      setActivities((prev) => prev.filter((a) => a.id !== localActId));
     });
   };
 
