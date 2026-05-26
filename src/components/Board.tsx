@@ -151,11 +151,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           prev.map((col) => (col.id === columnId ? updated : col))
         );
         broadcastRefresh();
+      } else {
+        toasts.push({ title: "Could not rename column", description: "Please try again." });
       }
     } catch (error) {
       console.error("Failed to rename column:", error);
+      toasts.push({ title: "Could not rename column", description: "Please try again." });
     }
-  }, [broadcastRefresh, onColumnsChange]);
+  }, [broadcastRefresh, onColumnsChange, toasts]);
 
   const handleSetDoneColumn = useCallback(async (columnId: string) => {
     const col = columns.find((c) => c.id === columnId);
@@ -180,11 +183,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           )
         );
         broadcastRefresh();
+      } else {
+        toasts.push({ title: "Could not update column", description: "Please try again." });
       }
     } catch (error) {
       console.error("Failed to set done column:", error);
+      toasts.push({ title: "Could not update column", description: "Please try again." });
     }
-  }, [columns, broadcastRefresh]);
+  }, [columns, broadcastRefresh, toasts]);
 
   const handleDeleteColumnClick = useCallback((columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
@@ -271,11 +277,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         const newColumn = await res.json();
         onColumnsChange((prev) => [...prev, newColumn]);
         broadcastRefresh();
+      } else {
+        toasts.push({ title: "Could not add column", description: "Please try again." });
       }
     } catch (error) {
       console.error("Failed to create column:", error);
+      toasts.push({ title: "Could not add column", description: "Please try again." });
     }
-  }, [boardId, broadcastRefresh]);
+  }, [boardId, broadcastRefresh, toasts]);
 
   // ── Scroll refs ───────────────────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -545,8 +554,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       console.error("Failed to add task:", error);
       // Rollback optimistic insert
       onTasksChange((prev) => prev.filter((t) => t.id !== tempId));
+      toasts.push({ title: "Could not add task", description: "Please try again." });
     }
-  }, [broadcastRefresh, onTasksChange]);
+  }, [broadcastRefresh, onTasksChange, toasts]);
 
   const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
     const prevTask = tasksRef.current.find((t) => t.id === id);
