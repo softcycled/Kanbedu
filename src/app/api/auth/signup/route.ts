@@ -21,19 +21,25 @@ export async function POST(req: Request) {
     }
     const data = result.data;
 
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
-    if (existing) {
+    const [existingEmail, existingHandle] = await Promise.all([
+      prisma.user.findUnique({ where: { email: data.email } }),
+      prisma.user.findUnique({ where: { handle: data.handle } }),
+    ]);
+    if (existingEmail) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    }
+    if (existingHandle) {
+      return NextResponse.json({ error: "That handle is already taken." }, { status: 409 });
     }
 
     const hashed = await hashPassword(data.password);
     const user = await prisma.user.create({
-      data: { email: data.email, password: hashed, name: data.name },
+      data: { email: data.email, password: hashed, name: data.name, handle: data.handle },
     });
 
     await createSession(user.id);
 
-    return NextResponse.json({ id: user.id, email: user.email, name: user.name });
+    return NextResponse.json({ id: user.id, email: user.email, name: user.name, handle: user.handle });
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });

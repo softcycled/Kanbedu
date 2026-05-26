@@ -18,7 +18,7 @@ export async function GET(
       where: { boardId: id },
       include: {
         user: {
-          select: { id: true, name: true, email: true, color: true },
+          select: { id: true, name: true, email: true, color: true, handle: true },
         },
       },
     });

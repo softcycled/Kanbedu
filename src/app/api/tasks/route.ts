@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     where: { columnRel: { boardId } },
     include: {
       _count: { select: { comments: true } },
-      assigneeUser: { select: { id: true, name: true, color: true } },
+      assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
       tags: true,
     },
     orderBy: [{ column: "asc" }, { order: "asc" }],

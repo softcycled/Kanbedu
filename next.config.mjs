@@ -13,6 +13,10 @@ const cspHeader = `
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Prevent Turbopack from bundling Prisma — required so the regenerated
+  // client + native engine are loaded fresh at runtime instead of from a stale bundle.
+  serverExternalPackages: ["@prisma/client", ".prisma/client"],
+
   // Reduce serverless function sizes by keeping heavy client-only libs out of SSR
   experimental: {
     optimizePackageImports: ["recharts"],

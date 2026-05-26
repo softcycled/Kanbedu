@@ -123,7 +123,7 @@ function TaskCard({ task, onClick }: Props) {
             <div
               className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm"
               style={{ backgroundColor: task.assigneeUser.color }}
-              title={task.assigneeUser.name}
+              title={task.assigneeUser.handle ? `@${task.assigneeUser.handle}` : task.assigneeUser.name}
             >
               {task.assigneeUser.name.charAt(0).toUpperCase()}
             </div>

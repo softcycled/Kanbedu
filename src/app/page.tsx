@@ -13,7 +13,7 @@ export default async function Home() {
   let [user, memberships] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { isAdmin: true },
+      select: { isAdmin: true, handle: true },
     }),
     prisma.boardMember.findMany({
       where: { userId: session.userId },
@@ -23,6 +23,9 @@ export default async function Home() {
   ]);
 
   let boards = memberships.map((m) => m.board);
+
+  // Existing users without a handle must set one up first
+  if (user && !user.handle) redirect("/handle-setup");
 
   // First-time user: create a default board
   if (boards.length === 0) {
@@ -39,7 +42,7 @@ export default async function Home() {
           update: {},
         });
         // Refresh `user` value (only need isAdmin for later checks).
-        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true } });
+        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true, handle: true } });
       }
     }
 
@@ -71,7 +74,7 @@ export default async function Home() {
       where: { columnRel: { boardId: firstBoard.id } },
       include: {
         _count: { select: { comments: true } },
-        assigneeUser: { select: { id: true, name: true, color: true } },
+        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
         tags: true,
       },
       orderBy: [{ column: "asc" }, { order: "asc" }],

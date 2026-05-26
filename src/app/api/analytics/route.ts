@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
           where: { enteredAt: { gte: HISTORY_CUTOFF } },
           orderBy: { enteredAt: "asc" },
         },
-        assigneeUser: { select: { id: true, name: true, color: true } },
+        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     return {
       id: t.id,
       title: t.title,
-      assignee: t.assigneeUser?.name || "(unassigned)",
+      assignee: t.assigneeUser?.handle ? `@${t.assigneeUser.handle}` : t.assigneeUser?.name || "(unassigned)",
       priority: t.priority,
       columnId: t.column,
       columnLabel: col?.label ?? t.column,

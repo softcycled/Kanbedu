@@ -44,6 +44,7 @@ export interface Task {
     id: string;
     name: string;
     color: string;
+    handle?: string | null;
   } | null;
   order: number;
   priority: string;
@@ -68,6 +69,7 @@ export interface TaskActivity {
     id: string;
     name: string;
     color: string;
+    handle?: string | null;
   };
 }
 
@@ -76,5 +78,6 @@ export interface BoardMemberData {
   name: string;
   color: string;
   email: string;
+  handle?: string | null;
   role?: string;
 }

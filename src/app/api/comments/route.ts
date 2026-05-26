@@ -22,12 +22,16 @@ export async function POST(req: Request) {
   const allowed = await isMemberOfBoard(session.userId, taskRow.columnRel.boardId);
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, handle: true, email: true } });
+
+  const author = user?.handle
+    ? `@${user.handle}`
+    : (user?.name && user.name.trim()) || user?.email || "Anonymous";
 
   const comment = await prisma.comment.create({
     data: {
       content: data.content,
-      author: (user?.name && user.name.trim()) || user?.email || "Anonymous",
+      author,
       taskId: data.taskId,
     },
   });

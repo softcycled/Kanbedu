@@ -335,7 +335,7 @@ export default function SettingsPanel({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-ink truncate">{member.name}</p>
-                          <p className="text-xs text-muted truncate">{member.email}</p>
+                          <p className="text-xs text-muted truncate">{member.handle ? `@${member.handle}` : member.email}</p>
                         </div>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleInfo.color}`}>
                           {roleInfo.label}

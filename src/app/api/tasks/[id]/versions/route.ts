@@ -22,7 +22,7 @@ export async function GET(
     where: { taskId: id },
     orderBy: { createdAt: "desc" },
     include: {
-      user: { select: { id: true, name: true, color: true } },
+      user: { select: { id: true, name: true, color: true, handle: true } },
     },
   });
 

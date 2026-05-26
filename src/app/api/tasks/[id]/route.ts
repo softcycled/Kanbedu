@@ -67,7 +67,7 @@ export async function GET(
     column: true,
     columnUpdatedAt: true,
     assigneeId: true,
-    assigneeUser: { select: { id: true, name: true, color: true } },
+    assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
     order: true,
     priority: true,
     movedByNonAssignee: true,
@@ -77,10 +77,10 @@ export async function GET(
   const detailedInclude: any = wantAll
     ? {
         comments: { orderBy: { createdAt: "asc" } },
-        assigneeUser: { select: { id: true, name: true, color: true } },
+        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
         tags: true,
         activities: {
-          include: { user: { select: { id: true, name: true, color: true } } },
+          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
           orderBy: { createdAt: "desc" },
           take: 20,
         },
@@ -91,7 +91,7 @@ export async function GET(
   const activityInclude: any = wantActivities && !wantAll
     ? {
         activities: {
-          include: { user: { select: { id: true, name: true, color: true } } },
+          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
           orderBy: { createdAt: "desc" },
           take: 20,
         },
@@ -132,7 +132,7 @@ export async function GET(
         content: true,
         createdAt: true,
         userId: true,
-        user: { select: { id: true, name: true, color: true } },
+        user: { select: { id: true, name: true, color: true, handle: true } },
       },
     });
     activitiesMs = Date.now() - activitiesStart;

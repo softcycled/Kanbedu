@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 function LoginContent() {
@@ -19,17 +19,40 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (mode !== "signup" || !handle) { setHandleStatus("idle"); return; }
+    setHandleStatus("checking");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/handle-check?handle=${encodeURIComponent(handle)}`);
+        const data = await res.json();
+        setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
+      } catch { setHandleStatus("idle"); }
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [handle, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (mode === "signup") {
+      if (!handle) { setError("Please choose a handle."); return; }
+      if (handleStatus !== "available") { setError("Please choose a valid, available handle."); return; }
+    }
+
     setLoading(true);
 
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
     const body: Record<string, string> = { email, password };
-    if (mode === "signup") body.name = name;
+    if (mode === "signup") { body.name = name; body.handle = handle; }
 
     try {
       const res = await fetch(endpoint, {
@@ -56,6 +79,8 @@ function LoginContent() {
   const toggleMode = () => {
     setMode((m) => (m === "login" ? "signup" : "login"));
     setError("");
+    setHandle("");
+    setHandleStatus("idle");
   };
 
   return (
@@ -82,29 +107,75 @@ function LoginContent() {
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
-              <div>
-                <label
-                  className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                  style={{ color: "#78716C" }}
-                >
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  autoComplete="name"
-                  className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
-                  style={{
-                    backgroundColor: "#EFEDE8",
-                    color: "#1C1917",
-                    border: "1px solid transparent",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
-                  onBlur={(e) => (e.target.style.borderColor = "transparent")}
-                />
-              </div>
+              <>
+                <div>
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                    style={{ color: "#78716C" }}
+                  >
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    autoComplete="name"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
+                    style={{
+                      backgroundColor: "#EFEDE8",
+                      color: "#1C1917",
+                      border: "1px solid transparent",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
+                    onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                    style={{ color: "#78716C" }}
+                  >
+                    Handle
+                  </label>
+                  <div className="relative">
+                    <span
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium select-none"
+                      style={{ color: "#78716C" }}
+                    >
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                      placeholder="yourhandle"
+                      autoComplete="off"
+                      maxLength={30}
+                      className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
+                      style={{
+                        backgroundColor: "#EFEDE8",
+                        color: "#1C1917",
+                        border: "1px solid transparent",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
+                      onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                    />
+                  </div>
+                  {handle && (
+                    <p className="text-xs mt-1.5" style={{
+                      color: handleStatus === "available" ? "#22C55E"
+                        : handleStatus === "taken" || handleStatus === "invalid" ? "#E8613A"
+                        : "#78716C"
+                    }}>
+                      {handleStatus === "available" ? `@${handle} is available`
+                        : handleStatus === "taken" ? "That handle is already taken"
+                        : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
+                        : "Checking..."}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
 
             <div>

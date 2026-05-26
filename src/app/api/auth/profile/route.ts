@@ -20,11 +20,18 @@ export async function PATCH(req: Request) {
     const updateData: Record<string, string> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.color !== undefined) updateData.color = data.color;
+    if (data.handle !== undefined) {
+      const existing = await prisma.user.findUnique({ where: { handle: data.handle } });
+      if (existing && existing.id !== session.userId) {
+        return NextResponse.json({ error: "That handle is already taken." }, { status: 409 });
+      }
+      updateData.handle = data.handle;
+    }
 
     const user = await prisma.user.update({
       where: { id: session.userId },
       data: updateData,
-      select: { id: true, email: true, name: true, color: true },
+      select: { id: true, email: true, name: true, color: true, handle: true },
     });
 
     return NextResponse.json(user);

@@ -1031,7 +1031,7 @@ export default function TaskModal({
                         >
                           {m.name.charAt(0).toUpperCase()}
                         </span>
-                        <span className="truncate">{m.name}</span>
+                        <span className="truncate">{(m as any).handle ? `@${(m as any).handle}` : m.name}</span>
                       </>
                     );
                   })()}
@@ -1068,7 +1068,7 @@ export default function TaskModal({
                               {m.name.charAt(0).toUpperCase()}
                             </span>
                           )}
-                          <span className="truncate">{m.name}</span>
+                          <span className="truncate">{m.id === "" ? m.name : ((m as any).handle ? `@${(m as any).handle}` : m.name)}</span>
                           {isSelected && (
                             <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M2 6l3 3 5-5"/>
@@ -1403,7 +1403,7 @@ export default function TaskModal({
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-1.5 flex-wrap">
-                              <span className="text-xs font-semibold text-ink">{a.user?.name || "System"}</span>
+                              <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
                               <span className="text-xs text-muted leading-snug">{a.content}</span>
                             </div>
                             <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
@@ -1459,7 +1459,7 @@ export default function TaskModal({
                                 >
                                   {v.user.name.charAt(0).toUpperCase()}
                                 </div>
-                                <span className="text-xs font-semibold text-ink">{v.user.name}</span>
+                                <span className="text-xs font-semibold text-ink">{(v.user as any).handle ? `@${(v.user as any).handle}` : v.user.name}</span>
                               </div>
                               <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
                             </div>

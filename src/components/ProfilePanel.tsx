@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
+import { useTheme } from "./ThemeProvider";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ interface UserProfile {
   email: string;
   name: string;
   color: string;
+  handle: string | null;
 }
 
 interface AvatarColor {
@@ -233,7 +234,7 @@ function AppearanceTab() {
         <SectionTitle>UI Preferences</SectionTitle>
         <SectionBlock>
           <SectionItem>
-            <SettingRow label="Dark mode" description="Switch between light and dark themes">
+            <SettingRow label="Light mode" description="Switch between light and dark themes">
               {mounted ? (
                 <Toggle checked={isDark} onChange={(v) => setTheme(v ? "dark" : "light")} />
               ) : (
@@ -317,6 +318,14 @@ export default function ProfilePanel() {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSaved, setPwSaved] = useState(false);
 
+  // Handle state
+  const [handleValue, setHandleValue] = useState("");
+  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "same">("idle");
+  const [handleSaving, setHandleSaving] = useState(false);
+  const [handleSaved, setHandleSaved] = useState(false);
+  const [handleError, setHandleError] = useState<string | null>(null);
+  const handleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Boards state (localStorage-backed)
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -340,6 +349,7 @@ export default function ProfilePanel() {
           setProfile(data);
           setName(data.name);
           setColor(data.color || DEFAULT_COLOR);
+          setHandleValue(data.handle ?? "");
         }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
@@ -417,6 +427,48 @@ export default function ProfilePanel() {
     }
   };
 
+  // Handle availability debounce
+  useEffect(() => {
+    if (!handleValue) { setHandleStatus("idle"); return; }
+    if (handleValue === profile?.handle) { setHandleStatus("same"); return; }
+    setHandleStatus("checking");
+    if (handleDebounceRef.current) clearTimeout(handleDebounceRef.current);
+    handleDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/handle-check?handle=${encodeURIComponent(handleValue)}`);
+        const data = await res.json();
+        setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
+      } catch { setHandleStatus("idle"); }
+    }, 400);
+    return () => { if (handleDebounceRef.current) clearTimeout(handleDebounceRef.current); };
+  }, [handleValue, profile?.handle]);
+
+  const handleSaveHandle = async () => {
+    if (!profile || handleSaving || (handleStatus !== "available" && handleStatus !== "same")) return;
+    if (handleValue === profile.handle) return;
+    setHandleError(null);
+    setHandleSaving(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handleValue }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setProfile(data);
+        setHandleSaved(true);
+        setTimeout(() => setHandleSaved(false), 2000);
+      } else {
+        setHandleError(data.error ?? "Failed to save handle.");
+      }
+    } catch {
+      setHandleError("Something went wrong.");
+    } finally {
+      setHandleSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
@@ -487,7 +539,7 @@ export default function ProfilePanel() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-ink">{name || "No name set"}</p>
-                        <p className="text-xs text-muted">{hoverColor ? hoverColor.name : profile?.email ?? ""}</p>
+                        <p className="text-xs text-muted">{hoverColor ? hoverColor.name : profile?.handle ? `@${profile.handle}` : profile?.email ?? ""}</p>
                       </div>
                     </div>
                     <p className="text-xs font-medium text-muted mb-2">Avatar color</p>
@@ -563,6 +615,45 @@ export default function ProfilePanel() {
                       className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
                     >
                       {saved ? "Saved" : saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </SectionItem>
+
+                <SectionItem>
+                  <div className="py-4">
+                    <label className="block text-xs font-medium text-muted mb-1.5">Handle</label>
+                    <div className="relative mb-3">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted select-none">@</span>
+                      <input
+                        type="text"
+                        value={handleValue}
+                        onChange={(e) => setHandleValue(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveHandle()}
+                        disabled={handleSaving}
+                        maxLength={30}
+                        placeholder="yourhandle"
+                        className="w-full pl-7 pr-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
+                      />
+                    </div>
+                    {handleValue && handleValue !== profile?.handle && (
+                      <p className="text-xs mb-2" style={{
+                        color: handleStatus === "available" ? "#22C55E"
+                          : handleStatus === "taken" || handleStatus === "invalid" ? "#E8613A"
+                          : "var(--color-muted)"
+                      }}>
+                        {handleStatus === "available" ? `@${handleValue} is available`
+                          : handleStatus === "taken" ? "That handle is already taken"
+                          : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
+                          : "Checking..."}
+                      </p>
+                    )}
+                    {handleError && <p className="text-xs text-red-500 mb-2">{handleError}</p>}
+                    <button
+                      onClick={handleSaveHandle}
+                      disabled={handleSaving || handleValue === profile?.handle || (handleStatus !== "available")}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                    >
+                      {handleSaved ? "Saved" : handleSaving ? "Saving…" : "Save handle"}
                     </button>
                   </div>
                 </SectionItem>

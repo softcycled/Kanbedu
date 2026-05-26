@@ -2,10 +2,18 @@ import { z } from "zod";
 
 // -- Auth --
 
+export const handleSchema = z
+  .string()
+  .trim()
+  .min(2, "Handle must be at least 2 characters.")
+  .max(30, "Handle must be at most 30 characters.")
+  .regex(/^[a-z0-9_]+$/, "Handle may only contain lowercase letters, numbers, and underscores.");
+
 export const signupSchema = z.object({
   email: z.string().trim().email("Invalid email address.").toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters."),
   name: z.string().trim().default(""),
+  handle: handleSchema,
 });
 
 export const loginSchema = z.object({
@@ -20,8 +28,9 @@ export const profileUpdateSchema = z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color.")
       .optional(),
+    handle: handleSchema.optional(),
   })
-  .refine((data) => data.name !== undefined || data.color !== undefined, {
+  .refine((data) => data.name !== undefined || data.color !== undefined || data.handle !== undefined, {
     message: "No valid fields to update.",
   });
 
