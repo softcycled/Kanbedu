@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getSession();
-  console.log("[DEBUG page.tsx] session:", session);
   if (!session) redirect("/landing");
 
   // Run user lookup + board memberships in parallel
@@ -23,7 +22,6 @@ export default async function Home() {
     }),
   ]);
 
-  console.log("[DEBUG page.tsx] user from DB:", user);
   let boards = memberships.map((m) => m.board);
 
   // First-time user: create a default board
@@ -99,7 +97,6 @@ export default async function Home() {
   }));
 
   const resolvedIsAdmin = !!user?.isAdmin;
-  console.log("[DEBUG page.tsx] isAdmin passed to BoardContainer:", resolvedIsAdmin, "| user:", user);
 
   return (
     <BoardContainer
