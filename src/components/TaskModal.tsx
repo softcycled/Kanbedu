@@ -884,12 +884,12 @@ export default function TaskModal({
                     onChange={(e) => setDraftTitle(e.target.value)}
                     onKeyDown={handleTitleKeyDown}
                     onBlur={commitTitle}
-                    className="w-full text-[18px] font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
+                    className="w-full text-[22px] font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
                   />
                 ) : (
                   <h2
                     onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
-                    className="text-[18px] font-semibold text-ink leading-snug cursor-text rounded-lg px-2 py-1 -mx-2 hover:bg-column-bg transition-colors"
+                    className="text-[22px] font-semibold text-ink leading-snug cursor-text rounded-lg px-2 py-1 -mx-2 hover:bg-column-bg transition-colors"
                   >
                     {optimisticTitle ?? task.title}
                   </h2>
@@ -918,7 +918,7 @@ export default function TaskModal({
                       void flushUpdates();
                     }}
                     placeholder="Write a detailed description..."
-                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm text-ink border border-transparent focus:border-border/60 focus:outline-none resize-none"
+                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
                 ) : (
                   <div
@@ -926,7 +926,7 @@ export default function TaskModal({
                       descriptionOriginalRef.current = description;
                       setIsEditingDescription(true);
                     }}
-                    className="min-h-[4rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
+                    className="min-h-[5rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
                   >
                     {description ? (
                       <div className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
