@@ -134,6 +134,13 @@ export default function BoardContainer({
       setActivePanel("board");
     }
 
+    if (!cached) {
+      // No cache: switch board ID immediately so the header and key update before the fetch
+      setActiveBoardId(boardId);
+      activeBoardIdRef.current = boardId; // keep ref in sync so the guard below passes
+      setActivePanel("board");
+    }
+
     if (isStale) {
       // Fetch fresh data (silently if we already rendered from cache)
       setIsLoadingBoard(true);
@@ -145,10 +152,6 @@ export default function BoardContainer({
         setColumns(data.columns);
       }
       setIsLoadingBoard(false);
-    }
-
-    if (!cached) {
-      setActivePanel("board");
     }
   }, [fetchBoardData]);
 
