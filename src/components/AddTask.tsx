@@ -40,11 +40,22 @@ export default function AddTask({ column, onAdd }: Props) {
     }
   };
 
+  const handleBlur = () => {
+    if (!value.trim()) {
+      setActive(false);
+      setValue("");
+      setIsEmpty(false);
+    } else {
+      handleSubmit();
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSubmit();
     if (e.key === "Escape") {
       setActive(false);
       setValue("");
+      setIsEmpty(false);
     }
   };
 
@@ -56,7 +67,7 @@ export default function AddTask({ column, onAdd }: Props) {
           value={value}
           onChange={(e) => { setValue(e.target.value); if (isEmpty) setIsEmpty(false); }}
           onKeyDown={handleKeyDown}
-          onBlur={handleSubmit}
+          onBlur={handleBlur}
           placeholder="Task title…"
           className={`
             w-full bg-card-bg rounded-xl px-4 py-3
