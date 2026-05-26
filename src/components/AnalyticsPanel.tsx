@@ -247,7 +247,17 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
     return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading analytics…</div>;
   }
   if (!data) {
-    return <div className="flex-1 flex items-center justify-center text-muted text-sm">Failed to load analytics.</div>;
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted text-sm">
+        <p>Failed to load analytics.</p>
+        <button
+          onClick={fetchData}
+          className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border hover:border-ink/40 hover:text-ink transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   const { summary, columns, assignees } = data;
