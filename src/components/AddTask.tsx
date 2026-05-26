@@ -11,6 +11,7 @@ export default function AddTask({ column, onAdd }: Props) {
   const [active, setActive] = useState(false);
   const [value, setValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleActivate = () => {
@@ -21,14 +22,16 @@ export default function AddTask({ column, onAdd }: Props) {
   const handleSubmit = async () => {
     const trimmed = value.trim();
     if (!trimmed) {
-      setActive(false);
-      setValue("");
+      setIsEmpty(true);
+      inputRef.current?.focus();
       return;
     }
+    setIsEmpty(false);
     setIsSaving(true);
     try {
       await onAdd(trimmed, column);
       setValue("");
+      setIsEmpty(false);
       setActive(false);
     } catch (err) {
       console.error("Failed to add task:", err);
@@ -51,18 +54,21 @@ export default function AddTask({ column, onAdd }: Props) {
         <input
           ref={inputRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => { setValue(e.target.value); if (isEmpty) setIsEmpty(false); }}
           onKeyDown={handleKeyDown}
           onBlur={handleSubmit}
           placeholder="Task title…"
-          className="
+          className={`
             w-full bg-card-bg rounded-xl px-4 py-3
             text-sm text-ink placeholder:text-muted
-            border border-border focus:outline-none focus-ring
+            border focus:outline-none focus-ring
             shadow-card
-          "
+            ${isEmpty ? "border-red-400" : "border-border"}
+          `}
         />
-        <p className="text-xs text-muted mt-1.5 px-1">{isSaving ? "Adding…" : "Enter to add · Esc to cancel"}</p>
+        <p className={`text-xs mt-1.5 px-1 ${isEmpty ? "text-red-400" : "text-muted"}`}>
+          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : "Enter to add · Esc to cancel"}
+        </p>
       </div>
     );
   }
