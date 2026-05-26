@@ -635,7 +635,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       const comment: Comment = await res.json();
       onTasksChange((prev) =>
         prev.map((t) =>
-          t.id === taskId ? { ...t, comments: [...(t.comments ?? []), comment] } : t
+          t.id === taskId
+            ? { ...t, comments: [...(t.comments ?? []), comment], commentCount: (t.commentCount ?? 0) + 1 }
+            : t
         )
       );
       broadcastRefresh();

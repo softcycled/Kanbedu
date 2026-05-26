@@ -40,8 +40,8 @@ function TaskCard({ task, onClick }: Props) {
   const overdue = deadlineInfo.severity === "overdue";
   const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
-  // Compute comment count without requiring full comment bodies on board payloads
-  const commentCount = (task.comments && task.comments.length) || (task as any).commentCount || ((task as any)._count?.comments) || 0;
+  // commentCount is kept in sync by Board.handleAddComment; fall back to array length only if absent
+  const commentCount = task.commentCount ?? task.comments?.length ?? 0;
 
   const priorityDot: Record<string, string> = {
     low:    "bg-blue-500",
