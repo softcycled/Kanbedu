@@ -5,12 +5,18 @@ import { getSession, isMemberOfBoard } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const boardId = searchParams.get("boardId");
 
     if (!boardId) {
       return NextResponse.json({ error: "Board ID is required" }, { status: 400 });
     }
+
+    const allowed = await isMemberOfBoard(session.userId, boardId);
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const tags = await prisma.tag.findMany({
       where: { boardId },

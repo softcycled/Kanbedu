@@ -1,12 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getSession, isMemberOfBoard } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const boardId = searchParams.get("boardId");
   if (!boardId) {
     return NextResponse.json({ error: "boardId is required" }, { status: 400 });
   }
+
+  const allowed = await isMemberOfBoard(session.userId, boardId);
+  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
 
   // Run columns and tasks in parallel — tasks filter via relation instead of prefetching IDs
   const [columns, tasks] = await Promise.all([

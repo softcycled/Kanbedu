@@ -4,21 +4,26 @@ import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/valid
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 
-// GET columns (optionally scoped by boardId)
+// GET columns (scoped by boardId)
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const boardId = searchParams.get("boardId");
+    if (!boardId) return NextResponse.json({ error: "boardId is required" }, { status: 400 });
 
-    const where = boardId ? { boardId } : {};
+    const allowed = await isMemberOfBoard(session.userId, boardId);
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const columns = await prisma.column.findMany({
-      where,
+      where: { boardId },
       orderBy: { order: "asc" },
     });
 
     // If no columns exist for this board, create defaults
-    if (columns.length === 0 && boardId) {
+    if (columns.length === 0) {
       const defaultColumns = [
         { label: "To Do", order: 0, isDone: false, boardId },
         { label: "In Progress", order: 1, isDone: false, boardId },
