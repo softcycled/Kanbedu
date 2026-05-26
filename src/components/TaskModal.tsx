@@ -357,31 +357,16 @@ export default function TaskModal({
     };
   }, []);
 
-  // Auto-resize textarea for comfortable editing
+  // Auto-resize textarea to match content height — min-h class handles the floor
   const adjustDescriptionHeight = useCallback(() => {
     const el = descriptionTextareaRef.current;
     if (!el) return;
-    // compute useful metrics
-    const cs = window.getComputedStyle(el);
-    let lineHeight = parseFloat(cs.lineHeight || "");
-    if (!lineHeight || Number.isNaN(lineHeight)) {
-      const fontSize = parseFloat(cs.fontSize || "14");
-      lineHeight = fontSize * 1.4;
-    }
-    const paddingTop = parseFloat(cs.paddingTop || "0") || 0;
-    const paddingBottom = parseFloat(cs.paddingBottom || "0") || 0;
-    const borderTop = parseFloat(cs.borderTopWidth || "0") || 0;
-    const borderBottom = parseFloat(cs.borderBottomWidth || "0") || 0;
 
-    const minLines = 10; // preferred minimum 8-12 lines
-    const minHeight = Math.round(lineHeight * minLines + paddingTop + paddingBottom + borderTop + borderBottom);
-
-    // Reset to auto then measure
+    // Reset to auto so scrollHeight reflects true content size
     el.style.height = "auto";
-    const scrollH = el.scrollHeight;
-    const desired = Math.max(scrollH, minHeight);
+    const desired = el.scrollHeight;
 
-    // cap height to avoid overflowing the modal body
+    // Cap to avoid overflowing the modal body
     const modalAvailable = modalBodyRef.current ? Math.max(120, modalBodyRef.current.clientHeight - 120) : window.innerHeight * 0.5;
     const maxHeight = Math.max(200, modalAvailable);
 
@@ -918,7 +903,7 @@ export default function TaskModal({
                       void flushUpdates();
                     }}
                     placeholder="Write a detailed description..."
-                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
+                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm leading-relaxed text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
                 ) : (
                   <div
