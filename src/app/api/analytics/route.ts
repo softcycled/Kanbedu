@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
 
+  // Limit history lookback to 90 days — prevents unbounded scans on long-lived boards
+  const HISTORY_CUTOFF = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
   // Run columns and tasks in parallel — tasks filter via relation instead of prefetching IDs
   const [columns, tasks] = await Promise.all([
     prisma.column.findMany({
@@ -26,7 +29,10 @@ export async function GET(request: NextRequest) {
       where: { columnRel: { boardId } },
       include: {
         _count: { select: { comments: true } },
-        columnHistory: { orderBy: { enteredAt: "asc" } },
+        columnHistory: {
+          where: { enteredAt: { gte: HISTORY_CUTOFF } },
+          orderBy: { enteredAt: "asc" },
+        },
         assigneeUser: { select: { id: true, name: true, color: true } },
       },
       orderBy: { createdAt: "asc" },
