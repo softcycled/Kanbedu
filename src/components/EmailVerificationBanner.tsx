@@ -45,11 +45,11 @@ export default function EmailVerificationBanner() {
   if (!show) return null;
 
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs font-medium" style={{ backgroundColor: "#FEF3C7", borderBottom: "1px solid #FDE68A", color: "#92400E" }}>
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs font-medium bg-amber-50 border-b border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
       <span>
         Please verify your email to secure your account.{" "}
         {sent ? (
-          <span style={{ color: "#15803D" }}>Verification email sent!</span>
+          <span className="text-green-700 dark:text-green-400">Verification email sent!</span>
         ) : (
           <button
             onClick={resend}
