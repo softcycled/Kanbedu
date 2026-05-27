@@ -234,7 +234,7 @@ function AppearanceTab() {
         <SectionTitle>UI Preferences</SectionTitle>
         <SectionBlock>
           <SectionItem>
-            <SettingRow label="Light mode" description="Switch between light and dark themes">
+            <SettingRow label="Dark mode" description="Switch between light and dark themes">
               {mounted ? (
                 <Toggle checked={isDark} onChange={(v) => setTheme(v ? "dark" : "light")} />
               ) : (
