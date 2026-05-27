@@ -46,6 +46,17 @@ export default function FilterBar({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    if (!openDropdown) return;
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("keydown", keyHandler);
+    return () => document.removeEventListener("keydown", keyHandler);
+  }, [openDropdown]);
+
   const toggleSelection = (list: string[], item: string, setter: (val: string[]) => void) => {
     if (list.includes(item)) {
       setter(list.filter((i) => i !== item));
@@ -85,9 +96,11 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")}
-          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
-            selectedAssignees.length > 0 
-              ? "bg-accent/10 border-accent/30 text-accent" 
+          aria-expanded={openDropdown === "assignee"}
+          aria-haspopup="menu"
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            selectedAssignees.length > 0
+              ? "bg-accent/10 border-accent/30 text-accent"
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
           }`}
         >
@@ -103,22 +116,28 @@ export default function FilterBar({
         </button>
 
         {openDropdown === "assignee" && (
-          <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
-            <div 
+          <div role="menu" className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={selectedAssignees.includes("unassigned")}
               onClick={() => toggleSelection(selectedAssignees, "unassigned", setSelectedAssignees)}
-              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</div>
                 <span className="text-sm text-ink">Unassigned</span>
               </div>
               {selectedAssignees.includes("unassigned") && <CheckIcon />}
-            </div>
+            </button>
             {members.map((m) => (
-              <div 
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={selectedAssignees.includes(m.id)}
                 key={m.id}
                 onClick={() => toggleSelection(selectedAssignees, m.id, setSelectedAssignees)}
-                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: m.color, color: getTextColorForBg(m.color) }}>
@@ -127,7 +146,7 @@ export default function FilterBar({
                   <span className="text-sm text-ink">{m.name}</span>
                 </div>
                 {selectedAssignees.includes(m.id) && <CheckIcon />}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -137,9 +156,11 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "tags" ? null : "tags")}
-          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
-            selectedTags.length > 0 
-              ? "bg-accent/10 border-accent/30 text-accent" 
+          aria-expanded={openDropdown === "tags"}
+          aria-haspopup="menu"
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            selectedTags.length > 0
+              ? "bg-accent/10 border-accent/30 text-accent"
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
           }`}
         >
@@ -155,20 +176,23 @@ export default function FilterBar({
         </button>
 
         {openDropdown === "tags" && (
-          <div className="absolute left-0 mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
+          <div role="menu" className="absolute left-0 mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
             {tags.length === 0 && <p className="px-3 py-4 text-center text-xs text-muted">No tags found.</p>}
             {tags.map((t) => (
-              <div 
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={selectedTags.includes(t.id)}
                 key={t.id}
                 onClick={() => toggleSelection(selectedTags, t.id, setSelectedTags)}
-                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
                   <span className="text-sm text-ink">{t.name}</span>
                 </div>
                 {selectedTags.includes(t.id) && <CheckIcon />}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -178,9 +202,11 @@ export default function FilterBar({
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
-          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all ${
-            selectedPriorities.length > 0 
-              ? "bg-accent/10 border-accent/30 text-accent" 
+          aria-expanded={openDropdown === "priority"}
+          aria-haspopup="menu"
+          className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            selectedPriorities.length > 0
+              ? "bg-accent/10 border-accent/30 text-accent"
               : "bg-paper border-border/60 text-muted hover:text-ink hover:border-border"
           }`}
         >
@@ -196,16 +222,19 @@ export default function FilterBar({
         </button>
 
         {openDropdown === "priority" && (
-          <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-48 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
+          <div role="menu" className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-48 bg-card-bg border border-border rounded-xl shadow-modal z-50 p-2 space-y-1">
             {["low", "medium", "high", "urgent"].map((p) => (
-              <div 
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={selectedPriorities.includes(p)}
                 key={p}
                 onClick={() => toggleSelection(selectedPriorities, p, setSelectedPriorities)}
-                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-column-bg cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <span className="text-sm text-ink capitalize">{p}</span>
                 {selectedPriorities.includes(p) && <CheckIcon />}
-              </div>
+              </button>
             ))}
           </div>
         )}
