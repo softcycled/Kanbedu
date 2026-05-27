@@ -527,6 +527,30 @@ export default function TaskModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Focus trap: keep Tab/Shift+Tab inside the modal
+  useEffect(() => {
+    const modal = modalBodyRef.current?.parentElement;
+    if (!modal) return;
+    const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(modal.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    modal.addEventListener("keydown", handler);
+    // Move focus into the modal on open
+    const firstFocusable = modal.querySelector<HTMLElement>(FOCUSABLE);
+    firstFocusable?.focus();
+    return () => modal.removeEventListener("keydown", handler);
+  }, []);
+
   const handleAddComment = async () => {
     const trimmed = commentInput.trim();
     if (!trimmed || !task) return;
@@ -779,7 +803,7 @@ export default function TaskModal({
       onClick={(e) => e.target === overlayRef.current && handleClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in"
     >
-      <div className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-[860px] h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
+      <div role="dialog" aria-modal="true" aria-label={task?.title ?? "Task"} className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-[860px] h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (

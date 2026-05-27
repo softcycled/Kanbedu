@@ -167,9 +167,8 @@ const WORKFLOW_ITEMS = [
       "Assignee tracking per card",
       "Board-level activity feed",
     ],
-    frameLabel: "Board and list synchronization",
-    frameIndex: 1,
-    frameAspect: "video" as const,
+    screenshot: "/screenshots/board.png",
+    screenshotAlt: "Kanbedu board view with task cards organized across workflow columns",
     flip: false,
   },
   {
@@ -183,9 +182,8 @@ const WORKFLOW_ITEMS = [
       "Due dates and deadline tracking",
       "Rich description with markdown",
     ],
-    frameLabel: "Task modal workflow",
-    frameIndex: 2,
-    frameAspect: "square" as const,
+    screenshot: "/screenshots/task-modal.png",
+    screenshotAlt: "Task detail modal showing description, assignee, priority, deadline, and comments",
     flip: true,
   },
   {
@@ -199,9 +197,8 @@ const WORKFLOW_ITEMS = [
       "Individual contribution views",
       "Custom task filtering",
     ],
-    frameLabel: "Realtime analytics page",
-    frameIndex: 3,
-    frameAspect: "video" as const,
+    screenshot: "/screenshots/analytics.png",
+    screenshotAlt: "Analytics panel showing workflow overview, bottleneck detection, and project health metrics",
     flip: false,
   },
 ];
@@ -384,11 +381,22 @@ export default function LandingPage() {
 
                     {/* Frame */}
                     <div className={item.flip ? "order-first lg:order-first" : ""}>
-                      <PlaceholderFrame
-                        label={item.frameLabel}
-                        aspect={item.frameAspect}
-                        index={item.frameIndex}
-                      />
+                      <div
+                        className="relative rounded-xl overflow-hidden border border-white/[0.07]"
+                        style={{
+                          boxShadow:
+                            "0 0 0 1px rgba(255,255,255,0.03), 0 20px 60px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        <Image
+                          src={item.screenshot}
+                          alt={item.screenshotAlt}
+                          width={1280}
+                          height={800}
+                          className="w-full h-auto block"
+                          unoptimized
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

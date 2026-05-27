@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -36,6 +37,12 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: { email: data.email, password: hashed, name: data.name, handle: data.handle },
     });
+
+    // Create a 24-hour verification token and send the email (fire-and-forget)
+    prisma.emailVerification.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+    }).then((record) => sendVerificationEmail(user.email, record.token))
+      .catch((err) => console.error("Failed to send verification email:", err));
 
     await createSession(user.id);
 

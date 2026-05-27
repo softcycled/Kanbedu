@@ -23,12 +23,12 @@ export const realtimeServerClient = createClient(supabaseUrl, supabaseAnonKey, {
 export async function broadcastToBoard(realtimeSecret: string, payload?: any) {
   if (!realtimeSecret) return;
   
-  // Fire-and-forget the broadcast so it doesn't block API response times
-  realtimeServerClient.channel(`board-${realtimeSecret}`).send({
-    type: "broadcast",
-    event: "refresh",
-    payload: payload || { timestamp: new Date().toISOString() },
-  }).catch((err) => {
-    console.error("Failed to broadcast realtime event:", err);
-  });
+  // Use httpSend (explicit REST delivery) — server-side Next.js functions have no
+  // persistent WebSocket, so send() was silently falling back to REST anyway.
+  realtimeServerClient
+    .channel(`board-${realtimeSecret}`)
+    .httpSend("refresh", payload || { timestamp: new Date().toISOString() })
+    .catch((err) => {
+      console.error("Failed to broadcast realtime event:", err);
+    });
 }

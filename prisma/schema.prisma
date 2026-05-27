@@ -19,12 +19,25 @@ model User {
   color               String                   @default("#4A90A4")
   createdAt           DateTime                 @default(now())
   isAdmin             Boolean                  @default(false)
+  emailVerified       Boolean                  @default(false)
   invites             BoardInvite[]
   boards              BoardMember[]
   bugReports          BugReport[]
   assignedTasks       Task[]                   @relation("TaskAssignees")
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
+  emailVerifications  EmailVerification[]
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Board {

@@ -29,14 +29,15 @@ export async function GET(req: Request) {
       where: { githubId: String(ghUser.id) },
       update: {
         githubAccessToken: access_token,
-        email: primaryEmail, // Keep email in sync if possible
+        email: primaryEmail,
+        emailVerified: true, // GitHub has already verified this email
       },
       create: {
         githubId: String(ghUser.id),
         githubAccessToken: access_token,
         email: primaryEmail,
         name: ghUser.name || ghUser.login,
-        // No password for GitHub users
+        emailVerified: true, // GitHub OAuth is an implicit email verification
       },
     });
 

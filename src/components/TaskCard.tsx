@@ -63,6 +63,10 @@ function TaskCard({ task, onClick }: Props) {
       {...(mounted ? attributes : {})}
       {...(mounted ? listeners : {})}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open task: ${task.title}`}
       data-task
       className={rootClass}
     >
