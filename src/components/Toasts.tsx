@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ push, dismiss }}>
       {children}
-      <div className="fixed right-6 bottom-6 z-50 flex flex-col-reverse gap-3 items-end">
+      <div className="fixed right-6 bottom-20 md:bottom-6 z-50 flex flex-col-reverse gap-3 items-end">
         {toasts.map((t) => (
           <ToastView key={t.id} toast={t} onClose={() => dismiss(t.id)} />
         ))}
