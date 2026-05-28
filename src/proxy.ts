@@ -22,7 +22,7 @@ export async function proxy(req: NextRequest) {
   const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
 
   // Allow public routes and static assets
-  if (isPublic(pathname) || pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+  if (isPublic(pathname) || pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.startsWith("/screenshots/")) {
     return NextResponse.next();
   }
 

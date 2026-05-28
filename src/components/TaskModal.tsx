@@ -119,8 +119,6 @@ export default function TaskModal({
   const pendingRequestsRef = useRef<{ comments?: Promise<any> | null; activities?: Promise<any> | null; versions?: Promise<any> | null }>({ comments: null, activities: null, versions: null });
   const activityIdleTimerRef = useRef<number | null>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
-  const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const [scrollBtnTop, setScrollBtnTop] = useState<number | null>(null);
   const descriptionOriginalRef = useRef<string>("");
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const savedIndicatorTimeoutRef = useRef<number | null>(null);
@@ -724,49 +722,6 @@ export default function TaskModal({
     return () => observer.disconnect();
   }, [task]);
 
-  // Measure whether comments are below the fold and compute floating button position
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = modalBodyRef.current;
-      const cm = commentsRef.current;
-      if (!el || !cm) {
-        setShowScrollBtn(false);
-        setScrollBtnTop(null);
-        return;
-      }
-
-      // Use bounding rects for robust, layout-insensitive measurement
-      const elRect = el.getBoundingClientRect();
-      const cmRect = cm.getBoundingClientRect();
-
-      // Show when the comments block extends below the visible bottom of the scroll container
-      const shouldShow = comments.length > 0 && cmRect.bottom > elRect.bottom - 8;
-      setShowScrollBtn(shouldShow);
-
-      if (shouldShow) {
-        // Position relative to the left-column container: compute comments' top offset inside that container
-        const leftCol = el.parentElement || el.offsetParent || el;
-        const leftRect = (leftCol as HTMLElement).getBoundingClientRect();
-        const top = Math.round(cmRect.top - leftRect.top - 44); // sit slightly above the comments
-        setScrollBtnTop(Math.max(8, top));
-      } else {
-        setScrollBtnTop(null);
-      }
-    };
-
-    // Initial measure on layout
-    requestAnimationFrame(measure);
-
-    // Re-measure shortly after mount to catch late layout shifts
-    const t = setTimeout(() => requestAnimationFrame(measure), 120);
-
-    const onResize = () => requestAnimationFrame(measure);
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      clearTimeout(t);
-    };
-  }, [description, comments.length, isEditingDescription, task?.id]);
 
   if (!task) return null;
 
@@ -993,13 +948,12 @@ export default function TaskModal({
 
             </div>
 
-            {showScrollBtn && scrollBtnTop !== null && (
+            {!commentsVisible && comments.length > 0 && (
               <button
                 onClick={scrollToComments}
                 title="Scroll to comments"
                 aria-label="Scroll to comments"
-                className="absolute right-4 z-10 w-8 h-8 rounded-full bg-column-bg/80 hover:bg-column-bg text-muted flex items-center justify-center shadow-sm transition-colors"
-                style={{ top: scrollBtnTop }}
+                className="absolute bottom-[84px] left-1/2 -translate-x-1/2 z-10 w-8 h-8 rounded-full bg-column-bg/90 hover:bg-column-bg text-muted flex items-center justify-center shadow-sm transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <path d="M2 4l4 4 4-4" />

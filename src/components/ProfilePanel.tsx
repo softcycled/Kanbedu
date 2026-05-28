@@ -234,9 +234,9 @@ function AppearanceTab() {
         <SectionTitle>UI Preferences</SectionTitle>
         <SectionBlock>
           <SectionItem>
-            <SettingRow label="Dark mode" description="Switch between light and dark themes">
+            <SettingRow label="Light mode" description="Switch between dark and light themes">
               {mounted ? (
-                <Toggle checked={isDark} onChange={(v) => setTheme(v ? "dark" : "light")} />
+                <Toggle checked={!isDark} onChange={(v) => setTheme(v ? "light" : "dark")} />
               ) : (
                 <div className="h-5 w-9 rounded-full bg-border motion-safe:animate-pulse" />
               )}

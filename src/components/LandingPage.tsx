@@ -2,204 +2,156 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 
-// ── Placeholder frame ─────────────────────────────────────────────────────────
 
-const GLOW_COLORS = [
-  "rgba(59,130,246,0.08)",
-  "rgba(124,58,237,0.08)",
-  "rgba(16,185,129,0.07)",
-  "rgba(245,158,11,0.07)",
-  "rgba(236,72,153,0.07)",
-  "rgba(20,184,166,0.07)",
+// ── Pillar icon frame ─────────────────────────────────────────────────────────
+
+const PILLAR_GLOWS = [
+  "rgba(124,58,237,0.10)",
+  "rgba(59,130,246,0.10)",
+  "rgba(16,185,129,0.09)",
 ];
 
-function PlaceholderFrame({
-  label,
-  caption,
-  aspect = "video",
+function PillarIconFrame({
+  children,
   index = 0,
-  className = "",
 }: {
-  label: string;
-  caption?: string;
-  aspect?: "video" | "square" | "tall";
+  children: React.ReactNode;
   index?: number;
-  className?: string;
 }) {
-  const aspectClass =
-    aspect === "video"
-      ? "aspect-video"
-      : aspect === "square"
-      ? "aspect-square"
-      : "aspect-[3/4]";
-
-  const glow = GLOW_COLORS[index % GLOW_COLORS.length];
-
+  const glow = PILLAR_GLOWS[index % PILLAR_GLOWS.length];
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-white/[0.07] ${aspectClass} ${className}`}
+      className="relative overflow-hidden rounded-xl border border-white/[0.07] aspect-square flex items-center justify-center"
       style={{ background: "#131110" }}
     >
-      {/* Dot grid */}
-      <div
-        className="absolute inset-0 opacity-70"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
-        }}
-      />
-      {/* Radial accent tint */}
       <div
         className="absolute inset-0"
         style={{
-          background: `radial-gradient(ellipse 70% 55% at 50% 35%, ${glow}, transparent 70%)`,
+          background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${glow}, transparent 70%)`,
         }}
       />
-      {/* Corner marks */}
-      <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-white/[0.12]" />
-      <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-white/[0.12]" />
-      <div className="absolute bottom-11 left-4 w-5 h-5 border-b border-l border-white/[0.12]" />
-      <div className="absolute bottom-11 right-4 w-5 h-5 border-b border-r border-white/[0.12]" />
-      {/* Label bar */}
-      <div
-        className="absolute bottom-0 inset-x-0 px-4 py-2.5 border-t border-white/[0.06] flex items-center gap-2.5"
-        style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-white/20 animate-pulse flex-shrink-0" />
-        <span className="text-[11px] text-white/30 font-medium tracking-wide leading-none">
-          {label}
-        </span>
-        {caption && (
-          <span className="text-[10px] text-white/15 ml-auto font-medium tracking-wider uppercase">
-            {caption}
-          </span>
-        )}
-      </div>
+      <div className="relative text-white/40">{children}</div>
     </div>
   );
 }
 
-// ── Capability grid cell ──────────────────────────────────────────────────────
+// ── Pillar icons ──────────────────────────────────────────────────────────────
 
-function CapabilityCell({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function IconBoards() {
   return (
-    <div
-      className="p-7 transition-colors duration-200 hover:bg-white/[0.025] group"
-      style={{
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
-      }}
+    <svg
+      width="92"
+      height="92"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <h3 className="text-sm font-semibold text-ink mb-2 leading-snug">{title}</h3>
-      <p className="text-xs text-muted leading-relaxed">{description}</p>
-    </div>
+      <rect x="8" y="14" width="14" height="36" rx="1.5" />
+      <rect x="25" y="14" width="14" height="36" rx="1.5" />
+      <rect x="42" y="14" width="14" height="36" rx="1.5" />
+      <line x1="11" y1="22" x2="19" y2="22" />
+      <line x1="11" y1="28" x2="19" y2="28" />
+      <line x1="28" y1="22" x2="36" y2="22" />
+      <line x1="28" y1="28" x2="36" y2="28" />
+      <line x1="28" y1="34" x2="36" y2="34" />
+      <line x1="45" y1="22" x2="53" y2="22" />
+    </svg>
+  );
+}
+
+function IconSync() {
+  return (
+    <svg
+      width="92"
+      height="92"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 30 A18 18 0 0 1 46 20" />
+      <polyline points="38,14 46,20 40,26" />
+      <path d="M50 34 A18 18 0 0 1 18 44" />
+      <polyline points="26,50 18,44 24,38" />
+    </svg>
+  );
+}
+
+function IconLink() {
+  return (
+    <svg
+      width="92"
+      height="92"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M28 24 H22 a8 8 0 0 0 0 16 H28" />
+      <path d="M36 24 H42 a8 8 0 0 1 0 16 H36" />
+      <line x1="24" y1="32" x2="40" y2="32" />
+    </svg>
   );
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const CAPABILITIES = [
+const PILLARS = [
   {
-    title: "Kanban Boards",
+    fig: "FIG 0.1",
+    title: "Boards built for clarity",
     description:
-      "Visual columns that map to your workflow. Drag tasks to reprioritize in real time.",
+      "Visual columns that match how you actually think about work — no setup, no learning curve.",
+    Icon: IconBoards,
   },
   {
-    title: "Task Assignment",
+    fig: "FIG 0.2",
+    title: "Synced in real time",
     description:
-      "Every card has a clear owner. No ambiguity about who handles what.",
+      "Changes show up instantly for everyone on the board. No refresh, no stale state.",
+    Icon: IconSync,
   },
   {
-    title: "Real-time Sync",
+    fig: "FIG 0.3",
+    title: "One link to join",
     description:
-      "Changes propagate instantly to all board members. No refreshing, no stale state.",
-  },
-  {
-    title: "One-link Invites",
-    description:
-      "Share a link. Your team joins the board. No approval flow required.",
-  },
-  {
-    title: "Activity History",
-    description:
-      "Full audit trail on every task. Know exactly who changed what and when.",
-  },
-  {
-    title: "Priority Labels",
-    description:
-      "Mark urgency with color labels. Filter for what actually needs attention now.",
-  },
-  {
-    title: "Due Dates",
-    description:
-      "Attach deadlines to tasks and see them in a shared calendar view.",
-  },
-  {
-    title: "Team Analytics",
-    description:
-      "Cycle time breakdowns, contribution views, and workflow summaries.",
-  },
-  {
-    title: "Dark Mode",
-    description:
-      "Thoughtfully designed dark theme. Easy on the eyes during late-night work sessions.",
+      "Share a link, your group joins. No approval flow, no friction.",
+    Icon: IconLink,
   },
 ];
 
 const WORKFLOW_ITEMS = [
   {
     index: "01",
-    category: "Boards",
-    headline: "Visual boards that match\nhow your team thinks.",
-    body: "Drag cards between columns as work progresses. Every status visible at a glance — no status meetings required.",
-    bullets: [
-      "Drag-and-drop task management",
-      "Priority levels and color labels",
-      "Assignee tracking per card",
-      "Board-level activity feed",
-    ],
-    screenshot: "/screenshots/board.png",
+    category: "Group projects",
+    headline: "Split the work.\nSee the whole picture.",
+    body: "Divide the reading, assign sections, track who's done. Everyone sees the same board — no more chasing people in chat the night before it's due.",
+    screenshot: "/screenshots/board-dark.png",
     screenshotAlt: "Kanbedu board view with task cards organized across workflow columns",
-    flip: false,
   },
   {
     index: "02",
-    category: "Task detail",
-    headline: "Every task has the\nfull context it needs.",
-    body: "Open any task to see its description, comments, activity history, due date, and assignee — all in one focused view.",
-    bullets: [
-      "Inline comments and discussion",
-      "Full activity history per task",
-      "Due dates and deadline tracking",
-      "Rich description with markdown",
-    ],
+    category: "Inside a task",
+    headline: "Every task carries\nits full context.",
+    body: "Open any card to see the description, deadline, comments, and who's working on it. No scrolling through chat trying to remember what was decided.",
     screenshot: "/screenshots/task-modal.png",
     screenshotAlt: "Task detail modal showing description, assignee, priority, deadline, and comments",
-    flip: true,
   },
   {
     index: "03",
     category: "Analytics",
-    headline: "Real-time analytics surface\nblockers and bottlenecks.",
-    body: "Built-in analytics surfaces blockers and bottlenecks so you can keep work flowing without manual check-ins or status updates.",
-    bullets: [
-      "Cycle time breakdowns",
-      "Overall workflow efficiency",
-      "Individual contribution views",
-      "Custom task filtering",
-    ],
+    headline: "Spot what's slowing\nthe project down.",
+    body: "See how long each task has been sitting, where work piles up, and which deadlines are at risk. No more guessing whether the group is on track.",
     screenshot: "/screenshots/analytics.png",
-    screenshotAlt: "Analytics panel showing workflow overview, bottleneck detection, and project health metrics",
-    flip: false,
+    screenshotAlt: "Analytics panel showing cycle times, stuck tasks, and progress overview for the board",
   },
 ];
 
@@ -277,23 +229,23 @@ export default function LandingPage() {
         <main>
 
           {/* ── Hero ──────────────────────────────────────────────────── */}
-          <section className="pt-40 pb-24 px-6">
+          <section className="pt-48 pb-32 px-6">
             <div className="max-w-5xl mx-auto text-center">
-  
+
               {/* Headline */}
               <h1 className="text-5xl sm:text-6xl md:text-[72px] font-bold tracking-[-0.03em] leading-[1.02] text-ink mb-5 motion-safe:animate-fade-in [animation-delay:80ms]">
-                Built for teams
+                Project boards.
                 <br className="hidden sm:block" />
-                {" "}that actually ship.
+                {" "}Without the noise.
               </h1>
 
               {/* Sub */}
-              <p className="text-[15px] md:text-[17px] text-muted max-w-[340px] mx-auto leading-relaxed mb-10 motion-safe:animate-fade-in [animation-delay:160ms]">
-                Boards, tasks, and real-time collaboration — without the setup overhead.
+              <p className="text-[15px] md:text-[17px] text-muted max-w-md mx-auto leading-relaxed mb-10 motion-safe:animate-fade-in [animation-delay:160ms]">
+                Boards, tasks, and collaboration — without the bloat.
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-20 motion-safe:animate-fade-in [animation-delay:240ms]">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4 motion-safe:animate-fade-in [animation-delay:240ms]">
                 <Link
                   href="/login?mode=signup"
                   className="w-full sm:w-auto bg-[#EBEBEB] text-[#161412] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-white transition-colors"
@@ -308,6 +260,11 @@ export default function LandingPage() {
                 </Link>
               </div>
 
+              {/* Trust microcopy */}
+              <p className="text-xs text-muted/70 mb-20 motion-safe:animate-fade-in [animation-delay:320ms]">
+                Free for students and teachers. No credit card.
+              </p>
+
               {/* Hero screenshot */}
               <div
                 className="relative rounded-2xl overflow-hidden border border-white/[0.07] motion-safe:animate-modal-in [animation-delay:300ms]"
@@ -316,14 +273,11 @@ export default function LandingPage() {
                     "0 0 0 1px rgba(255,255,255,0.03), 0 40px 100px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.4)",
                 }}
               >
-                <Image
-                  src="/kanbeduhero.png"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/board.png"
                   alt="Kanbedu board view — tasks organized across columns with assignees, priorities, and labels"
-                  width={1200}
-                  height={750}
                   className="w-full h-auto block"
-                  priority
-                  unoptimized
                 />
               </div>
               {/* Glow under screenshot */}
@@ -336,65 +290,41 @@ export default function LandingPage() {
 
           {/* ── Workflow Features ────────────────────────────────────── */}
           <section
-            className="py-32 px-6"
+            className="py-40 px-6"
             style={{ borderTop: "1px solid rgba(40, 40, 40, 0.05)" }}
           >
             <div className="max-w-6xl mx-auto">
-              {/* Header */}
-              <div className="mb-24 reveal">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
-                  How it works
-                </p>
-                <h2 className="text-3xl md:text-[42px] font-bold tracking-[-0.025em] text-ink leading-[1.07]">
-                  Everything your team
-                  <br />needs in one workspace.
-                </h2>
-              </div>
-
-              {/* Feature rows */}
-              <div className="space-y-32">
+              {/* Feature rows — full-width stacked layout */}
+              <div className="space-y-40">
                 {WORKFLOW_ITEMS.map((item) => (
-                  <div
-                    key={item.index}
-                    className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center reveal"
-                  >
+                  <div key={item.index} className="reveal">
                     {/* Text */}
-                    <div className={item.flip ? "order-last lg:order-last" : ""}>
+                    <div className="max-w-2xl mx-auto text-center mb-14">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
                         {item.index} — {item.category}
                       </p>
-                      <h3 className="text-[22px] font-bold text-ink mb-4 tracking-tight leading-snug whitespace-pre-line">
+                      <h3 className="text-3xl md:text-[40px] font-bold text-ink mb-5 tracking-tight leading-[1.1] whitespace-pre-line">
                         {item.headline}
                       </h3>
-                      <p className="text-sm text-muted leading-relaxed mb-8 max-w-sm">
+                      <p className="text-base text-muted leading-relaxed max-w-xl mx-auto">
                         {item.body}
                       </p>
-                      <ul className="space-y-2.5">
-                        {item.bullets.map((b) => (
-                          <li key={b} className="flex items-center gap-2.5 text-sm text-muted">
-                            <span className="w-[3px] h-[3px] rounded-full bg-accent/60 flex-shrink-0" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
                     </div>
 
                     {/* Frame */}
-                    <div className={item.flip ? "order-first lg:order-first" : ""}>
+                    <div className="max-w-5xl mx-auto">
                       <div
                         className="relative rounded-xl overflow-hidden border border-white/[0.07]"
                         style={{
                           boxShadow:
-                            "0 0 0 1px rgba(255,255,255,0.03), 0 20px 60px rgba(0,0,0,0.5)",
+                            "0 0 0 1px rgba(255,255,255,0.03), 0 30px 80px rgba(0,0,0,0.55)",
                         }}
                       >
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={item.screenshot}
                           alt={item.screenshotAlt}
-                          width={1280}
-                          height={800}
                           className="w-full h-auto block"
-                          unoptimized
                         />
                       </div>
                     </div>
@@ -404,94 +334,109 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Capabilities ─────────────────────────────────────────── */}
+          {/* ── Pillars ──────────────────────────────────────────────── */}
           <section
-            className="py-28 px-6"
+            className="py-36 px-6"
             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
             <div className="max-w-6xl mx-auto">
-              <div className="mb-16 reveal">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
-                  Capabilities
-                </p>
-                <h2 className="text-3xl md:text-[42px] font-bold tracking-[-0.025em] text-ink">
-                  Everything you need.
-                  <br />Nothing you don&apos;t.
+              {/* Two-tone lead-in */}
+              <div className="mb-20 reveal max-w-4xl">
+                <h2 className="text-3xl md:text-[44px] font-bold tracking-[-0.02em] leading-[1.15]">
+                  <span className="text-ink">A Kanban tool built for the classroom.</span>{" "}
+                  <span className="text-muted">Stripped to the essentials so students and teachers can focus on the work — not on learning the tool.</span>
                 </h2>
               </div>
 
-              <div
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 reveal"
-                style={{
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
-                  borderLeft: "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                {CAPABILITIES.map((cap) => (
-                  <CapabilityCell key={cap.title} {...cap} />
+              {/* 3-up pillars */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-14 reveal">
+                {PILLARS.map((pillar, i) => (
+                  <div key={pillar.fig}>
+                    <p className="text-[10px] font-medium tracking-[0.18em] text-muted/60 mb-5 font-mono uppercase">
+                      {pillar.fig}
+                    </p>
+                    <div className="mb-7">
+                      <PillarIconFrame index={i}>
+                        <pillar.Icon />
+                      </PillarIconFrame>
+                    </div>
+                    <h3 className="text-sm font-semibold text-ink mb-2 tracking-tight">
+                      {pillar.title}
+                    </h3>
+                    <p className="text-sm text-muted leading-relaxed">
+                      {pillar.description}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* ── Coming soon previews ──────────────────────────────────── */}
+          {/* ── Educator section ─────────────────────────────────────── */}
           <section
-            className="py-28 px-6"
+            className="py-40 px-6"
             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
             <div className="max-w-6xl mx-auto">
-              <div className="text-center max-w-lg mx-auto mb-16 reveal">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
-                  In development
+              {/* Eyebrow + two-tone heading */}
+              <div className="mb-16 reveal max-w-4xl">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-4">
+                  For classrooms — coming this semester
                 </p>
-                <h2 className="text-3xl font-bold tracking-tight text-ink mb-4">
-                  More views on the way.
+                <h2 className="text-3xl md:text-[44px] font-bold tracking-[-0.02em] leading-[1.15]">
+                  <span className="text-ink">Made for the teacher running 12 group projects.</span>{" "}
+                  <span className="text-muted">Class boards, group monitoring, and reusable layouts — built specifically for how teachers actually use Kanban.</span>
                 </h2>
-                <p className="text-sm text-muted leading-relaxed">
-                  Analytics, calendar views, and educator workspace features are actively being developed.
-                </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 reveal">
-                <PlaceholderFrame
-                  label="Task analytics dashboard"
-                  caption="Coming soon"
-                  aspect="square"
-                  index={4}
-                />
-                <PlaceholderFrame
-                  label="Educator workspace overview"
-                  caption="Coming soon"
-                  aspect="square"
-                  index={5}
-                />
-                <PlaceholderFrame
-                  label="Mobile experience preview"
-                  caption="Coming soon"
-                  aspect="square"
-                  index={0}
-                />
+
+              {/* 3-up educator features */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-10 reveal">
+                <div className="md:border-l md:border-white/[0.07] md:pl-8">
+                  <h3 className="text-base font-semibold text-ink mb-2 tracking-tight">
+                    Class boards
+                  </h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Run every project in your class from one workspace. Spin up new groups in seconds.
+                  </p>
+                </div>
+                <div className="md:border-l md:border-white/[0.07] md:pl-8">
+                  <h3 className="text-base font-semibold text-ink mb-2 tracking-tight">
+                    Group monitoring
+                  </h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    See every group's progress without opening 12 boards. Spot stuck work before deadlines slip.
+                  </p>
+                </div>
+                <div className="md:border-l md:border-white/[0.07] md:pl-8">
+                  <h3 className="text-base font-semibold text-ink mb-2 tracking-tight">
+                    Reusable layouts
+                  </h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Build a board once. Reuse it every semester, every cohort, every assignment.
+                  </p>
+                </div>
               </div>
             </div>
           </section>
 
           {/* ── Final CTA ────────────────────────────────────────────── */}
           <section
-            className="py-36 px-6 reveal"
+            className="py-44 px-6 reveal"
             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-4xl md:text-[64px] font-bold tracking-[-0.03em] text-ink leading-[1.05] mb-5">
-                Built for the work
-                <br />that matters.
+                Make group projects
+                <br />feel less like chaos.
               </h2>
-              <p className="text-[15px] text-muted mb-10 max-w-xs mx-auto leading-relaxed">
-                Free to use. No credit card. Start coordinating your team today.
+              <p className="text-[15px] text-muted mb-10 max-w-sm mx-auto leading-relaxed">
+                Free for students and teachers. No credit card. Make your first board in 30 seconds.
               </p>
               <Link
                 href="/login?mode=signup"
                 className="inline-block bg-[#EBEBEB] text-[#161412] px-7 py-3 rounded-full text-sm font-semibold hover:bg-white transition-colors"
               >
-                Sign Up 
+                Sign Up
               </Link>
             </div>
           </section>
