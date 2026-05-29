@@ -5,7 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
-import { timeInColumn, formatDeadlineLabel } from "@/lib/utils";
+import { formatDeadlineLabel } from "@/lib/utils";
 import PriorityIcon from "./PriorityIcon";
 
 interface Props {
@@ -38,7 +38,6 @@ function TaskCard({ task, onClick }: Props) {
 
   const deadlineInfo = formatDeadlineLabel(task.deadline, task.completedAt);
   const overdue = deadlineInfo.severity === "overdue";
-  const timeStr = mounted ? timeInColumn(task.columnUpdatedAt) : "";
 
   // commentCount is kept in sync by Board.handleAddComment; fall back to array length only if absent
   const commentCount = task.commentCount ?? task.comments?.length ?? 0;
@@ -94,9 +93,7 @@ function TaskCard({ task, onClick }: Props) {
           {priorityLabel[p]}
         </span>
 
-        {timeStr && <span className="text-xs text-muted">{timeStr}</span>}
-
-        {/* Deadline badge */}
+{/* Deadline badge */}
         {deadlineInfo.severity !== "none" && (
           <span className={`inline-flex items-center gap-2 text-xs font-medium ${
             deadlineInfo.severity === "overdue"
