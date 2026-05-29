@@ -25,6 +25,8 @@
     --c-on-primary: 255 255 255;
   --c-column-bg:  239 237 232;  /* #EFEDE8 */
   --c-card-bg:    253 252 250;  /* #FDFCFA */
+  --c-surface:    244 242 237;  /* info section boxes in right panel */
+  --c-panel-bg:   243 241 237;  /* right properties panel background */
   --c-border:     226 222 216;  /* #E2DED8 */
   --c-todo-dot:   148 163 184;  /* #94A3B8 */
   --c-doing-dot:  245 158  11;  /* #F59E0B */
@@ -48,6 +50,8 @@
     --c-on-primary: var(--c-paper);
   --c-column-bg:  35  32  30;   /* #231E1E increased from 30,28,26 for better separation */
   --c-card-bg:    48  45  42;   /* #302D2A increased from 38,36,33 for clarity */
+  --c-surface:    62  59  55;   /* info section boxes — lighter than card-bg */
+  --c-panel-bg:   57  54  51;   /* right properties panel background */
   --c-border:     70  67  63;   /* #464340 increased from 52,49,46 for visibility */
   --c-todo-dot:   148 163 184;  /* same */
   --c-doing-dot:  245 158  11;  /* same */

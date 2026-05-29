@@ -25,6 +25,8 @@ module.exports = {
         "on-primary": "rgb(var(--c-on-primary) / <alpha-value>)",
         "column-bg":  "rgb(var(--c-column-bg) / <alpha-value>)",
         "card-bg":    "rgb(var(--c-card-bg)   / <alpha-value>)",
+        surface:      "rgb(var(--c-surface)   / <alpha-value>)",
+        "panel-bg":   "rgb(var(--c-panel-bg)  / <alpha-value>)",
         border:       "rgb(var(--c-border)    / <alpha-value>)",
         "todo-dot":   "rgb(var(--c-todo-dot)  / <alpha-value>)",
         "doing-dot":  "rgb(var(--c-doing-dot) / <alpha-value>)",
@@ -42,6 +44,7 @@ module.exports = {
         "modal-in": "modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)",
         "fade-in": "fadeIn 0.15s ease-out",
         "slide-up": "slideUp 0.2s cubic-bezier(0.34,1.3,0.64,1)",
+        "slide-in-right": "slideInRight 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
       },
       keyframes: {
         modalIn: {
@@ -55,6 +58,10 @@ module.exports = {
         slideUp: {
           "0%": { opacity: 0, transform: "translateY(6px)" },
           "100%": { opacity: 1, transform: "translateY(0)" },
+        },
+        slideInRight: {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
         },
       },
     },
