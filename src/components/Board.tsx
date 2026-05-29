@@ -711,22 +711,26 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       {/* Header row: board name left, filters right */}
       <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
         <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedAssignees={selectedAssignees}
-          setSelectedAssignees={setSelectedAssignees}
-          selectedTags={selectedTags}
-          setSelectedTags={setSelectedTags}
-          selectedPriorities={selectedPriorities}
-          setSelectedPriorities={setSelectedPriorities}
-          members={boardMembers}
-          tags={allBoardTags}
-          totalTasks={tasks.length}
-          filteredTasksCount={filteredTasks.length}
-        />
-        {/* View mode toggle (animated slider) */}
-        <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
+        {/* When the task side panel is open, hide the filter bar and view toggle so the
+            header reads as just the board's title (matches Linear/ClickUp side-panel pattern). */}
+        {!selectedTask && (
+          <>
+            <FilterBar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedAssignees={selectedAssignees}
+              setSelectedAssignees={setSelectedAssignees}
+              selectedTags={selectedTags}
+              setSelectedTags={setSelectedTags}
+              selectedPriorities={selectedPriorities}
+              setSelectedPriorities={setSelectedPriorities}
+              members={boardMembers}
+              tags={allBoardTags}
+              totalTasks={tasks.length}
+              filteredTasksCount={filteredTasks.length}
+            />
+            {/* View mode toggle (animated slider) */}
+            <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
           {/* Sliding indicator */}
           <div
             aria-hidden
@@ -767,6 +771,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             </svg>
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {viewMode === "list" ? (
