@@ -14,7 +14,21 @@ import {
   dateInputToISOString,
 } from "@/lib/utils";
 import useBoardResources from "@/hooks/useBoardResources";
-import { LABEL_PALETTE, getTextColorForBg } from "@/lib/labelPalette";
+import { LABEL_PALETTE } from "@/lib/labelPalette";
+import PriorityIcon from "./PriorityIcon";
+
+// Mirrors the column-color palette in ColumnHeader.tsx so the phase dot in the
+// modal matches the color shown on the board for that column.
+const COLUMN_DOT_COLORS = [
+  "bg-blue-400",
+  "bg-amber-400",
+  "bg-green-400",
+  "bg-purple-400",
+  "bg-pink-400",
+  "bg-cyan-400",
+];
+const getColumnDot = (index: number) =>
+  index < 0 ? "bg-muted" : COLUMN_DOT_COLORS[index % COLUMN_DOT_COLORS.length];
 
 interface Props {
   task: Task | null;
@@ -84,6 +98,28 @@ export default function TaskModal({
   const { tags: allBoardTags, setTagsForBoard } = useBoardResources(boardId);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const [metaTagDropdownOpen, setMetaTagDropdownOpen] = useState(false);
+  const metaTagDropdownRef = useRef<HTMLDivElement>(null);
+  const [openMetaProp, setOpenMetaProp] = useState<null | "phase" | "priority" | "assignee">(null);
+  const metaPhaseRef = useRef<HTMLDivElement>(null);
+  const metaPriorityRef = useRef<HTMLDivElement>(null);
+  const metaAssigneeRef = useRef<HTMLDivElement>(null);
+  const metaDeadlineInputRef = useRef<HTMLInputElement>(null);
+  const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false);
+  const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const [closing, setClosing] = useState(false);
+  // Track viewport so we render properties/meta in either the inline mobile slot or the
+  // desktop right column — never both — so dropdown refs and outside-click stay correct.
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 768px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#4A90A4");
@@ -301,6 +337,23 @@ export default function TaskModal({
     return () => document.removeEventListener("mousedown", handler);
   }, [columnDropdownOpen]);
 
+  // Close priority dropdown on outside click
+  useEffect(() => {
+    if (!priorityDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target as Node)) {
+        setPriorityDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [priorityDropdownOpen]);
+
+  // Reset closing state when a new task opens
+  useEffect(() => {
+    if (task) setClosing(false);
+  }, [task?.id]);
+
   // Auto-focus title input when editing
   useEffect(() => {
     if (!isEditingTitle) return;
@@ -432,6 +485,35 @@ export default function TaskModal({
     return () => document.removeEventListener("mousedown", handler);
   }, [tagDropdownOpen]);
 
+  // Close meta-row tag dropdown on outside click
+  useEffect(() => {
+    if (!metaTagDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (metaTagDropdownRef.current && !metaTagDropdownRef.current.contains(e.target as Node)) {
+        setMetaTagDropdownOpen(false);
+        setIsCreatingTag(false);
+        setTagCreatePhase(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [metaTagDropdownOpen]);
+
+  // Close meta-row property dropdowns on outside click
+  useEffect(() => {
+    if (!openMetaProp) return;
+    const openRef = openMetaProp === "phase" ? metaPhaseRef
+                  : openMetaProp === "priority" ? metaPriorityRef
+                  : metaAssigneeRef;
+    const handler = (e: MouseEvent) => {
+      if (openRef.current && !openRef.current.contains(e.target as Node)) {
+        setOpenMetaProp(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMetaProp]);
+
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
     if (!task) return;
@@ -513,7 +595,9 @@ export default function TaskModal({
     setTagToDelete(null);
     // flush in background so closing feels instant
     flushUpdates();
-    onClose();
+    setClosing(true);
+    // Let the slide-out animation play before unmounting via parent
+    setTimeout(() => onClose(), 200);
   }, [flushUpdates, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -525,9 +609,9 @@ export default function TaskModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Focus trap: keep Tab/Shift+Tab inside the modal
+  // Focus trap: keep Tab/Shift+Tab inside the panel
   useEffect(() => {
-    const modal = modalBodyRef.current?.parentElement;
+    const modal = modalBodyRef.current?.closest('[role="dialog"]') as HTMLElement | null;
     if (!modal) return;
     const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
     const handler = (e: KeyboardEvent) => {
@@ -755,14 +839,26 @@ export default function TaskModal({
   return (
     <div
       ref={overlayRef}
-      onClick={(e) => e.target === overlayRef.current && handleClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in"
+      className="fixed inset-y-0 right-0 left-0 md:left-56 z-40 flex pointer-events-none"
     >
-      <div role="dialog" aria-modal="true" aria-label={task?.title ?? "Task"} className="relative bg-card-bg sm:rounded-2xl shadow-modal w-full max-w-[860px] h-full sm:h-auto sm:max-h-[90vh] flex flex-col motion-safe:animate-modal-in overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="false"
+        aria-label={task?.title ?? "Task"}
+        className={`pointer-events-auto relative bg-card-bg shadow-modal border-l border-border/60 w-full h-full flex flex-col overflow-hidden ${closing ? "" : "motion-safe:animate-slide-in-right"}`}
+        style={
+          closing
+            ? {
+                transform: "translateX(100%)",
+                transition: "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }
+            : undefined
+        }
+      >
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
             <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 motion-safe:animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this task?</p>
@@ -787,7 +883,7 @@ export default function TaskModal({
         )}
 
         {tagToDelete && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center sm:rounded-2xl bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-ink/20 backdrop-blur-[2px] motion-safe:animate-fade-in">
             <div className="bg-card-bg sm:rounded-2xl shadow-modal border border-border w-72 sm:w-64 p-6 flex flex-col gap-4 motion-safe:animate-modal-in">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-semibold text-ink">Delete this tag?</p>
@@ -811,12 +907,13 @@ export default function TaskModal({
           </div>
         )}
 
-        {/* ── Header — action buttons only, spans full width ── */}
-        <div className="flex-shrink-0 flex items-center justify-end gap-1 px-4 py-2 border-b border-border/30">
+        {/* ── Header — delete left, close right ── */}
+        <div className="flex-shrink-0 flex items-center justify-between gap-1 px-4 py-2 border-b border-border/30">
           <button
             onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
             className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
             title="Delete task"
+            aria-label="Delete task"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
@@ -825,6 +922,8 @@ export default function TaskModal({
           <button
             onClick={handleClose}
             className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+            title="Close"
+            aria-label="Close"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M1 1l12 12M13 1L1 13"/>
@@ -832,39 +931,712 @@ export default function TaskModal({
           </button>
         </div>
 
-        {/* ── Two-column body ── */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* ── Body: single column on mobile, 2-column (main | properties sidebar) on desktop ── */}
+        <div className="relative flex flex-1 min-h-0 flex-col md:flex-row overflow-hidden">
+        <div className="flex flex-col min-h-0 flex-1 md:min-w-0">
+          <div ref={modalBodyRef} className="flex-1 overflow-y-auto antialiased">
 
-          {/* ── LEFT COLUMN — task workspace ── */}
-          <div className="relative flex flex-col border-r border-border/30" style={{ width: "58%" }}>
-            <div ref={modalBodyRef} className="flex-1 overflow-y-auto px-7 py-6 space-y-4 antialiased">
+            {/* Title */}
+            <div className="px-8 md:px-10 pt-10 pb-4">
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  onBlur={commitTitle}
+                  className="w-full text-[30px] font-bold text-ink leading-tight bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
+                />
+              ) : (
+                <h2
+                  onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
+                  className="text-[30px] font-bold text-ink leading-tight cursor-text rounded-lg px-2 py-1 -mx-2 hover:bg-column-bg transition-colors"
+                >
+                  {optimisticTitle ?? task.title}
+                </h2>
+              )}
+            </div>
 
-              {/* Title */}
-              <div>
-                {isEditingTitle ? (
-                  <input
-                    ref={titleInputRef}
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    onKeyDown={handleTitleKeyDown}
-                    onBlur={commitTitle}
-                    className="w-full text-[22px] font-semibold text-ink leading-snug bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
-                  />
-                ) : (
-                  <h2
-                    onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}
-                    className="text-[22px] font-semibold text-ink leading-snug cursor-text rounded-lg px-2 py-1 -mx-2 hover:bg-column-bg transition-colors"
+            {/* Quick meta row — desktop only; mobile renders the full properties grid below */}
+            {isDesktop && (() => {
+              const m = boardMembers.find((bm) => bm.id === assigneeId);
+              const hasDeadline = !!deadline && deadlineInfo.severity !== "none";
+              const colIdx = columns.findIndex((c) => c.id === columnId);
+              const colLabel = columns.find((c) => c.id === columnId)?.label;
+              const itemClass = "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:bg-column-bg transition-colors cursor-pointer";
+              return (
+                <div className="px-8 md:px-10 pb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                  <span className="text-muted mr-1">Properties</span>
+
+                  {/* Phase */}
+                  {colLabel && (
+                    <div ref={metaPhaseRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenMetaProp((cur) => cur === "phase" ? null : "phase")}
+                        className={`${itemClass} text-ink`}
+                      >
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colIdx)}`} />
+                        <span>{colLabel}</span>
+                      </button>
+                      {openMetaProp === "phase" && (
+                        <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                          {columns.map((c) => {
+                            const isSelected = c.id === columnId;
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  userHasEdited.current = true;
+                                  setColumnId(c.id);
+                                  setOpenMetaProp(null);
+                                  void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                              >
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                                <span className="truncate">{c.label}</span>
+                                {isSelected && (
+                                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M2 6l3 3 5-5"/>
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Priority */}
+                  <div ref={metaPriorityRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setOpenMetaProp((cur) => cur === "priority" ? null : "priority")}
+                      className={`${itemClass} text-ink`}
+                    >
+                      <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
+                      <span className="capitalize">{priority}</span>
+                    </button>
+                    {openMetaProp === "priority" && (
+                      <div className="absolute top-full left-0 mt-1 z-50 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                          const isSelected = priority === p;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => {
+                                setPriority(p);
+                                setOpenMetaProp(null);
+                                void handleUpdateWithFeedback(task.id, { priority: p });
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                            >
+                              <PriorityIcon priority={p} className="w-3.5 h-3.5" />
+                              <span className="capitalize">{p}</span>
+                              {isSelected && (
+                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M2 6l3 3 5-5"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Assignee */}
+                  {m && (
+                    <div ref={metaAssigneeRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenMetaProp((cur) => cur === "assignee" ? null : "assignee")}
+                        className={`${itemClass} text-ink`}
+                      >
+                        <span
+                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                          style={{ backgroundColor: m.color }}
+                        >
+                          {m.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span>{m.handle ? `@${m.handle}` : m.name}</span>
+                      </button>
+                      {openMetaProp === "assignee" && (
+                        <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                          {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((bm) => {
+                            const isSelected = bm.id === assigneeId;
+                            return (
+                              <button
+                                key={bm.id}
+                                type="button"
+                                onClick={() => {
+                                  userHasEdited.current = true;
+                                  setAssigneeId(bm.id);
+                                  setOpenMetaProp(null);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                                }`}
+                              >
+                                {bm.id === "" ? (
+                                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                    style={{ backgroundColor: bm.color }}
+                                  >
+                                    {bm.name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                                <span className="truncate">{bm.id === "" ? bm.name : (bm.handle ? `@${bm.handle}` : bm.name)}</span>
+                                {isSelected && (
+                                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M2 6l3 3 5-5"/>
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Deadline — clicking the pill opens the native date picker */}
+                  {hasDeadline && (
+                    <button
+                      type="button"
+                      onClick={() => { try { metaDeadlineInputRef.current?.showPicker?.(); } catch {} }}
+                      className={`${itemClass} ${
+                        deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
+                        deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
+                                                              "text-ink"
+                      }`}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="2" y="3" width="10" height="9" rx="1.5"/>
+                        <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
+                      </svg>
+                      <span>{deadlineInfo.label}</span>
+                      <input
+                        ref={metaDeadlineInputRef}
+                        type="date"
+                        value={deadline}
+                        onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                        className="sr-only"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                      />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Tags row — desktop only */}
+            {isDesktop && (() => {
+              const selectedIds = optimisticTagIds ?? task.tags?.map((t) => t.id) ?? [];
+              const selectedTags = allBoardTags.filter((t) => selectedIds.includes(t.id));
+              return (
+                <div className="px-8 md:px-10 pb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                  <span className="text-muted mr-1">Tags</span>
+                  <div ref={metaTagDropdownRef} className="relative flex flex-wrap items-center gap-1.5">
+                    {selectedTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        title="Click to remove"
+                      >
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                        <span>{tag.name}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => { setTagDropdownOpen(false); setMetaTagDropdownOpen((v) => !v); }}
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                      title="Manage tags"
+                      aria-label="Add tag"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 3v8M3 7h8" />
+                      </svg>
+                    </button>
+
+                    {metaTagDropdownOpen && (
+                      <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {!isCreatingTag && (
+                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                            {allBoardTags.length === 0 ? (
+                              <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
+                            ) : (
+                              allBoardTags.map((tag) => {
+                                const isSelected = selectedIds.some((id) => id === tag.id);
+                                return (
+                                  <div
+                                    key={tag.id}
+                                    onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                                    className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                                    }`}
+                                  >
+                                    <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                                    <span className="truncate flex-1">{tag.name}</span>
+                                    <div className="ml-auto flex items-center gap-1">
+                                      {isSelected && (
+                                        <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M2 6l3 3 5-5"/>
+                                        </svg>
+                                      )}
+                                      <button
+                                        onClick={(e) => handleDeleteTag(e, tag)}
+                                        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                          <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+
+                        {isCreatingTag && tagCreatePhase === "name" && (
+                          <div className="p-3">
+                            <input
+                              autoFocus
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                              placeholder="Tag name…"
+                              className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  setIsCreatingTag(false);
+                                  setNewTagName("");
+                                  setTagCreatePhase(null);
+                                } else if (e.key === "Enter") {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                            <div className="mt-3 flex items-center justify-between">
+                              <button
+                                onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                                className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                                disabled={!newTagName.trim()}
+                                className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isCreatingTag && tagCreatePhase === "color" && (
+                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                            {LABEL_PALETTE.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => handleCreateTagWithColor(p.hex)}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                              >
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
+                                <span className="truncate">{p.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {!isCreatingTag && (
+                          <div className="border-t border-border/20">
+                            <button
+                              onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
+                              className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M7 3v8M3 7h8" />
+                              </svg>
+                              Create new tag
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Properties (mobile only — desktop renders these in the right column) */}
+            {!isDesktop && (
+            <div className="px-8 pb-6 border-b border-border/30">
+              <div className="grid grid-cols-[110px_1fr] gap-x-5 gap-y-4 items-center text-sm">
+
+                {/* Assignee */}
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="7" cy="5" r="2.5"/>
+                    <path d="M2 13a5 5 0 0110 0"/>
+                  </svg>
+                  Assignee
+                </div>
+                <div ref={assigneeDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setAssigneeDropdownOpen((v) => !v)}
+                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
                   >
-                    {optimisticTitle ?? task.title}
-                  </h2>
-                )}
-              </div>
+                    {(() => {
+                      const m = boardMembers.find((bm) => bm.id === assigneeId);
+                      if (!m) return <span className="text-muted">Unassigned</span>;
+                      return (
+                        <>
+                          <span
+                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                            style={{ backgroundColor: m.color }}
+                          >
+                            {m.name.charAt(0).toUpperCase()}
+                          </span>
+                          <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
+                        </>
+                      );
+                    })()}
+                  </button>
+                  {assigneeDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                      {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
+                        const isSelected = m.id === assigneeId;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              userHasEdited.current = true;
+                              setAssigneeId(m.id);
+                              setAssigneeDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                              isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                            }`}
+                          >
+                            {m.id === "" ? (
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                              </span>
+                            ) : (
+                              <span
+                                className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                style={{ backgroundColor: m.color }}
+                              >
+                                {m.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                            <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
+                            {isSelected && (
+                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 6l3 3 5-5"/>
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-              {/* Description */}
-              <div className="pt-1">
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Description
-                </label>
+                {/* Phase */}
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 9l5-3 5 3M2 5l5-3 5 3"/>
+                  </svg>
+                  Phase
+                </div>
+                <div ref={columnDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setColumnDropdownOpen((v) => !v)}
+                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
+                    <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
+                  </button>
+                  {columnDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                      {columns.map((c) => {
+                        const isSelected = c.id === columnId;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              userHasEdited.current = true;
+                              setColumnId(c.id);
+                              setColumnDropdownOpen(false);
+                              void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                          >
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                            <span className="truncate">{c.label}</span>
+                            {isSelected && (
+                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 6l3 3 5-5"/>
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Priority */}
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M2 12V9M6 12V6M10 12V3"/>
+                  </svg>
+                  Priority
+                </div>
+                <div ref={priorityDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setPriorityDropdownOpen((v) => !v)}
+                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+                  >
+                    <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
+                    <span className="capitalize">{priority}</span>
+                  </button>
+                  {priorityDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                      {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                        const isSelected = priority === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              setPriority(p);
+                              setPriorityDropdownOpen(false);
+                              void handleUpdateWithFeedback(task.id, { priority: p });
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                          >
+                            <PriorityIcon priority={p} className="w-3.5 h-3.5" />
+                            <span className="capitalize">{p}</span>
+                            {isSelected && (
+                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 6l3 3 5-5"/>
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Deadline */}
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2" y="3" width="10" height="9" rx="1.5"/>
+                    <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
+                  </svg>
+                  Deadline
+                  {overdue && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      Overdue
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                    className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
+                  />
+                  {showDeadlineStatus && (
+                    <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
+                      deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
+                      deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
+                                                             "text-muted"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        deadlineInfo.severity === "overdue"  ? "bg-red-500" :
+                        deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
+                      }`} />
+                      {deadlineInfo.label}
+                    </p>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div className="flex items-center gap-1.5 text-xs text-muted self-start pt-1">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 2h6.5L12 5.5V12H2z"/>
+                    <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none"/>
+                  </svg>
+                  Tags
+                </div>
+                <div ref={tagDropdownRef} className="relative">
+                  <div className="flex flex-wrap items-center gap-1.5 -mx-1">
+                    {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        title="Click to remove"
+                      >
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                        <span>{tag.name}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                      title="Manage tags"
+                      aria-label="Add tag"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 3v8M3 7h8"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {tagDropdownOpen && (
+                    <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                      {!isCreatingTag && (
+                        <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                          {allBoardTags.length === 0 ? (
+                            <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
+                          ) : (
+                            allBoardTags.map((tag) => {
+                              const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
+                              return (
+                                <div
+                                  key={tag.id}
+                                  onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                                  className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                                    isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                                  }`}
+                                >
+                                  <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                                  <span className="truncate flex-1">{tag.name}</span>
+                                  <div className="ml-auto flex items-center gap-1">
+                                    {isSelected && (
+                                      <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M2 6l3 3 5-5"/>
+                                      </svg>
+                                    )}
+                                    <button
+                                      onClick={(e) => handleDeleteTag(e, tag)}
+                                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+
+                      {isCreatingTag && tagCreatePhase === "name" && (
+                        <div className="p-3">
+                          <input
+                            autoFocus
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            placeholder="Tag name…"
+                            className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setIsCreatingTag(false);
+                                setNewTagName("");
+                                setTagCreatePhase(null);
+                              } else if (e.key === "Enter") {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                          <div className="mt-3 flex items-center justify-between">
+                            <button
+                              onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                              className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                              disabled={!newTagName.trim()}
+                              className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isCreatingTag && tagCreatePhase === "color" && (
+                        <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                          {LABEL_PALETTE.map((p) => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleCreateTagWithColor(p.hex)}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                            >
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
+                              <span className="truncate">{p.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {!isCreatingTag && (
+                        <div className="border-t border-border/20">
+                          <button
+                            onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
+                            className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M7 3v8M3 7h8" />
+                            </svg>
+                            Create new tag
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+            )}
+
+            {/* Description — full width, max-width inner column for comfortable reading */}
+            <div className="px-8 md:px-10 pt-8 md:pt-4 pb-8 border-b border-border/30">
+              <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
+                Description
+              </label>
+              <div className="max-w-[720px]">
                 {isEditingDescription ? (
                   <textarea
                     ref={descriptionTextareaRef}
@@ -882,7 +1654,7 @@ export default function TaskModal({
                       void flushUpdates();
                     }}
                     placeholder="Write a detailed description..."
-                    className="w-full min-h-[5rem] bg-column-bg rounded-lg px-3 py-2.5 text-sm leading-relaxed text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
+                    className="w-full min-h-[6rem] bg-column-bg rounded-lg px-3 py-2.5 text-[15px] leading-[1.7] text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
                 ) : (
                   <div
@@ -890,422 +1662,66 @@ export default function TaskModal({
                       descriptionOriginalRef.current = description;
                       setIsEditingDescription(true);
                     }}
-                    className="min-h-[5rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
+                    className="min-h-[6rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
                   >
                     {description ? (
-                      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
+                      <div className="whitespace-pre-wrap break-words text-[15px] leading-[1.7]" style={{ whiteSpace: "pre-wrap" }}>
                         {description}
                       </div>
                     ) : (
-                      <span className="text-muted text-sm">Write a detailed description...</span>
+                      <span className="text-muted text-[15px]">Write a detailed description...</span>
                     )}
                   </div>
                 )}
               </div>
-
-              {/* Comments */}
-              <div ref={commentsRef} className="pt-1">
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
-                  Comments{comments.length > 0 && <span className="normal-case font-normal ml-1">({comments.length})</span>}
-                </label>
-                {commentsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="space-y-0.5 animate-pulse">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-column-bg/40" />
-                          <div className="h-3 w-24 bg-column-bg/40 rounded" />
-                          <div className="h-3 w-12 bg-column-bg/40 rounded ml-auto" />
-                        </div>
-                        <div className="h-4 bg-column-bg/40 rounded w-full ml-7" />
-                      </div>
-                    ))}
-                  </div>
-                ) : comments.length > 0 ? (
-                  <div className="space-y-4">
-                    {comments.map((c) => (
-                      <div key={c.id} className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                            style={{ backgroundColor: nameToColor(c.author || "A") }}
-                          >
-                            {(c.author || "A").charAt(0).toUpperCase()}
-                          </span>
-                          <span className="text-xs font-semibold text-ink">
-                            {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
-                          </span>
-                          <span className="text-[10px] text-muted">{formatTimeAgo(c.createdAt)}</span>
-                        </div>
-                        <p className="text-sm text-ink/80 leading-relaxed pl-7">{c.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted italic">No comments yet.</p>
-                )}
-              </div>
-
             </div>
 
-            {!commentsVisible && comments.length > 0 && (
-              <button
-                onClick={scrollToComments}
-                title="Scroll to comments"
-                aria-label="Scroll to comments"
-                className="absolute bottom-[84px] left-1/2 -translate-x-1/2 z-10 w-8 h-8 rounded-full bg-column-bg/90 hover:bg-column-bg text-muted flex items-center justify-center shadow-sm transition-colors"
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M2 4l4 4 4-4" />
-                </svg>
-              </button>
-            )}
-
-            {/* Comment input — pinned to bottom of left column */}
-            <div className="flex-shrink-0 px-7 py-4 border-t border-border/30">
-              <div className="flex gap-2 bg-column-bg/60 rounded-xl p-2 ring-1 ring-border/40 focus-within:ring-accent/30 transition-all">
-                <input
-                  ref={commentInputRef}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  onKeyDown={handleCommentKey}
-                  placeholder="Write a comment..."
-                  disabled={addingComment}
-                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
-                />
-                <button
-                  onClick={handleAddComment}
-                  disabled={!commentInput.trim() || addingComment}
-                  className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
-                >
-                  Post
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* ── RIGHT COLUMN — metadata panel ── */}
-          <div className="flex flex-col min-h-0" style={{ width: "42%" }}>
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 antialiased">
-
-              {/* Assignee */}
-              <div ref={assigneeDropdownRef} className="relative">
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Assignee
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setAssigneeDropdownOpen((v) => !v)}
-                  className="w-full bg-column-bg rounded-xl px-4 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
-                >
-                  {(() => {
-                    const m = boardMembers.find((bm) => bm.id === assigneeId);
-                    if (!m) return <span className="text-muted">Unassigned</span>;
-                    return (
-                      <>
-                        <span
-                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                          style={{ backgroundColor: m.color }}
-                        >
-                          {m.name.charAt(0).toUpperCase()}
-                        </span>
-                        <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
-                      </>
-                    );
-                  })()}
-                  <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 4l4 4 4-4"/>
-                  </svg>
-                </button>
-                {assigneeDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                    {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
-                      const isSelected = m.id === assigneeId;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            userHasEdited.current = true;
-                            setAssigneeId(m.id);
-                            setAssigneeDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                            isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                          }`}
-                        >
-                          {m.id === "" ? (
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                              <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                            </span>
-                          ) : (
-                            <span
-                              className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                              style={{ backgroundColor: m.color }}
-                            >
-                              {m.name.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                          <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
-                          {isSelected && (
-                            <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M2 6l3 3 5-5"/>
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Phase */}
-              <div ref={columnDropdownRef} className="relative">
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Phase
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setColumnDropdownOpen((v) => !v)}
-                  className="w-full bg-column-bg rounded-xl px-4 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
-                >
-                  <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
-                  <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 4l4 4 4-4"/>
-                  </svg>
-                </button>
-                {columnDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                    {columns.map((c) => {
-                      const isSelected = c.id === columnId;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            userHasEdited.current = true;
-                            setColumnId(c.id);
-                            setColumnDropdownOpen(false);
-                            void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
-                          }}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                        >
-                          <span className="truncate">{c.label}</span>
-                          {isSelected && (
-                            <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M2 6l3 3 5-5"/>
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Priority
-                </label>
-                <div className="flex gap-1.5 flex-wrap">
-                  {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                    const styles = {
-                      low:    { active: "bg-blue-500/25 text-blue-600 ring-1 ring-blue-500/60 font-semibold",    idle: "text-muted hover:bg-blue-500/10 hover:text-blue-500" },
-                      medium: { active: "bg-yellow-500/25 text-yellow-700 ring-1 ring-yellow-500/60 font-semibold", idle: "text-muted hover:bg-yellow-500/10 hover:text-yellow-600" },
-                      high:   { active: "bg-orange-500/25 text-orange-600 ring-1 ring-orange-500/60 font-semibold", idle: "text-muted hover:bg-orange-500/10 hover:text-orange-500" },
-                      urgent: { active: "bg-red-500/25 text-red-600 ring-1 ring-red-500/60 font-semibold",       idle: "text-muted hover:bg-red-500/10 hover:text-red-500" },
-                    };
-                    const isActive = priority === p;
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => {
-                          setPriority(p);
-                          void handleUpdateWithFeedback(task.id, { priority: p });
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                          isActive ? styles[p].active : styles[p].idle
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Deadline */}
-              <div>
-                <label className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Deadline
-                  {overdue && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500 normal-case tracking-normal">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                      Overdue
-                    </span>
-                  )}
-                </label>
-                <input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-                  className="w-full bg-column-bg rounded-xl px-4 py-2.5 text-sm text-ink border border-transparent focus:border-border focus:outline-none transition-colors"
-                />
-                {showDeadlineStatus && (
-                  <p className={`mt-1.5 flex items-center gap-1.5 text-xs ${
-                    deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
-                    deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
-                                                           "text-muted"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      deadlineInfo.severity === "overdue"  ? "bg-red-500" :
-                      deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
-                    }`} />
-                    {deadlineInfo.label}
-                  </p>
-                )}
-              </div>
-
-              {/* Tags */}
-              <div ref={tagDropdownRef} className="relative">
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-2">
-                  Tags
-                </label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleTag(tag.id)}
-                      className="px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-80"
-                      style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
-                      title="Click to remove"
-                    >
-                      {tag.name}
-                    </button>
+            {/* Comments */}
+            <div ref={commentsRef} className="px-8 md:px-10 py-8 border-b border-border/30">
+              <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-4">
+                Comments{comments.length > 0 && <span className="normal-case font-normal ml-1">({comments.length})</span>}
+              </label>
+              {commentsLoading ? (
+                <div className="space-y-5">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="space-y-1 animate-pulse">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-column-bg/40" />
+                        <div className="h-3 w-24 bg-column-bg/40 rounded" />
+                        <div className="h-3 w-12 bg-column-bg/40 rounded ml-auto" />
+                      </div>
+                      <div className="h-4 bg-column-bg/40 rounded w-full ml-8" />
+                    </div>
                   ))}
-                  <button
-                    onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
-                    className="w-7 h-7 rounded-lg bg-column-bg flex items-center justify-center text-muted hover:text-ink hover:bg-column-bg/40 transition-colors"
-                    title="Manage tags"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M7 3v8M3 7h8"/>
-                    </svg>
-                  </button>
                 </div>
-
-                {tagDropdownOpen && (
-                  <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                    {!isCreatingTag && (
-                      <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                        {allBoardTags.length === 0 ? (
-                          <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
-                        ) : (
-                          allBoardTags.map((tag) => {
-                            const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
-                            return (
-                              <div
-                                key={tag.id}
-                                onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
-                                className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                                }`}
-                              >
-                                <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
-                                <span className="truncate flex-1">{tag.name}</span>
-                                <div className="ml-auto flex items-center gap-1">
-                                  {isSelected && (
-                                    <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M2 6l3 3 5-5"/>
-                                    </svg>
-                                  )}
-                                  <button
-                                    onClick={(e) => handleDeleteTag(e, tag)}
-                                    className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                      <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-
-                    {isCreatingTag && tagCreatePhase === "name" && (
-                      <div className="p-3">
-                        <input
-                          autoFocus
-                          value={newTagName}
-                          onChange={(e) => setNewTagName(e.target.value)}
-                          placeholder="Tag name…"
-                          className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
-                          onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                              setIsCreatingTag(false);
-                              setNewTagName("");
-                              setTagCreatePhase(null);
-                            } else if (e.key === "Enter") {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                        <div className="mt-3 flex items-center justify-between">
-                          <button
-                            onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
-                            className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
-                            disabled={!newTagName.trim()}
-                            className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {isCreatingTag && tagCreatePhase === "color" && (
-                      <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                        {LABEL_PALETTE.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleCreateTagWithColor(p.hex)}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                          >
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
-                            <span className="truncate">{p.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {!isCreatingTag && (
-                      <div className="border-t border-border/20">
-                        <button
-                          onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
-                          className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+              ) : comments.length > 0 ? (
+                <div className="space-y-5">
+                  {comments.map((c) => (
+                    <div key={c.id} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                          style={{ backgroundColor: nameToColor(c.author || "A") }}
                         >
-                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M7 3v8M3 7h8" />
-                          </svg>
-                          Create new tag
-                        </button>
+                          {(c.author || "A").charAt(0).toUpperCase()}
+                        </span>
+                        <span className="text-sm font-semibold text-ink">
+                          {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
+                        </span>
+                        <span className="text-xs text-muted">{formatTimeAgo(c.createdAt)}</span>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      <p className="text-[15px] text-ink/85 leading-relaxed pl-8">{c.content}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted italic">No comments yet.</p>
+              )}
+            </div>
 
-              {/* Divider */}
-              <div className="border-t border-border/30" />
+            {/* Info, Activity, History (mobile only — desktop renders these in the right column) */}
+            {!isDesktop && (
+            <div className="px-8 py-6 space-y-6">
 
               {/* Info */}
               <div>
@@ -1451,7 +1867,540 @@ export default function TaskModal({
               </div>
 
             </div>
+            )}
           </div>
+
+          {/* Comment input — pinned to bottom of left column */}
+          <div className="flex-shrink-0 px-8 md:px-10 py-3 border-t border-border/30 bg-card-bg">
+            <div className="flex gap-2 bg-column-bg/60 rounded-xl p-2 ring-1 ring-border/40 focus-within:ring-accent/30 transition-all">
+              <input
+                ref={commentInputRef}
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                onKeyDown={handleCommentKey}
+                placeholder="Write a comment..."
+                disabled={addingComment}
+                className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
+              />
+              <button
+                onClick={handleAddComment}
+                disabled={!commentInput.trim() || addingComment}
+                className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
+              >
+                Post
+              </button>
+            </div>
+          </div>
+        </div>{/* /left column */}
+
+        {/* ── Right column: properties sidebar (desktop only) ── */}
+        {isDesktop && (
+          <>
+            <div className="w-px bg-border/30 flex-shrink-0" />
+            <aside className="flex flex-col w-[36%] max-w-[440px] min-w-[320px] flex-shrink-0 min-h-0 bg-panel-bg">
+              <div className="flex-1 overflow-y-auto antialiased px-6 py-7 space-y-7">
+
+                {/* Properties (desktop) */}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Properties</p>
+                  <div className="bg-column-bg/40 rounded-xl border border-border/30 px-4 py-4">
+                    <div className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-4 items-center text-sm">
+
+                  {/* Assignee */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="7" cy="5" r="2.5"/>
+                      <path d="M2 13a5 5 0 0110 0"/>
+                    </svg>
+                    Assignee
+                  </div>
+                  <div ref={assigneeDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setAssigneeDropdownOpen((v) => !v)}
+                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+                    >
+                      {(() => {
+                        const m = boardMembers.find((bm) => bm.id === assigneeId);
+                        if (!m) return <span className="text-muted">Unassigned</span>;
+                        return (
+                          <>
+                            <span
+                              className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                              style={{ backgroundColor: m.color }}
+                            >
+                              {m.name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
+                          </>
+                        );
+                      })()}
+                    </button>
+                    {assigneeDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
+                          const isSelected = m.id === assigneeId;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                userHasEdited.current = true;
+                                setAssigneeId(m.id);
+                                setAssigneeDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                              }`}
+                            >
+                              {m.id === "" ? (
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                                </span>
+                              ) : (
+                                <span
+                                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                  style={{ backgroundColor: m.color }}
+                                >
+                                  {m.name.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                              <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
+                              {isSelected && (
+                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M2 6l3 3 5-5"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Phase */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M2 9l5-3 5 3M2 5l5-3 5 3"/>
+                    </svg>
+                    Phase
+                  </div>
+                  <div ref={columnDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setColumnDropdownOpen((v) => !v)}
+                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+                    >
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
+                    <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
+                    </button>
+                    {columnDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {columns.map((c) => {
+                          const isSelected = c.id === columnId;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                userHasEdited.current = true;
+                                setColumnId(c.id);
+                                setColumnDropdownOpen(false);
+                                void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                            >
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                            <span className="truncate">{c.label}</span>
+                              {isSelected && (
+                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M2 6l3 3 5-5"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Priority */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M2 12V9M6 12V6M10 12V3"/>
+                    </svg>
+                    Priority
+                  </div>
+                  <div ref={priorityDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setPriorityDropdownOpen((v) => !v)}
+                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+                    >
+                      <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
+                      <span className="capitalize">{priority}</span>
+                    </button>
+                    {priorityDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                          const isSelected = priority === p;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => {
+                                setPriority(p);
+                                setPriorityDropdownOpen(false);
+                                void handleUpdateWithFeedback(task.id, { priority: p });
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                            >
+                              <PriorityIcon priority={p} className="w-3.5 h-3.5" />
+                              <span className="capitalize">{p}</span>
+                              {isSelected && (
+                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M2 6l3 3 5-5"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Deadline */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="10" height="9" rx="1.5"/>
+                      <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
+                    </svg>
+                    Deadline
+                    {overdue && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        Overdue
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                      className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
+                    />
+                    {showDeadlineStatus && (
+                      <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
+                        deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
+                        deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
+                                                               "text-muted"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          deadlineInfo.severity === "overdue"  ? "bg-red-500" :
+                          deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
+                        }`} />
+                        {deadlineInfo.label}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted self-start pt-1">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M2 2h6.5L12 5.5V12H2z"/>
+                      <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none"/>
+                    </svg>
+                    Tags
+                  </div>
+                  <div ref={tagDropdownRef} className="relative">
+                    <div className="flex flex-wrap items-center gap-1.5 -mx-1">
+                      {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => toggleTag(tag.id)}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                          title="Click to remove"
+                        >
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                          <span>{tag.name}</span>
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                        title="Manage tags"
+                        aria-label="Add tag"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M7 3v8M3 7h8"/>
+                        </svg>
+                      </button>
+                    </div>
+
+                    {tagDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+                        {!isCreatingTag && (
+                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                            {allBoardTags.length === 0 ? (
+                              <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
+                            ) : (
+                              allBoardTags.map((tag) => {
+                                const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
+                                return (
+                                  <div
+                                    key={tag.id}
+                                    onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                                    className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                                    }`}
+                                  >
+                                    <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                                    <span className="truncate flex-1">{tag.name}</span>
+                                    <div className="ml-auto flex items-center gap-1">
+                                      {isSelected && (
+                                        <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M2 6l3 3 5-5"/>
+                                        </svg>
+                                      )}
+                                      <button
+                                        onClick={(e) => handleDeleteTag(e, tag)}
+                                        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                          <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+
+                        {isCreatingTag && tagCreatePhase === "name" && (
+                          <div className="p-3">
+                            <input
+                              autoFocus
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                              placeholder="Tag name…"
+                              className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  setIsCreatingTag(false);
+                                  setNewTagName("");
+                                  setTagCreatePhase(null);
+                                } else if (e.key === "Enter") {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                            <div className="mt-3 flex items-center justify-between">
+                              <button
+                                onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                                className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                                disabled={!newTagName.trim()}
+                                className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isCreatingTag && tagCreatePhase === "color" && (
+                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                            {LABEL_PALETTE.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => handleCreateTagWithColor(p.hex)}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                              >
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
+                                <span className="truncate">{p.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {!isCreatingTag && (
+                          <div className="border-t border-border/20">
+                            <button
+                              onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
+                              className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M7 3v8M3 7h8" />
+                              </svg>
+                              Create new tag
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info, Activity, History (desktop) */}
+                <div className="space-y-6">
+
+                  {/* Info */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Info</p>
+                    <div className="bg-column-bg/40 rounded-xl border border-border/30 px-4 py-3 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted">Created</span>
+                        <span className="text-xs text-ink">{formatDateTime(task.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted">In this column</span>
+                        <span className="text-xs text-ink">{timeInColumn(task.columnUpdatedAt)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted">Last updated</span>
+                        <span className="text-xs text-ink">
+                          {formatTimeAgo(
+                            task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
+                              ? task.updatedAt
+                              : task.createdAt
+                          )}
+                        </span>
+                      </div>
+                      {task.completedAt && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted">Completed</span>
+                          <span className="text-xs text-ink">{formatDateTime(task.completedAt)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Activity */}
+                  <div>
+                    <button
+                      onClick={() => {
+                        const next = !showActivity;
+                        setShowActivity(next);
+                        if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
+                      }}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+                    >
+                      <svg
+                        className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
+                        width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+                      >
+                        <path d="M3 2l4 3-4 3"/>
+                      </svg>
+                      {showActivity
+                        ? "Hide activity"
+                        : `Show activity${activities.length > 0 ? ` (${activities.length})` : ""}`}
+                    </button>
+                    {showActivity && (
+                      <div className="mt-3 space-y-3">
+                        {activitiesLoading ? (
+                          <div className="space-y-3">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="h-8 rounded bg-column-bg/40 animate-pulse" />
+                            ))}
+                          </div>
+                        ) : activities.length === 0 ? (
+                          <p className="text-xs text-muted italic">No activity recorded yet.</p>
+                        ) : (
+                          activities.map((a) => (
+                            <div key={a.id} className="flex gap-2.5 items-start">
+                              <div
+                                className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
+                                style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
+                              >
+                                {a.user?.name.charAt(0).toUpperCase() || "?"}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1.5 flex-wrap">
+                                  <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
+                                  <span className="text-xs text-muted leading-snug">{a.content}</span>
+                                </div>
+                                <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* History */}
+                  <div>
+                    <button
+                      onClick={() => {
+                        const next = !showHistory;
+                        setShowHistory(next);
+                        if (next && versions.length === 0) void fetchVersionsDeduped();
+                      }}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+                    >
+                      <svg
+                        className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}
+                        width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+                      >
+                        <path d="M3 2l4 3-4 3"/>
+                      </svg>
+                      {showHistory
+                        ? "Hide history"
+                        : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
+                    </button>
+                    {showHistory && (
+                      <div className="mt-3 space-y-5">
+                        {versionsLoading ? (
+                          <div className="space-y-3">
+                            {[1, 2].map((i) => (
+                              <div key={i} className="h-12 rounded bg-column-bg/40 animate-pulse" />
+                            ))}
+                          </div>
+                        ) : versions.length === 0 ? (
+                          <p className="text-xs text-muted italic">No description history available.</p>
+                        ) : (
+                          versions.map((v, idx) => {
+                            const nextVersion = versions[idx + 1];
+                            const prevContent = nextVersion ? nextVersion.content : "";
+                            return (
+                              <div key={v.id} className="space-y-2">
+                                <div className="flex items-center justify-between flex-wrap gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                                      style={{ backgroundColor: v.user.color }}
+                                    >
+                                      {v.user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-xs font-semibold text-ink">{v.user.handle ? `@${v.user.handle}` : v.user.name}</span>
+                                  </div>
+                                  <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
+                                </div>
+                                <DiffViewer oldText={prevContent} newText={v.content} />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+              </div>
+            </aside>
+          </>
+        )}
 
         </div>
 
