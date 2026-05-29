@@ -173,9 +173,11 @@ export default function TaskModal({
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
   const isEditingDescriptionRef = useRef(isEditingDescription);
-  // Stable ref so the idle-activity timer doesn't capture stale showActivity state
+  // Stable refs so the idle-activity timer doesn't capture stale state
   const showActivityRef = useRef(showActivity);
+  const activitiesRef = useRef(activities);
   useEffect(() => { showActivityRef.current = showActivity; }, [showActivity]);
+  useEffect(() => { activitiesRef.current = activities; }, [activities]);
 
   useEffect(() => {
     if (!task) return;
@@ -218,10 +220,12 @@ export default function TaskModal({
         if (typeof window !== "undefined") {
           if (activityIdleTimerRef.current) window.clearTimeout(activityIdleTimerRef.current);
           activityIdleTimerRef.current = window.setTimeout(() => {
-            if (!task) return;
-            // Use ref to read current showActivity — avoids stale closure from effect capture
-            if (!showActivityRef.current && (activities.length === 0 || !activities)) {
-              void fetchActivitiesForTask(task.id);
+            // Read current state via refs — avoids stale closure capture if the user opens
+            // another task before this timer fires (and if so, fetch for that task instead).
+            const currentTaskId = prevTask.current;
+            if (!currentTaskId) return;
+            if (!showActivityRef.current && activitiesRef.current.length === 0) {
+              void fetchActivitiesForTask(currentTaskId);
             }
           }, 2500);
         }
@@ -276,17 +280,25 @@ export default function TaskModal({
   }, []);
 
   // ----- DEDUPED FETCH HELPERS (comments / activities / versions) -----
+  // Each helper captures `taskId` in closure and gates the setter by comparing to
+  // `prevTask.current` — the canonical current task id — so a late-resolving fetch
+  // from a previous task cannot overwrite the new task's data. The finally block also
+  // only clears the pending ref if it still points to this promise, so an old
+  // resolution can't null out the in-flight request for the new task.
   const fetchCommentsForTask = useCallback(async (taskId?: string) => {
     if (!taskId) return null;
     if (pendingRequestsRef.current.comments) return pendingRequestsRef.current.comments;
     setCommentsLoading(true);
-    const p = fetch(`/api/tasks/${taskId}?include=comments`)
+    let p: Promise<any>;
+    p = fetch(`/api/tasks/${taskId}?include=comments`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.comments) setComments(data.comments); return data; })
+      .then((data) => { if (data?.comments && prevTask.current === taskId) setComments(data.comments); return data; })
       .catch(() => null)
       .finally(() => {
-        if (isMounted.current) setCommentsLoading(false);
-        pendingRequestsRef.current.comments = null;
+        if (pendingRequestsRef.current.comments === p) {
+          if (isMounted.current) setCommentsLoading(false);
+          pendingRequestsRef.current.comments = null;
+        }
       });
     pendingRequestsRef.current.comments = p;
     return p;
@@ -296,13 +308,16 @@ export default function TaskModal({
     if (!taskId) return null;
     if (pendingRequestsRef.current.activities) return pendingRequestsRef.current.activities;
     setActivitiesLoading(true);
-    const p = fetch(`/api/tasks/${taskId}?include=activities`)
+    let p: Promise<any>;
+    p = fetch(`/api/tasks/${taskId}?include=activities`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.activities) setActivities(data.activities); return data; })
+      .then((data) => { if (data?.activities && prevTask.current === taskId) setActivities(data.activities); return data; })
       .catch(() => null)
       .finally(() => {
-        if (isMounted.current) setActivitiesLoading(false);
-        pendingRequestsRef.current.activities = null;
+        if (pendingRequestsRef.current.activities === p) {
+          if (isMounted.current) setActivitiesLoading(false);
+          pendingRequestsRef.current.activities = null;
+        }
       });
     pendingRequestsRef.current.activities = p;
     return p;
@@ -311,15 +326,19 @@ export default function TaskModal({
   // reuse existing fetchVersions but dedupe via the same ref
   const fetchVersionsDeduped = useCallback(async () => {
     if (!task) return null;
+    const taskId = task.id;
     if (pendingRequestsRef.current.versions) return pendingRequestsRef.current.versions;
     setVersionsLoading(true);
-    const p = fetch(`/api/tasks/${task.id}/versions`)
+    let p: Promise<any>;
+    p = fetch(`/api/tasks/${taskId}/versions`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setVersions(data); return data; })
+      .then((data) => { if (data && prevTask.current === taskId) setVersions(data); return data; })
       .catch(() => null)
       .finally(() => {
-        if (isMounted.current) setVersionsLoading(false);
-        pendingRequestsRef.current.versions = null;
+        if (pendingRequestsRef.current.versions === p) {
+          if (isMounted.current) setVersionsLoading(false);
+          pendingRequestsRef.current.versions = null;
+        }
       });
     pendingRequestsRef.current.versions = p;
     return p;
@@ -535,8 +554,9 @@ export default function TaskModal({
   }, [onUpdate, task]);
 
   useEffect(() => {
-    if (!task) return;
-    if (debouncedAssigneeId !== originalTask.current?.assigneeId) {
+    if (!task || !isMounted.current || prevTask.current !== task.id) return;
+    if (!userHasEdited.current) return;
+    if (debouncedAssigneeId !== (originalTask.current?.assigneeId ?? "")) {
       void handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
