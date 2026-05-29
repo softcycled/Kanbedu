@@ -395,12 +395,19 @@ export default function TaskModal({
     if (trimmed !== task.title) {
       // show optimistic title instantly
       setOptimisticTitle(trimmed);
-      // fire update in background
-      void onUpdate(task.id, { title: trimmed }).catch((err) => {
-        console.error("Title update failed", err);
-        // clear optimistic on failure; parent fetch may also reconcile
-        setOptimisticTitle(null);
-      });
+      const targetTaskId = task.id;
+      // fire update in background; clear optimistic overlay once the server confirms so it
+      // doesn't sit in state indefinitely when the parent doesn't refetch.
+      void onUpdate(targetTaskId, { title: trimmed })
+        .then(() => {
+          // Only clear if we're still viewing the same task — otherwise leave any newer
+          // optimistic title alone.
+          if (prevTask.current === targetTaskId) setOptimisticTitle(null);
+        })
+        .catch((err) => {
+          console.error("Title update failed", err);
+          setOptimisticTitle(null);
+        });
     }
     setIsEditingTitle(false);
   }, [draftTitle, task, onUpdate]);
@@ -1664,8 +1671,10 @@ export default function TaskModal({
                     onChange={(e) => { userHasEdited.current = true; setDescription(e.target.value); }}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
+                        // Revert description only — do NOT clear userHasEdited globally:
+                        // other fields (deadline, assignee) may have unsaved edits that
+                        // would be silently dropped by the debounced-save guards.
                         setDescription(descriptionOriginalRef.current);
-                        userHasEdited.current = false;
                         setIsEditingDescription(false);
                       }
                     }}

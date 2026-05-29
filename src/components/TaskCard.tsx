@@ -143,6 +143,11 @@ function TaskCard({ task, onClick }: Props) {
 
 // Memoize on task data only. KanbanColumn passes an inline arrow `() => onTaskClick(task)` which
 // is always a new reference — comparing onClick would defeat the memo on every render.
+const tagsDigest = (tags: Task["tags"]) =>
+  (tags ?? []).map((t) => `${t.id}|${t.name}|${t.color}`).join(",");
+const assigneeUserDigest = (u: Task["assigneeUser"]) =>
+  u ? `${u.color}|${u.name}|${u.handle ?? ""}` : "";
+
 export default memo(TaskCard, (prev, next) => {
   const prevCount = (prev.task.comments && prev.task.comments.length) || (prev.task as any).commentCount || ((prev.task as any)._count?.comments) || 0;
   const nextCount = (next.task.comments && next.task.comments.length) || (next.task as any).commentCount || ((next.task as any)._count?.comments) || 0;
@@ -156,6 +161,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.columnUpdatedAt === next.task.columnUpdatedAt &&
     prev.task.completedAt === next.task.completedAt &&
     prevCount === nextCount &&
-    prev.task.tags?.length === next.task.tags?.length
+    tagsDigest(prev.task.tags) === tagsDigest(next.task.tags) &&
+    assigneeUserDigest(prev.task.assigneeUser) === assigneeUserDigest(next.task.assigneeUser)
   );
 });
