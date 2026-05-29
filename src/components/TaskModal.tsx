@@ -1169,7 +1169,7 @@ export default function TaskModal({
                       <button
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
                         title="Click to remove"
                       >
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
@@ -1517,7 +1517,7 @@ export default function TaskModal({
                       <button
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
                         title="Click to remove"
                       >
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
@@ -2139,7 +2139,7 @@ export default function TaskModal({
                         <button
                           key={tag.id}
                           onClick={() => toggleTag(tag.id)}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
                           title="Click to remove"
                         >
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
