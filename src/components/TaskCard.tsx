@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
 import { timeInColumn, formatDeadlineLabel } from "@/lib/utils";
-import { getTextColorForBg } from "@/lib/labelPalette";
+import PriorityIcon from "./PriorityIcon";
 
 interface Props {
   task: Task;
@@ -43,12 +43,6 @@ function TaskCard({ task, onClick }: Props) {
   // commentCount is kept in sync by Board.handleAddComment; fall back to array length only if absent
   const commentCount = task.commentCount ?? task.comments?.length ?? 0;
 
-  const priorityDot: Record<string, string> = {
-    low:    "bg-blue-500",
-    medium: "bg-yellow-500",
-    high:   "bg-orange-500",
-    urgent: "bg-red-500",
-  };
   const priorityLabel: Record<string, string> = {
     low: "Low", medium: "Med", high: "High", urgent: "URGENT",
   };
@@ -81,13 +75,13 @@ function TaskCard({ task, onClick }: Props) {
 
       {/* Tags */}
       {task.tags && task.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+        <div className="flex flex-wrap gap-x-2.5 gap-y-1 mt-2">
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold"
-              style={{ backgroundColor: tag.color, color: getTextColorForBg(tag.color) }}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] text-ink border border-border/60"
             >
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
               {tag.name}
             </span>
           ))}
@@ -95,13 +89,13 @@ function TaskCard({ task, onClick }: Props) {
       )}
 
       <div className="flex items-center gap-2 mt-2.5">
-        <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${
-          p === "urgent" ? "bg-red-500/10 dark:bg-red-950/30 text-red-500 dark:text-red-400" :
-          p === "high"   ? "bg-orange-500/10 dark:bg-orange-950/30 text-orange-500 dark:text-orange-400" :
-          p === "low"    ? "bg-blue-500/10 dark:bg-blue-950/30 text-blue-500 dark:text-blue-400" :
-                           "bg-yellow-500/10 dark:bg-yellow-950/30 text-yellow-600 dark:text-yellow-300"
+        <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+          p === "urgent" ? "text-red-500 dark:text-red-400" :
+          p === "high"   ? "text-orange-500 dark:text-orange-400" :
+          p === "low"    ? "text-blue-500 dark:text-blue-400" :
+                           "text-yellow-600 dark:text-yellow-300"
         }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${priorityDot[p]}`} />
+          <PriorityIcon priority={p} className="w-3 h-3" />
           {priorityLabel[p]}
         </span>
 
@@ -109,11 +103,11 @@ function TaskCard({ task, onClick }: Props) {
 
         {/* Deadline badge */}
         {deadlineInfo.severity !== "none" && (
-          <span className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-0.5 rounded-md ${
+          <span className={`inline-flex items-center gap-2 text-xs font-medium ${
             deadlineInfo.severity === "overdue"
-              ? "bg-red-500/10 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+              ? "text-red-600 dark:text-red-400"
               : deadlineInfo.severity === "due-soon"
-              ? "bg-orange-500/10 text-orange-500 dark:bg-orange-950/30 dark:text-orange-400"
+              ? "text-orange-500 dark:text-orange-400"
               : "text-muted"
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${deadlineInfo.severity === "overdue" ? "bg-red-500" : deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/30"}`} />
