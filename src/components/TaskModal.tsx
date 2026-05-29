@@ -133,19 +133,16 @@ export default function TaskModal({
     }
   }, []);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [addingComment, setAddingComment] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [versionsLoading, setVersionsLoading] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const modalBodyRef = useRef<HTMLDivElement>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
   const pendingRequestsRef = useRef<{ comments?: Promise<any> | null; activities?: Promise<any> | null; versions?: Promise<any> | null }>({ comments: null, activities: null, versions: null });
   const activityIdleTimerRef = useRef<number | null>(null);
-  const [commentsVisible, setCommentsVisible] = useState(false);
   const descriptionOriginalRef = useRef<string>("");
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const savedIndicatorTimeoutRef = useRef<number | null>(null);
@@ -813,18 +810,6 @@ export default function TaskModal({
     }
   };
 
-  useEffect(() => {
-    const el = commentsRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setCommentsVisible(entry.isIntersecting),
-      { root: modalBodyRef.current, threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [task]);
-
-
   if (!task) return null;
 
   const overdue = isOverdue(task.deadline, task.completedAt);
@@ -848,15 +833,8 @@ export default function TaskModal({
     }
   }
 
-  const scrollToComments = () => {
-    if (!modalBodyRef.current || !commentsRef.current) return;
-    const top = commentsRef.current.offsetTop;
-    modalBodyRef.current.scrollTo({ top: Math.max(0, top - 12), behavior: "smooth" });
-  };
-
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-y-0 right-0 left-0 md:left-56 z-40 flex pointer-events-none"
     >
       <div
@@ -1899,12 +1877,11 @@ export default function TaskModal({
                 onChange={(e) => setCommentInput(e.target.value)}
                 onKeyDown={handleCommentKey}
                 placeholder="Write a comment..."
-                disabled={addingComment}
                 className="flex-1 bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted border-none outline-none"
               />
               <button
                 onClick={handleAddComment}
-                disabled={!commentInput.trim() || addingComment}
+                disabled={!commentInput.trim()}
                 className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
               >
                 Post
