@@ -3,27 +3,63 @@
 interface Props {
   priority: "low" | "medium" | "high" | "urgent" | string | null | undefined;
   className?: string;
+  colorClass?: string; // overrides the default priority-based color
 }
 
-const LEVELS: Record<string, number> = { low: 1, medium: 2, high: 3, urgent: 4 };
+const DEFAULT_COLOR: Record<string, string> = {
+  urgent: "text-red-500 dark:text-red-400",
+  high:   "text-orange-500 dark:text-orange-400",
+  medium: "text-yellow-500 dark:text-yellow-400",
+  low:    "text-blue-500 dark:text-blue-400",
+};
 
-export default function PriorityIcon({ priority, className = "w-3 h-3" }: Props) {
+const LEVELS: Record<string, number> = { low: 1, medium: 2, high: 3 };
+
+export default function PriorityIcon({ priority, className = "w-3 h-3", colorClass }: Props) {
   const p = (priority ?? "medium") as string;
+  const color = colorClass ?? DEFAULT_COLOR[p] ?? "text-muted";
+
+  if (p === "urgent") {
+    return (
+      <svg
+        className={`flex-shrink-0 ${color} ${className}`}
+        viewBox="0 0 14 14"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <rect x="6" y="2" width="2" height="7" rx="1" />
+        <circle cx="7" cy="12" r="1.1" />
+      </svg>
+    );
+  }
+
+  // Wifi-bar arcs for low / medium / high.
+  // All arcs share center (7, 14) with ±45° spread.
+  // r = n·2√2 so endpoints land on clean integers.
   const level = LEVELS[p] ?? 0;
 
-  const fillClass =
-    p === "urgent" ? "fill-red-500 dark:fill-red-400" :
-    p === "high"   ? "fill-orange-500 dark:fill-orange-400" :
-    p === "medium" ? "fill-yellow-500 dark:fill-yellow-400" :
-    p === "low"    ? "fill-blue-500 dark:fill-blue-400" :
-                     "fill-muted";
-
   return (
-    <svg className={`flex-shrink-0 ${className}`} viewBox="0 0 14 14" aria-hidden="true">
-      <rect className={fillClass} opacity={level >= 1 ? 1 : 0.25} x="2"  y="9" width="2" height="4"  rx="0.5" />
-      <rect className={fillClass} opacity={level >= 2 ? 1 : 0.25} x="6"  y="6" width="2" height="7"  rx="0.5" />
-      <rect className={fillClass} opacity={level >= 3 ? 1 : 0.25} x="10" y="3" width="2" height="10" rx="0.5" />
-      {level >= 4 && <circle cx="11" cy="1.5" r="1" className={fillClass} />}
+    <svg
+      className={`flex-shrink-0 ${color} ${className}`}
+      viewBox="0 0 14 14"
+      aria-hidden="true"
+    >
+      <circle cx="7" cy="13" r="0.85" fill="currentColor" />
+      <path
+        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+        opacity={level >= 1 ? 1 : 0.2}
+        d="M 5 12 A 2.83 2.83 0 0 1 9 12"
+      />
+      <path
+        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+        opacity={level >= 2 ? 1 : 0.2}
+        d="M 3 10 A 5.66 5.66 0 0 1 11 10"
+      />
+      <path
+        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+        opacity={level >= 3 ? 1 : 0.2}
+        d="M 1 8 A 8.49 8.49 0 0 1 13 8"
+      />
     </svg>
   );
 }
