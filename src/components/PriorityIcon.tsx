@@ -33,33 +33,20 @@ export default function PriorityIcon({ priority, className = "w-3 h-3", colorCla
     );
   }
 
-  // Wifi-bar arcs for low / medium / high.
-  // All arcs share center (7, 14) with ±45° spread.
-  // r = n·2√2 so endpoints land on clean integers.
+  // Ascending signal bars for low / medium / high.
+  // Three bars aligned to the bottom, increasing in height left to right.
   const level = LEVELS[p] ?? 0;
 
   return (
     <svg
       className={`flex-shrink-0 ${color} ${className}`}
       viewBox="0 0 14 14"
+      fill="currentColor"
       aria-hidden="true"
     >
-      <circle cx="7" cy="13" r="0.85" fill="currentColor" />
-      <path
-        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-        opacity={level >= 1 ? 1 : 0.2}
-        d="M 5 12 A 2.83 2.83 0 0 1 9 12"
-      />
-      <path
-        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-        opacity={level >= 2 ? 1 : 0.2}
-        d="M 3 10 A 5.66 5.66 0 0 1 11 10"
-      />
-      <path
-        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-        opacity={level >= 3 ? 1 : 0.2}
-        d="M 1 8 A 8.49 8.49 0 0 1 13 8"
-      />
+      <rect opacity={level >= 1 ? 1 : 0.2} x="1"  y="9"  width="3" height="4"  rx="0.5" />
+      <rect opacity={level >= 2 ? 1 : 0.2} x="5.5" y="6"  width="3" height="7"  rx="0.5" />
+      <rect opacity={level >= 3 ? 1 : 0.2} x="10" y="3"  width="3" height="10" rx="0.5" />
     </svg>
   );
 }
