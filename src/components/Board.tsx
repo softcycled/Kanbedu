@@ -711,10 +711,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       {/* Header row: board name left, filters right */}
       <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
         <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
-        {/* When the task side panel is open, hide the filter bar and view toggle so the
-            header reads as just the board's title (matches Linear/ClickUp side-panel pattern). */}
-        {!selectedTask && (
-          <>
+        {/* When the task side panel is open, hide the filter bar and view toggle visually but
+            keep them in the layout so the header height stays stable (no upward shift). */}
+        <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
             <FilterBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -771,8 +770,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             </svg>
           </button>
         </div>
-          </>
-        )}
+        </div>
       </div>
 
       {viewMode === "list" ? (
