@@ -16,19 +16,10 @@ import {
 import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
+import { getColumnPalette } from "@/lib/columnPalette";
 
-// Mirrors the column-color palette in ColumnHeader.tsx so the phase dot in the
-// modal matches the color shown on the board for that column.
-const COLUMN_DOT_COLORS = [
-  "bg-blue-400",
-  "bg-amber-400",
-  "bg-green-400",
-  "bg-purple-400",
-  "bg-pink-400",
-  "bg-cyan-400",
-];
 const getColumnDot = (index: number) =>
-  index < 0 ? "bg-muted" : COLUMN_DOT_COLORS[index % COLUMN_DOT_COLORS.length];
+  index < 0 ? "bg-muted" : getColumnPalette(index).dot;
 
 interface Props {
   task: Task | null;
@@ -1178,7 +1169,7 @@ export default function TaskModal({
                       <button
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
                         title="Click to remove"
                       >
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
@@ -1526,7 +1517,7 @@ export default function TaskModal({
                       <button
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
                         title="Click to remove"
                       >
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
@@ -1683,7 +1674,7 @@ export default function TaskModal({
                       void flushUpdates();
                     }}
                     placeholder="Write a detailed description..."
-                    className="w-full min-h-[6rem] bg-column-bg rounded-lg px-3 py-2.5 text-[15px] leading-[1.7] text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
+                    className="w-full min-h-[6rem] bg-column-bg/40 rounded-lg px-3 py-2.5 text-[15px] leading-[1.7] text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
                 ) : (
                   <div
@@ -2148,7 +2139,7 @@ export default function TaskModal({
                         <button
                           key={tag.id}
                           onClick={() => toggleTag(tag.id)}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60 hover:bg-column-bg transition-colors"
                           title="Click to remove"
                         >
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />

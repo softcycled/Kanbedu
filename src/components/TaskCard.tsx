@@ -79,7 +79,7 @@ function TaskCard({ task, onClick }: Props) {
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] text-ink border border-border/60"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-ink border border-border/60"
             >
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
               {tag.name}

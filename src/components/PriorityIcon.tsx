@@ -5,7 +5,7 @@ interface Props {
   className?: string;
 }
 
-const LEVELS: Record<string, number> = { low: 1, medium: 2, high: 3, urgent: 3 };
+const LEVELS: Record<string, number> = { low: 1, medium: 2, high: 3, urgent: 4 };
 
 export default function PriorityIcon({ priority, className = "w-3 h-3" }: Props) {
   const p = (priority ?? "medium") as string;
@@ -23,6 +23,7 @@ export default function PriorityIcon({ priority, className = "w-3 h-3" }: Props)
       <rect className={fillClass} opacity={level >= 1 ? 1 : 0.25} x="2"  y="9" width="2" height="4"  rx="0.5" />
       <rect className={fillClass} opacity={level >= 2 ? 1 : 0.25} x="6"  y="6" width="2" height="7"  rx="0.5" />
       <rect className={fillClass} opacity={level >= 3 ? 1 : 0.25} x="10" y="3" width="2" height="10" rx="0.5" />
+      {level >= 4 && <circle cx="11" cy="1.5" r="1" className={fillClass} />}
     </svg>
   );
 }

@@ -3,20 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
-
-// ── Helpers ────────────────────────────────────────────────────
-
-/** Deterministic column accent colors — subtle, dark-mode friendly */
-const COLUMN_PALETTE = [
-  { pill: "bg-sky-500/15 text-sky-400 dark:text-sky-300",         dot: "bg-sky-400" },
-  { pill: "bg-violet-500/15 text-violet-400 dark:text-violet-300", dot: "bg-violet-400" },
-  { pill: "bg-emerald-500/15 text-emerald-500 dark:text-emerald-400", dot: "bg-emerald-400" },
-  { pill: "bg-orange-500/15 text-orange-400 dark:text-orange-300", dot: "bg-orange-400" },
-  { pill: "bg-pink-500/15 text-pink-400 dark:text-pink-300",       dot: "bg-pink-400" },
-  { pill: "bg-cyan-500/15 text-cyan-400 dark:text-cyan-300",       dot: "bg-cyan-400" },
-  { pill: "bg-yellow-500/15 text-yellow-500 dark:text-yellow-400", dot: "bg-yellow-400" },
-  { pill: "bg-rose-500/15 text-rose-400 dark:text-rose-300",       dot: "bg-rose-400" },
-];
+import { COLUMN_PALETTE } from "@/lib/columnPalette";
 
 const PRIORITY_CONFIG: Record<
   string,
@@ -353,23 +340,9 @@ interface RowProps {
 function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
   const p = task.priority ?? "medium";
   const pCfg = PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
-  let colColor = COLUMN_PALETTE[0];
-  if (columnEntry) {
-    const label = (columnEntry.label || "").toLowerCase().trim();
-    if (label === "in progress" || label === "in-progress" || label === "inprogress") {
-      // In Progress -> orange
-      colColor = COLUMN_PALETTE.find((p) => p.pill.includes("orange")) ?? COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length];
-    } else if (label === "done" || label === "completed") {
-      // Done -> green (emerald)
-      colColor = COLUMN_PALETTE.find((p) => p.pill.includes("emerald") || p.pill.includes("green")) ?? COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length];
-    } else if (label === "review") {
-      // Review -> purple (violet)
-      colColor = COLUMN_PALETTE.find((p) => p.pill.includes("violet") || p.pill.includes("purple")) ?? COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length];
-    } else {
-      // leave To Do and others unchanged — use deterministic palette index
-      colColor = COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length];
-    }
-  }
+  const colColor = columnEntry
+    ? COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length]
+    : COLUMN_PALETTE[0];
   const deadlineInfo = formatDeadlineLabel(task.deadline, task.completedAt);
 
   const deadlineColor =

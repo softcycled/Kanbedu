@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { getColumnPalette } from "@/lib/columnPalette";
 
 interface Props {
   columnId: string;
@@ -16,18 +17,6 @@ interface Props {
   dragListeners?: Record<string, unknown>;
 }
 
-const getColorClasses = (index: number) => {
-  const colors = [
-    { bg: "bg-blue-100 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", dot: "bg-blue-400 dark:bg-blue-400", text: "text-blue-700 dark:text-blue-300" },
-    { bg: "bg-amber-100 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", dot: "bg-amber-500 dark:bg-amber-400", text: "text-amber-700 dark:text-amber-300" },
-    { bg: "bg-green-100 dark:bg-green-950/30", border: "border-green-200 dark:border-green-800", dot: "bg-green-500 dark:bg-green-400", text: "text-green-700 dark:text-green-300" },
-    { bg: "bg-purple-100 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800", dot: "bg-purple-500 dark:bg-purple-400", text: "text-purple-700 dark:text-purple-300" },
-    { bg: "bg-pink-100 dark:bg-pink-950/30", border: "border-pink-200 dark:border-pink-800", dot: "bg-pink-500 dark:bg-pink-400", text: "text-pink-700 dark:text-pink-300" },
-    { bg: "bg-cyan-100 dark:bg-cyan-950/30", border: "border-cyan-200 dark:border-cyan-800", dot: "bg-cyan-500 dark:bg-cyan-400", text: "text-cyan-700 dark:text-cyan-300" },
-  ];
-
-  return colors[index % colors.length];
-};
 
 export default function ColumnHeader({
   columnId,
@@ -46,7 +35,7 @@ export default function ColumnHeader({
   const [editValue, setEditValue] = useState(label);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const colors = getColorClasses(columnIndex);
+  const colors = getColumnPalette(columnIndex);
 
   const handleSave = async () => {
     if (editValue.trim() && editValue !== label) {

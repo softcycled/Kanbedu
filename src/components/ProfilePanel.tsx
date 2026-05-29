@@ -55,7 +55,7 @@ interface LockedColor extends AvatarColor {
 }
 
 const LOCKED_COLORS: LockedColor[] = [
-  { name: "Channel Orange", hex: "#F37521", unlockedBy: "jorge" },
+  { name: "Channel Orange", hex: "#F37521", unlockedBy: "softcycled" },
 ];
 
 const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];
@@ -563,7 +563,7 @@ export default function ProfilePanel() {
                         );
                       })}
                       {LOCKED_COLORS.map((c) => {
-                        const isUnlocked = name.trim().toLowerCase() === c.unlockedBy.toLowerCase();
+                        const isUnlocked = handleValue.trim().toLowerCase() === c.unlockedBy.toLowerCase();
                         const isSelected = color === c.hex;
                         const isHovered = hoverColor?.hex === c.hex;
                         if (isUnlocked) {
