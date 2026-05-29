@@ -89,13 +89,8 @@ function TaskCard({ task, onClick }: Props) {
       )}
 
       <div className="flex items-center gap-2 mt-2.5">
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-white ${
-          p === "urgent" ? "bg-red-500" :
-          p === "high"   ? "bg-orange-500" :
-          p === "medium" ? "bg-amber-500" :
-                           "bg-blue-500"
-        }`}>
-          <PriorityIcon priority={p} className="w-2.5 h-2.5" colorClass="text-white" />
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-white">
+          <PriorityIcon priority={p} className="w-2.5 h-2.5" />
           {priorityLabel[p]}
         </span>
 

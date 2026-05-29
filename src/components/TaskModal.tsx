@@ -1036,7 +1036,7 @@ export default function TaskModal({
                       className={`${itemClass} text-ink`}
                     >
                       <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
-                      <span className="capitalize">{priority}</span>
+                      <span className="capitalize text-white">{priority}</span>
                     </button>
                     {openMetaProp === "priority" && (
                       <div className="absolute top-full left-0 mt-1 z-50 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
@@ -2058,7 +2058,7 @@ export default function TaskModal({
                       className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
                     >
                       <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
-                      <span className="capitalize">{priority}</span>
+                      <span className="capitalize text-white">{priority}</span>
                     </button>
                     {priorityDropdownOpen && (
                       <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
