@@ -26,12 +26,12 @@ export default function PrivacyPage() {
         <div className="mb-12">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Legal</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Privacy Policy</h1>
-          <p className="text-sm text-muted">Last updated: 9th May 2026</p>
+          <p className="text-sm text-muted">Last updated: 31st May 2026</p>
         </div>
 
         <div>
           <p className="text-base text-ink/80 leading-relaxed mb-10">
-            Your privacy matters to us. This Privacy Policy explains what data Kanbedu collects, why we collect it, and how it&rsquo;s used. We keep this simple and honest — we&rsquo;re not in the business of selling your data.
+            Your privacy matters to us. This Privacy Policy explains what data Kanbedu collects, why we collect it, and how it&rsquo;s used. We keep this simple and honest. We&rsquo;re not in the business of selling your data.
           </p>
 
           <Section title="1. What We Collect">
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
             <SubHeading>Usage data</SubHeading>
             <ul>
               <li>Basic activity data used for analytics features (e.g. task completion times, workflow phase durations).</li>
-              <li>This data is used only to power in-app analytics visible to your board members — it is not shared externally.</li>
+              <li>This data is used only to power in-app analytics visible to your board members. It&rsquo;s not shared externally.</li>
             </ul>
           </Section>
 
@@ -69,12 +69,24 @@ export default function PrivacyPage() {
               <li>Create and manage your account.</li>
               <li>Provide the core features of Kanbedu (boards, tasks, collaboration).</li>
               <li>Power the analytics dashboard so you and your team can review progress.</li>
-              <li>Send transactional emails (e.g. invite links, password resets) — we don&rsquo;t send marketing emails without your consent.</li>
+              <li>Send transactional emails (e.g. invite links, password resets). We don&rsquo;t send marketing emails without your consent.</li>
               <li>Debug issues and improve the service.</li>
             </ul>
           </Section>
 
-          <Section title="4. Authentication and Sessions">
+          <Section title="4. Legal Basis for Processing">
+            <p>
+              If data protection law applies to you, here are the legal grounds we rely on to process your data:
+            </p>
+            <ul>
+              <li><strong>Performance of a contract:</strong> processing your account information and content is necessary to provide the service you signed up for.</li>
+              <li><strong>Legitimate interests:</strong> we process usage data to operate, secure, and improve the platform. We only do this where our interests don&rsquo;t override your rights.</li>
+              <li><strong>Legal obligation:</strong> we may process or retain data where the law requires it.</li>
+              <li><strong>Consent:</strong> where we rely on your consent (e.g. marketing communications), you can withdraw it at any time. That won&rsquo;t affect anything we processed before you withdrew.</li>
+            </ul>
+          </Section>
+
+          <Section title="5. Authentication and Sessions">
             <p>
               When you log in, Kanbedu issues a signed session token stored as an HTTP-only cookie. This token is used to authenticate your requests and expires after a period of inactivity.
             </p>
@@ -83,20 +95,20 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="5. Cookies and Local Storage">
+          <Section title="6. Cookies and Local Storage">
             <p>
               Kanbedu uses a small number of cookies and browser storage mechanisms:
             </p>
             <ul>
-              <li><strong>Session cookie</strong> — an HTTP-only cookie used to keep you logged in securely.</li>
-              <li><strong>Theme preference</strong> — stored in <code>localStorage</code> to remember your light/dark mode setting.</li>
+              <li><strong>Session cookie:</strong> an HTTP-only cookie used to keep you logged in securely.</li>
+              <li><strong>Theme preference:</strong> stored in <code>localStorage</code> to remember your light/dark mode setting.</li>
             </ul>
             <p>
               We do not use advertising cookies, third-party tracking cookies, or analytics platforms like Google Analytics.
             </p>
           </Section>
 
-          <Section title="6. Data Storage and Security">
+          <Section title="7. Data Storage and Security">
             <p>
               Your data is stored in a database hosted on our infrastructure. We use industry-standard practices to protect it:
             </p>
@@ -110,64 +122,87 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="7. Third-Party Services">
+          <Section title="8. International Data Transfers">
             <p>
-              Kanbedu may rely on third-party services for infrastructure (e.g. hosting, deployment). These providers are contractually bound to handle your data securely and only as instructed by us.
+              Kanbedu may store and process your personal data in countries other than your own, including countries that may not provide the same level of data protection as your home jurisdiction. Where we transfer personal data internationally, we take steps to ensure appropriate safeguards are in place, for example by relying on infrastructure providers that maintain standard contractual clauses or equivalent protections recognised under applicable law.
+            </p>
+            <p>
+              By using Kanbedu, you acknowledge that your data may be transferred to and processed in other countries as described in this policy.
+            </p>
+          </Section>
+
+          <Section title="9. Third-Party Services">
+            <p>
+              Kanbedu may rely on third-party services for infrastructure (e.g. hosting, deployment, email delivery). These providers are contractually bound to handle your data securely and only as instructed by us.
             </p>
             <p>
               We do not integrate with third-party advertising networks, social media trackers, or data brokers.
             </p>
             <p>
-              If we introduce new third-party integrations in the future (e.g. email delivery, notifications), we will update this policy and disclose what data those services receive.
+              If we introduce new third-party integrations in the future, we will update this policy and disclose what data those services receive.
             </p>
           </Section>
 
-          <Section title="8. Sharing Your Data">
+          <Section title="10. Sharing Your Data">
             <p>We do not sell, rent, or trade your personal data. We only share it in these limited circumstances:</p>
             <ul>
-              <li><strong>With your team</strong> — your name and avatar are visible to members of boards you belong to.</li>
-              <li><strong>Legal requirements</strong> — if required by law, we may disclose information in response to a valid legal request.</li>
-              <li><strong>Service providers</strong> — limited data may be shared with infrastructure providers strictly to operate the service.</li>
+              <li><strong>With your team:</strong> your name and avatar are visible to members of boards you belong to.</li>
+              <li><strong>Legal requirements:</strong> if required by law or a valid legal process, we may disclose information. Where permitted, we will notify you before complying.</li>
+              <li><strong>Service providers:</strong> limited data may be shared with infrastructure providers strictly to operate the service, under confidentiality obligations.</li>
+              <li><strong>Business transfers:</strong> in the event of a merger, acquisition, or sale of assets, your data may be transferred to a successor entity, subject to equivalent privacy protections.</li>
             </ul>
           </Section>
 
-          <Section title="9. Your Rights">
-            <p>You have the right to:</p>
+          <Section title="11. Your Rights">
+            <p>Depending on where you live, you may have some or all of the following rights over your data:</p>
             <ul>
-              <li><strong>Access</strong> the data we hold about you.</li>
-              <li><strong>Correct</strong> inaccurate information (you can update most of this directly in the app).</li>
-              <li><strong>Delete</strong> your account and associated data by contacting us at <Placeholder text="support@kanbedu.com" />.</li>
-              <li><strong>Export</strong> your data — contact us and we&rsquo;ll help where technically feasible.</li>
+              <li><strong>Access:</strong> request a copy of the data we hold about you.</li>
+              <li><strong>Correction:</strong> update inaccurate information (most can be changed directly in the app).</li>
+              <li><strong>Deletion:</strong> ask us to delete your account and associated data by contacting us at <Placeholder text="support@kanbedu.com" />.</li>
+              <li><strong>Portability:</strong> request your data in a structured, machine-readable format where technically feasible.</li>
+              <li><strong>Restriction:</strong> ask us to limit how we process your data in certain circumstances.</li>
+              <li><strong>Objection:</strong> object to processing based on our legitimate interests, including any profiling.</li>
+              <li><strong>Withdraw consent:</strong> if we&rsquo;re relying on your consent, you can withdraw it at any time. This won&rsquo;t affect anything we processed before you withdrew.</li>
+              <li><strong>Lodge a complaint:</strong> if you think we&rsquo;ve mishandled your data, you can complain to your local data protection authority.</li>
             </ul>
             <p>
-              We aim to respond to data requests within 30 days.
+              We aim to respond to all data requests within 30 days. We may need to verify your identity before fulfilling a request.
             </p>
           </Section>
 
-          <Section title="10. Data Retention">
+          <Section title="12. Data Retention">
             <p>
-              We retain your account and content data for as long as your account is active. If you delete your account, we will remove your personal data within a reasonable period, except where we are required to retain it by law.
+              We retain your account and content data for as long as your account is active. If you delete your account, we will remove your personal data within a reasonable period (typically within 30 days), except where we are required to retain it by law or for legitimate security purposes.
             </p>
             <p>
-              Anonymised, aggregated data (e.g. aggregate usage patterns) may be retained indefinitely.
-            </p>
-          </Section>
-
-          <Section title="11. Children">
-            <p>
-              Kanbedu is not directed at children under 13. We do not knowingly collect personal data from anyone under 13. If you believe a minor has created an account, please contact us at <Placeholder text="support@kanbedu.com" /> and we will remove it.
+              Anonymised, aggregated data (e.g. aggregate usage patterns) may be retained indefinitely, as it cannot reasonably be linked back to you.
             </p>
           </Section>
 
-          <Section title="12. Changes to This Policy">
+          <Section title="13. Children">
             <p>
-              We may update this Privacy Policy as the service evolves. When we do, we&rsquo;ll update the &ldquo;Last updated&rdquo; date at the top. For material changes, we&rsquo;ll notify you via email or an in-app notice.
+              Kanbedu is intended for users aged 13 and over. We do not knowingly collect personal data from children under 13. If you are under 13, please do not use Kanbedu or provide any personal information.
+            </p>
+            <p>
+              If a parent or guardian believes a child under 13 has created an account, please contact us at <Placeholder text="support@kanbedu.com" /> and we will promptly delete the account and associated data.
+            </p>
+            <p>
+              Users aged 13 to 17 should use Kanbedu only with the awareness and consent of a parent or guardian, where required by law.
             </p>
           </Section>
 
-          <Section title="13. Contact">
+          <Section title="14. Changes to This Policy">
+            <p>
+              We may update this Privacy Policy as the service evolves. When we do, we&rsquo;ll update the &ldquo;Last updated&rdquo; date at the top. For material changes, we&rsquo;ll notify you via email or an in-app notice at least 14 days before the changes take effect, where reasonably practicable.
+            </p>
+          </Section>
+
+          <Section title="15. Contact">
             <p>
               If you have questions or concerns about this policy or how we handle your data, reach us at <Placeholder text="privacy@kanbedu.com" />. General support is at <Placeholder text="support@kanbedu.com" />.
+            </p>
+            <p>
+              If you are in the European Economic Area and believe we have not adequately addressed your concern, you have the right to contact your local supervisory authority.
             </p>
           </Section>
         </div>
