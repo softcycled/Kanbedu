@@ -13,8 +13,6 @@ model User {
   email               String                   @unique
   handle              String?                  @unique
   password            String?
-  githubId            String?                  @unique
-  githubAccessToken   String?
   name                String                   @default("")
   color               String                   @default("#4A90A4")
   createdAt           DateTime                 @default(now())
@@ -43,7 +41,6 @@ model EmailVerification {
 model Board {
   id             String        @id @default(cuid())
   name           String
-  githubRepo     String?
   order          Int           @default(0)
   createdAt      DateTime      @default(now())
   realtimeSecret String        @unique @default(cuid())

@@ -32,7 +32,7 @@ export async function PATCH(req: Request) {
   }
 
   if (!user.password) {
-    return NextResponse.json({ error: "Users logged in via GitHub cannot change passwords." }, { status: 400 });
+    return NextResponse.json({ error: "This account has no password set." }, { status: 400 });
   }
 
   const valid = await bcrypt.compare(currentPassword, user.password);

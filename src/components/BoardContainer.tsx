@@ -215,7 +215,7 @@ export default function BoardContainer({
     return body;
   }, [handleBoardSwitch]);
 
-  const handleUpdateBoard = useCallback(async (boardId: string, data: { name?: string; githubRepo?: string | null }) => {
+  const handleUpdateBoard = useCallback(async (boardId: string, data: { name?: string }) => {
     const res = await fetch(`/api/boards/${boardId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

@@ -33,7 +33,6 @@ export async function PATCH(
       where: { id },
       data: {
         name: data.name,
-        githubRepo: data.githubRepo
       },
     });
 

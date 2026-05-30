@@ -24,7 +24,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 interface Props {
   boards: Board[];
   activeBoardId: string;
-  onUpdateBoard: (boardId: string, data: { name?: string; githubRepo?: string | null }) => Promise<void>;
+  onUpdateBoard: (boardId: string, data: { name?: string }) => Promise<void>;
   onDelete: (boardId: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
   currentUserId: string;
