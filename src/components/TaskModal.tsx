@@ -17,6 +17,7 @@ import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
 import { getColumnPalette } from "@/lib/columnPalette";
+import { nameToColor } from "@/lib/avatarColor";
 
 const getColumnDot = (index: number) =>
   index < 0 ? "bg-muted" : getColumnPalette(index).dot;
@@ -40,16 +41,6 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(handler);
   }, [value, delay]);
   return debouncedValue;
-}
-
-const AVATAR_PALETTE = [
-  "#4A90A4", "#7B68EE", "#E8854A", "#5BAD6F", "#D4706A",
-  "#A078C8", "#4E9E8F", "#C4885A", "#6B8DD6", "#D4956A",
-];
-function nameToColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }
 
 export default function TaskModal({ 
@@ -833,6 +824,513 @@ export default function TaskModal({
     }
   }
 
+  const renderPropertiesRows = (variant: "mobile" | "desktop") => {
+    const tagsTopPt = variant === "mobile" ? "pt-4" : "pt-2";
+    const priorityLabelClass = variant === "mobile" ? "capitalize" : "capitalize text-white";
+    return (
+      <>
+        {/* Assignee */}
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="7" cy="5" r="2.5"/>
+            <path d="M2 13a5 5 0 0110 0"/>
+          </svg>
+          Assignee
+        </div>
+        <div ref={assigneeDropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setAssigneeDropdownOpen((v) => !v)}
+            className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+          >
+            {(() => {
+              const m = boardMembers.find((bm) => bm.id === assigneeId);
+              if (!m) return <span className="text-muted">Unassigned</span>;
+              return (
+                <>
+                  <span
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ backgroundColor: m.color }}
+                  >
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
+                </>
+              );
+            })()}
+          </button>
+          {assigneeDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+              {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
+                const isSelected = m.id === assigneeId;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      userHasEdited.current = true;
+                      setAssigneeId(m.id);
+                      setAssigneeDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                    }`}
+                  >
+                    {m.id === "" ? (
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                      </span>
+                    ) : (
+                      <span
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                        style={{ backgroundColor: m.color }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
+                    {isSelected && (
+                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M2 6l3 3 5-5"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Phase */}
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M2 9l5-3 5 3M2 5l5-3 5 3"/>
+          </svg>
+          Phase
+        </div>
+        <div ref={columnDropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setColumnDropdownOpen((v) => !v)}
+            className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+          >
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
+            <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
+          </button>
+          {columnDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+              {columns.map((c) => {
+                const isSelected = c.id === columnId;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      userHasEdited.current = true;
+                      setColumnId(c.id);
+                      setColumnDropdownOpen(false);
+                      void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                    <span className="truncate">{c.label}</span>
+                    {isSelected && (
+                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M2 6l3 3 5-5"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Priority */}
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M2 12V9M6 12V6M10 12V3"/>
+          </svg>
+          Priority
+        </div>
+        <div ref={priorityDropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setPriorityDropdownOpen((v) => !v)}
+            className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
+          >
+            <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
+            <span className={priorityLabelClass}>{priority}</span>
+          </button>
+          {priorityDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+              {(["low", "medium", "high", "urgent"] as const).map((p) => {
+                const isSelected = priority === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setPriority(p);
+                      setPriorityDropdownOpen(false);
+                      void handleUpdateWithFeedback(task.id, { priority: p });
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
+                  >
+                    <PriorityIcon priority={p} className="w-3.5 h-3.5" />
+                    <span className="capitalize">{p}</span>
+                    {isSelected && (
+                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M2 6l3 3 5-5"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Deadline */}
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="2" y="3" width="10" height="9" rx="1.5"/>
+            <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
+          </svg>
+          Deadline
+          {overdue && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              Overdue
+            </span>
+          )}
+        </div>
+        <div>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+            className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
+          />
+          {showDeadlineStatus && (
+            <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
+              deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
+              deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
+                                                     "text-muted"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                deadlineInfo.severity === "overdue"  ? "bg-red-500" :
+                deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
+              }`} />
+              {deadlineInfo.label}
+            </p>
+          )}
+        </div>
+
+        {/* Tags */}
+        <div className="flex items-center gap-1.5 text-xs text-muted self-start pt-1">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M2 2h6.5L12 5.5V12H2z"/>
+            <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none"/>
+          </svg>
+          Tags
+        </div>
+        <div ref={tagDropdownRef} className="relative">
+          <div className={`flex flex-wrap items-center gap-1.5 -mx-1 ${tagsTopPt}`}>
+            {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => toggleTag(tag.id)}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
+                title="Click to remove"
+              >
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                <span>{tag.name}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+              className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
+              title="Manage tags"
+              aria-label="Add tag"
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M7 3v8M3 7h8"/>
+              </svg>
+            </button>
+          </div>
+
+          {tagDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
+              {!isCreatingTag && (
+                <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                  {allBoardTags.length === 0 ? (
+                    <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
+                  ) : (
+                    allBoardTags.map((tag) => {
+                      const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
+                      return (
+                        <div
+                          key={tag.id}
+                          onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                          className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                            isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                          }`}
+                        >
+                          <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                          <span className="truncate flex-1">{tag.name}</span>
+                          <div className="ml-auto flex items-center gap-1">
+                            {isSelected && (
+                              <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 6l3 3 5-5"/>
+                              </svg>
+                            )}
+                            <button
+                              onClick={(e) => handleDeleteTag(e, tag)}
+                              className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {isCreatingTag && tagCreatePhase === "name" && (
+                <div className="p-3">
+                  <input
+                    autoFocus
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Tag name…"
+                    className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setIsCreatingTag(false);
+                        setNewTagName("");
+                        setTagCreatePhase(null);
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                  <div className="mt-3 flex items-center justify-between">
+                    <button
+                      onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                      className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                      disabled={!newTagName.trim()}
+                      className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isCreatingTag && tagCreatePhase === "color" && (
+                <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
+                  {LABEL_PALETTE.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleCreateTagWithColor(p.hex)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
+                      <span className="truncate">{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!isCreatingTag && (
+                <div className="border-t border-border/20">
+                  <button
+                    onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
+                    className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M7 3v8M3 7h8" />
+                    </svg>
+                    Create new tag
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  const renderMetaPanels = (variant: "mobile" | "desktop") => {
+    const infoRows = (
+      <>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted">Created</span>
+          <span className="text-xs text-ink">{formatDateTime(task.createdAt)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted">In this column</span>
+          <span className="text-xs text-ink">{timeInColumn(task.columnUpdatedAt)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted">Last updated</span>
+          <span className="text-xs text-ink">
+            {formatTimeAgo(
+              task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
+                ? task.updatedAt
+                : task.createdAt
+            )}
+          </span>
+        </div>
+        {task.completedAt && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted">Completed</span>
+            <span className="text-xs text-ink">{formatDateTime(task.completedAt)}</span>
+          </div>
+        )}
+      </>
+    );
+    return (
+      <>
+        {/* Info */}
+        <div>
+          {variant === "mobile" ? (
+            <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Info</label>
+          ) : (
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Info</p>
+          )}
+          {variant === "mobile" ? (
+            <div className="space-y-2">{infoRows}</div>
+          ) : (
+            <div className="bg-column-bg/40 rounded-xl border border-border/30 px-4 py-3 space-y-2.5">{infoRows}</div>
+          )}
+        </div>
+
+        {/* Activity */}
+        <div>
+          <button
+            onClick={() => {
+              const next = !showActivity;
+              setShowActivity(next);
+              if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
+            }}
+            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+          >
+            <svg
+              className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
+              width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+            >
+              <path d="M3 2l4 3-4 3"/>
+            </svg>
+            {showActivity
+              ? "Hide activity"
+              : `Show activity${activities.length > 0 ? ` (${activities.length})` : ""}`}
+          </button>
+          {showActivity && (
+            <div className="mt-3 space-y-3">
+              {activitiesLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-8 rounded bg-column-bg/40 animate-pulse" />
+                  ))}
+                </div>
+              ) : activities.length === 0 ? (
+                <p className="text-xs text-muted italic">No activity recorded yet.</p>
+              ) : (
+                activities.map((a) => (
+                  <div key={a.id} className="flex gap-2.5 items-start">
+                    <div
+                      className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
+                      style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
+                    >
+                      {a.user?.name.charAt(0).toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
+                        <span className="text-xs text-muted leading-snug">{a.content}</span>
+                      </div>
+                      <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* History */}
+        <div>
+          <button
+            onClick={() => {
+              const next = !showHistory;
+              setShowHistory(next);
+              if (next && versions.length === 0) void fetchVersionsDeduped();
+            }}
+            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+          >
+            <svg
+              className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}
+              width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
+            >
+              <path d="M3 2l4 3-4 3"/>
+            </svg>
+            {showHistory
+              ? "Hide history"
+              : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
+          </button>
+          {showHistory && (
+            <div className="mt-3 space-y-5">
+              {versionsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-12 rounded bg-column-bg/40 animate-pulse" />
+                  ))}
+                </div>
+              ) : versions.length === 0 ? (
+                <p className="text-xs text-muted italic">No description history available.</p>
+              ) : (
+                versions.map((v, idx) => {
+                  const nextVersion = versions[idx + 1];
+                  const prevContent = nextVersion ? nextVersion.content : "";
+                  return (
+                    <div key={v.id} className="space-y-2">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                            style={{ backgroundColor: v.user.color }}
+                          >
+                            {v.user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-xs font-semibold text-ink">{v.user.handle ? `@${v.user.handle}` : v.user.name}</span>
+                        </div>
+                        <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
+                      </div>
+                      <DiffViewer oldText={prevContent} newText={v.content} />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+
   return (
     <div
       className="fixed inset-y-0 right-0 left-0 md:left-56 z-40 flex pointer-events-none"
@@ -1281,348 +1779,7 @@ export default function TaskModal({
             {!isDesktop && (
             <div className="px-8 pb-6 border-b border-border/30">
               <div className="grid grid-cols-[110px_1fr] gap-x-5 gap-y-4 items-center text-sm">
-
-                {/* Assignee */}
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="7" cy="5" r="2.5"/>
-                    <path d="M2 13a5 5 0 0110 0"/>
-                  </svg>
-                  Assignee
-                </div>
-                <div ref={assigneeDropdownRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setAssigneeDropdownOpen((v) => !v)}
-                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                  >
-                    {(() => {
-                      const m = boardMembers.find((bm) => bm.id === assigneeId);
-                      if (!m) return <span className="text-muted">Unassigned</span>;
-                      return (
-                        <>
-                          <span
-                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                            style={{ backgroundColor: m.color }}
-                          >
-                            {m.name.charAt(0).toUpperCase()}
-                          </span>
-                          <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
-                        </>
-                      );
-                    })()}
-                  </button>
-                  {assigneeDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                      {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
-                        const isSelected = m.id === assigneeId;
-                        return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => {
-                              userHasEdited.current = true;
-                              setAssigneeId(m.id);
-                              setAssigneeDropdownOpen(false);
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                              isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                            }`}
-                          >
-                            {m.id === "" ? (
-                              <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                                <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                              </span>
-                            ) : (
-                              <span
-                                className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                style={{ backgroundColor: m.color }}
-                              >
-                                {m.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                            <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
-                            {isSelected && (
-                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M2 6l3 3 5-5"/>
-                              </svg>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Phase */}
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 9l5-3 5 3M2 5l5-3 5 3"/>
-                  </svg>
-                  Phase
-                </div>
-                <div ref={columnDropdownRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setColumnDropdownOpen((v) => !v)}
-                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                  >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
-                    <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
-                  </button>
-                  {columnDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                      {columns.map((c) => {
-                        const isSelected = c.id === columnId;
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              userHasEdited.current = true;
-                              setColumnId(c.id);
-                              setColumnDropdownOpen(false);
-                              void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                          >
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
-                            <span className="truncate">{c.label}</span>
-                            {isSelected && (
-                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M2 6l3 3 5-5"/>
-                              </svg>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Priority */}
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M2 12V9M6 12V6M10 12V3"/>
-                  </svg>
-                  Priority
-                </div>
-                <div ref={priorityDropdownRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setPriorityDropdownOpen((v) => !v)}
-                    className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                  >
-                    <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
-                    <span className="capitalize">{priority}</span>
-                  </button>
-                  {priorityDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                      {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                        const isSelected = priority === p;
-                        return (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => {
-                              setPriority(p);
-                              setPriorityDropdownOpen(false);
-                              void handleUpdateWithFeedback(task.id, { priority: p });
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                          >
-                            <PriorityIcon priority={p} className="w-3.5 h-3.5" />
-                            <span className="capitalize">{p}</span>
-                            {isSelected && (
-                              <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M2 6l3 3 5-5"/>
-                              </svg>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Deadline */}
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="2" y="3" width="10" height="9" rx="1.5"/>
-                    <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
-                  </svg>
-                  Deadline
-                  {overdue && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                      Overdue
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <input
-                    type="date"
-                    value={deadline}
-                    onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-                    className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
-                  />
-                  {showDeadlineStatus && (
-                    <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
-                      deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
-                      deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
-                                                             "text-muted"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        deadlineInfo.severity === "overdue"  ? "bg-red-500" :
-                        deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
-                      }`} />
-                      {deadlineInfo.label}
-                    </p>
-                  )}
-                </div>
-
-                {/* Tags */}
-                <div className="flex items-center gap-1.5 text-xs text-muted self-start pt-1">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 2h6.5L12 5.5V12H2z"/>
-                    <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none"/>
-                  </svg>
-                  Tags
-                </div>
-                <div ref={tagDropdownRef} className="relative">
-                  <div className="flex flex-wrap items-center gap-1.5 -mx-1 pt-4">
-                    {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
-                      <button
-                        key={tag.id}
-                        onClick={() => toggleTag(tag.id)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
-                        title="Click to remove"
-                      >
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                        <span>{tag.name}</span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
-                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
-                      title="Manage tags"
-                      aria-label="Add tag"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M7 3v8M3 7h8"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  {tagDropdownOpen && (
-                    <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                      {!isCreatingTag && (
-                        <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                          {allBoardTags.length === 0 ? (
-                            <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
-                          ) : (
-                            allBoardTags.map((tag) => {
-                              const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
-                              return (
-                                <div
-                                  key={tag.id}
-                                  onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
-                                  className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                                    isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                                  }`}
-                                >
-                                  <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
-                                  <span className="truncate flex-1">{tag.name}</span>
-                                  <div className="ml-auto flex items-center gap-1">
-                                    {isSelected && (
-                                      <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M2 6l3 3 5-5"/>
-                                      </svg>
-                                    )}
-                                    <button
-                                      onClick={(e) => handleDeleteTag(e, tag)}
-                                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-
-                      {isCreatingTag && tagCreatePhase === "name" && (
-                        <div className="p-3">
-                          <input
-                            autoFocus
-                            value={newTagName}
-                            onChange={(e) => setNewTagName(e.target.value)}
-                            placeholder="Tag name…"
-                            className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") {
-                                setIsCreatingTag(false);
-                                setNewTagName("");
-                                setTagCreatePhase(null);
-                              } else if (e.key === "Enter") {
-                                e.preventDefault();
-                              }
-                            }}
-                          />
-                          <div className="mt-3 flex items-center justify-between">
-                            <button
-                              onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
-                              className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
-                              disabled={!newTagName.trim()}
-                              className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
-                            >
-                              Next
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {isCreatingTag && tagCreatePhase === "color" && (
-                        <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                          {LABEL_PALETTE.map((p) => (
-                            <button
-                              key={p.id}
-                              onClick={() => handleCreateTagWithColor(p.hex)}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                            >
-                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
-                              <span className="truncate">{p.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {!isCreatingTag && (
-                        <div className="border-t border-border/20">
-                          <button
-                            onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
-                            className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M7 3v8M3 7h8" />
-                            </svg>
-                            Create new tag
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
+                {renderPropertiesRows("mobile")}
               </div>
             </div>
             )}
@@ -1720,150 +1877,7 @@ export default function TaskModal({
             {/* Info, Activity, History (mobile only — desktop renders these in the right column) */}
             {!isDesktop && (
             <div className="px-8 py-6 space-y-6">
-
-              {/* Info */}
-              <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">
-                  Info
-                </label>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted">Created</span>
-                    <span className="text-xs text-ink">{formatDateTime(task.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted">In this column</span>
-                    <span className="text-xs text-ink">{timeInColumn(task.columnUpdatedAt)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted">Last updated</span>
-                    <span className="text-xs text-ink">
-                      {formatTimeAgo(
-                        task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
-                          ? task.updatedAt
-                          : task.createdAt
-                      )}
-                    </span>
-                  </div>
-                  {task.completedAt && (
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted">Completed</span>
-                      <span className="text-xs text-ink">{formatDateTime(task.completedAt)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Activity */}
-              <div>
-                <button
-                  onClick={() => {
-                    const next = !showActivity;
-                    setShowActivity(next);
-                    if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
-                  }}
-                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
-                >
-                  <svg
-                    className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
-                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
-                  >
-                    <path d="M3 2l4 3-4 3"/>
-                  </svg>
-                  {showActivity
-                    ? "Hide activity"
-                    : `Show activity${activities.length > 0 ? ` (${activities.length})` : ""}`}
-                </button>
-                {showActivity && (
-                  <div className="mt-3 space-y-3">
-                    {activitiesLoading ? (
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="h-8 rounded bg-column-bg/40 animate-pulse" />
-                        ))}
-                      </div>
-                    ) : activities.length === 0 ? (
-                      <p className="text-xs text-muted italic">No activity recorded yet.</p>
-                    ) : (
-                      activities.map((a) => (
-                        <div key={a.id} className="flex gap-2.5 items-start">
-                          <div
-                            className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
-                            style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
-                          >
-                            {a.user?.name.charAt(0).toUpperCase() || "?"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-1.5 flex-wrap">
-                              <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
-                              <span className="text-xs text-muted leading-snug">{a.content}</span>
-                            </div>
-                            <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* History */}
-              <div>
-                <button
-                  onClick={() => {
-                    const next = !showHistory;
-                    setShowHistory(next);
-                    if (next && versions.length === 0) void fetchVersionsDeduped();
-                  }}
-                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
-                >
-                  <svg
-                    className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}
-                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
-                  >
-                    <path d="M3 2l4 3-4 3"/>
-                  </svg>
-                  {showHistory
-                    ? "Hide history"
-                    : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
-                </button>
-                {showHistory && (
-                  <div className="mt-3 space-y-5">
-                    {versionsLoading ? (
-                      <div className="space-y-3">
-                        {[1, 2].map((i) => (
-                          <div key={i} className="h-12 rounded bg-column-bg/40 animate-pulse" />
-                        ))}
-                      </div>
-                    ) : versions.length === 0 ? (
-                      <p className="text-xs text-muted italic">No description history available.</p>
-                    ) : (
-                      versions.map((v, idx) => {
-                        const nextVersion = versions[idx + 1];
-                        const prevContent = nextVersion ? nextVersion.content : "";
-                        return (
-                          <div key={v.id} className="space-y-2">
-                            <div className="flex items-center justify-between flex-wrap gap-1">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                                  style={{ backgroundColor: v.user.color }}
-                                >
-                                  {v.user.name.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-xs font-semibold text-ink">{v.user.handle ? `@${v.user.handle}` : v.user.name}</span>
-                              </div>
-                              <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
-                            </div>
-                            <DiffViewer oldText={prevContent} newText={v.content} />
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-
+              {renderMetaPanels("mobile")}
             </div>
             )}
           </div>
@@ -1902,496 +1916,14 @@ export default function TaskModal({
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Properties</p>
                   <div className="bg-column-bg/40 rounded-xl border border-border/30 px-4 py-4">
                     <div className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-4 items-center text-sm">
-
-                  {/* Assignee */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <circle cx="7" cy="5" r="2.5"/>
-                      <path d="M2 13a5 5 0 0110 0"/>
-                    </svg>
-                    Assignee
-                  </div>
-                  <div ref={assigneeDropdownRef} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setAssigneeDropdownOpen((v) => !v)}
-                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                    >
-                      {(() => {
-                        const m = boardMembers.find((bm) => bm.id === assigneeId);
-                        if (!m) return <span className="text-muted">Unassigned</span>;
-                        return (
-                          <>
-                            <span
-                              className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                              style={{ backgroundColor: m.color }}
-                            >
-                              {m.name.charAt(0).toUpperCase()}
-                            </span>
-                            <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
-                          </>
-                        );
-                      })()}
-                    </button>
-                    {assigneeDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
-                          const isSelected = m.id === assigneeId;
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => {
-                                userHasEdited.current = true;
-                                setAssigneeId(m.id);
-                                setAssigneeDropdownOpen(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                              }`}
-                            >
-                              {m.id === "" ? (
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                                </span>
-                              ) : (
-                                <span
-                                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                  style={{ backgroundColor: m.color }}
-                                >
-                                  {m.name.charAt(0).toUpperCase()}
-                                </span>
-                              )}
-                              <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
-                              {isSelected && (
-                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M2 6l3 3 5-5"/>
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phase */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M2 9l5-3 5 3M2 5l5-3 5 3"/>
-                    </svg>
-                    Phase
-                  </div>
-                  <div ref={columnDropdownRef} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setColumnDropdownOpen((v) => !v)}
-                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                    >
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
-                    <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
-                    </button>
-                    {columnDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {columns.map((c) => {
-                          const isSelected = c.id === columnId;
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => {
-                                userHasEdited.current = true;
-                                setColumnId(c.id);
-                                setColumnDropdownOpen(false);
-                                void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                            >
-                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
-                            <span className="truncate">{c.label}</span>
-                              {isSelected && (
-                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M2 6l3 3 5-5"/>
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Priority */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M2 12V9M6 12V6M10 12V3"/>
-                    </svg>
-                    Priority
-                  </div>
-                  <div ref={priorityDropdownRef} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setPriorityDropdownOpen((v) => !v)}
-                      className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
-                    >
-                      <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
-                      <span className="capitalize text-white">{priority}</span>
-                    </button>
-                    {priorityDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                          const isSelected = priority === p;
-                          return (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => {
-                                setPriority(p);
-                                setPriorityDropdownOpen(false);
-                                void handleUpdateWithFeedback(task.id, { priority: p });
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                            >
-                              <PriorityIcon priority={p} className="w-3.5 h-3.5" />
-                              <span className="capitalize">{p}</span>
-                              {isSelected && (
-                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M2 6l3 3 5-5"/>
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Deadline */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="2" y="3" width="10" height="9" rx="1.5"/>
-                      <path d="M5 1.5v3M9 1.5v3M2 7h10"/>
-                    </svg>
-                    Deadline
-                    {overdue && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        Overdue
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-                      className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
-                    />
-                    {showDeadlineStatus && (
-                      <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
-                        deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
-                        deadlineInfo.severity === "due-soon" ? "text-orange-500 dark:text-orange-400" :
-                                                               "text-muted"
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          deadlineInfo.severity === "overdue"  ? "bg-red-500" :
-                          deadlineInfo.severity === "due-soon" ? "bg-orange-500" : "bg-muted/40"
-                        }`} />
-                        {deadlineInfo.label}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted self-start pt-1">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M2 2h6.5L12 5.5V12H2z"/>
-                      <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none"/>
-                    </svg>
-                    Tags
-                  </div>
-                  <div ref={tagDropdownRef} className="relative">
-                    <div className="flex flex-wrap items-center gap-1.5 -mx-1 pt-2">
-                      {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
-                        <button
-                          key={tag.id}
-                          onClick={() => toggleTag(tag.id)}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium leading-none text-ink border border-border/60 hover:bg-column-bg transition-colors"
-                          title="Click to remove"
-                        >
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                          <span>{tag.name}</span>
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
-                        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
-                        title="Manage tags"
-                        aria-label="Add tag"
-                      >
-                        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M7 3v8M3 7h8"/>
-                        </svg>
-                      </button>
-                    </div>
-
-                    {tagDropdownOpen && (
-                      <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {!isCreatingTag && (
-                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                            {allBoardTags.length === 0 ? (
-                              <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
-                            ) : (
-                              allBoardTags.map((tag) => {
-                                const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
-                                return (
-                                  <div
-                                    key={tag.id}
-                                    onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
-                                    className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                                    }`}
-                                  >
-                                    <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
-                                    <span className="truncate flex-1">{tag.name}</span>
-                                    <div className="ml-auto flex items-center gap-1">
-                                      {isSelected && (
-                                        <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <path d="M2 6l3 3 5-5"/>
-                                        </svg>
-                                      )}
-                                      <button
-                                        onClick={(e) => handleDeleteTag(e, tag)}
-                                        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                          <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        )}
-
-                        {isCreatingTag && tagCreatePhase === "name" && (
-                          <div className="p-3">
-                            <input
-                              autoFocus
-                              value={newTagName}
-                              onChange={(e) => setNewTagName(e.target.value)}
-                              placeholder="Tag name…"
-                              className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") {
-                                  setIsCreatingTag(false);
-                                  setNewTagName("");
-                                  setTagCreatePhase(null);
-                                } else if (e.key === "Enter") {
-                                  e.preventDefault();
-                                }
-                              }}
-                            />
-                            <div className="mt-3 flex items-center justify-between">
-                              <button
-                                onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
-                                className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
-                                disabled={!newTagName.trim()}
-                                className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
-                              >
-                                Next
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {isCreatingTag && tagCreatePhase === "color" && (
-                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                            {LABEL_PALETTE.map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => handleCreateTagWithColor(p.hex)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                              >
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
-                                <span className="truncate">{p.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {!isCreatingTag && (
-                          <div className="border-t border-border/20">
-                            <button
-                              onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
-                              className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M7 3v8M3 7h8" />
-                              </svg>
-                              Create new tag
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
+                      {renderPropertiesRows("desktop")}
                     </div>
                   </div>
                 </div>
 
                 {/* Info, Activity, History (desktop) */}
                 <div className="space-y-6">
-
-                  {/* Info */}
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3">Info</p>
-                    <div className="bg-column-bg/40 rounded-xl border border-border/30 px-4 py-3 space-y-2.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted">Created</span>
-                        <span className="text-xs text-ink">{formatDateTime(task.createdAt)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted">In this column</span>
-                        <span className="text-xs text-ink">{timeInColumn(task.columnUpdatedAt)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted">Last updated</span>
-                        <span className="text-xs text-ink">
-                          {formatTimeAgo(
-                            task.updatedAt && new Date(task.updatedAt).getFullYear() > 1970
-                              ? task.updatedAt
-                              : task.createdAt
-                          )}
-                        </span>
-                      </div>
-                      {task.completedAt && (
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-muted">Completed</span>
-                          <span className="text-xs text-ink">{formatDateTime(task.completedAt)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Activity */}
-                  <div>
-                    <button
-                      onClick={() => {
-                        const next = !showActivity;
-                        setShowActivity(next);
-                        if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
-                      }}
-                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
-                    >
-                      <svg
-                        className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
-                        width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
-                      >
-                        <path d="M3 2l4 3-4 3"/>
-                      </svg>
-                      {showActivity
-                        ? "Hide activity"
-                        : `Show activity${activities.length > 0 ? ` (${activities.length})` : ""}`}
-                    </button>
-                    {showActivity && (
-                      <div className="mt-3 space-y-3">
-                        {activitiesLoading ? (
-                          <div className="space-y-3">
-                            {[1, 2, 3].map((i) => (
-                              <div key={i} className="h-8 rounded bg-column-bg/40 animate-pulse" />
-                            ))}
-                          </div>
-                        ) : activities.length === 0 ? (
-                          <p className="text-xs text-muted italic">No activity recorded yet.</p>
-                        ) : (
-                          activities.map((a) => (
-                            <div key={a.id} className="flex gap-2.5 items-start">
-                              <div
-                                className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
-                                style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
-                              >
-                                {a.user?.name.charAt(0).toUpperCase() || "?"}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline gap-1.5 flex-wrap">
-                                  <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
-                                  <span className="text-xs text-muted leading-snug">{a.content}</span>
-                                </div>
-                                <span className="text-[10px] text-muted">{formatTimeAgo(a.createdAt)}</span>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* History */}
-                  <div>
-                    <button
-                      onClick={() => {
-                        const next = !showHistory;
-                        setShowHistory(next);
-                        if (next && versions.length === 0) void fetchVersionsDeduped();
-                      }}
-                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
-                    >
-                      <svg
-                        className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}
-                        width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
-                      >
-                        <path d="M3 2l4 3-4 3"/>
-                      </svg>
-                      {showHistory
-                        ? "Hide history"
-                        : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
-                    </button>
-                    {showHistory && (
-                      <div className="mt-3 space-y-5">
-                        {versionsLoading ? (
-                          <div className="space-y-3">
-                            {[1, 2].map((i) => (
-                              <div key={i} className="h-12 rounded bg-column-bg/40 animate-pulse" />
-                            ))}
-                          </div>
-                        ) : versions.length === 0 ? (
-                          <p className="text-xs text-muted italic">No description history available.</p>
-                        ) : (
-                          versions.map((v, idx) => {
-                            const nextVersion = versions[idx + 1];
-                            const prevContent = nextVersion ? nextVersion.content : "";
-                            return (
-                              <div key={v.id} className="space-y-2">
-                                <div className="flex items-center justify-between flex-wrap gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                                      style={{ backgroundColor: v.user.color }}
-                                    >
-                                      {v.user.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span className="text-xs font-semibold text-ink">{v.user.handle ? `@${v.user.handle}` : v.user.name}</span>
-                                  </div>
-                                  <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
-                                </div>
-                                <DiffViewer oldText={prevContent} newText={v.content} />
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-
+                  {renderMetaPanels("desktop")}
                 </div>
 
               </div>

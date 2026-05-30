@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
+import { nameToColor } from "@/lib/avatarColor";
 
 const PRIORITY_CONFIG: Record<
   string,
@@ -14,16 +15,6 @@ const PRIORITY_CONFIG: Record<
   high:   { label: "High",   dot: "bg-orange-500", badge: "bg-orange-500/10", text: "text-orange-500 dark:text-orange-400" },
   urgent: { label: "URGENT", dot: "bg-red-500",    badge: "bg-red-500/10",    text: "text-red-500 dark:text-red-400" },
 };
-
-const AVATAR_PALETTE = [
-  "#4A90A4","#7B68EE","#E8854A","#5BAD6F","#D4706A",
-  "#A078C8","#4E9E8F","#C4885A","#6B8DD6","#D4956A",
-];
-function nameToColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
-}
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
