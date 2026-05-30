@@ -599,6 +599,13 @@ export default function TaskModal({
   const handleClose = useCallback(() => {
     setConfirmDelete(false);
     setTagToDelete(null);
+    // Close all dropdowns so they don't visibly slide out with the panel
+    setAssigneeDropdownOpen(false);
+    setColumnDropdownOpen(false);
+    setPriorityDropdownOpen(false);
+    setTagDropdownOpen(false);
+    setMetaTagDropdownOpen(false);
+    setOpenMetaProp(null);
     // flush in background so closing feels instant
     flushUpdates();
     setClosing(true);

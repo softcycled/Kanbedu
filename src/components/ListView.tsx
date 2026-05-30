@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
@@ -84,8 +84,14 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
   }, [columnDropdownOpen]);
 
   // Build index maps for O(1) lookups
-  const columnMap = new Map(columns.map((c, i) => [c.id, { ...c, paletteIdx: i }]));
-  const memberMap = new Map(boardMembers.map((m) => [m.id, m]));
+  const columnMap = useMemo(
+    () => new Map(columns.map((c, i) => [c.id, { ...c, paletteIdx: i }])),
+    [columns]
+  );
+  const memberMap = useMemo(
+    () => new Map(boardMembers.map((m) => [m.id, m])),
+    [boardMembers]
+  );
 
   const handleOpenAdd = useCallback(() => {
     setNewColumn(columns[0]?.id ?? "");
@@ -126,8 +132,8 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
     if (sortKey === "title") {
       diff = a.title.localeCompare(b.title);
     } else if (sortKey === "phase") {
-      const colA = columns.find(c => c.id === a.column)?.label ?? "";
-      const colB = columns.find(c => c.id === b.column)?.label ?? "";
+      const colA = columnMap.get(a.column)?.label ?? "";
+      const colB = columnMap.get(b.column)?.label ?? "";
       diff = colA.localeCompare(colB);
     } else if (sortKey === "priority") {
       diff = (PRIORITY_ORDER[a.priority ?? "medium"] ?? 9) - (PRIORITY_ORDER[b.priority ?? "medium"] ?? 9);
