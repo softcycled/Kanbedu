@@ -25,6 +25,7 @@ model User {
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
   emailVerifications  EmailVerification[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model EmailVerification {
@@ -185,6 +186,17 @@ model BugReport {
   user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model RateLimit {
