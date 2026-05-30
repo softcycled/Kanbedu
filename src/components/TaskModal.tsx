@@ -861,7 +861,7 @@ export default function TaskModal({
                   >
                     {m.name.charAt(0).toUpperCase()}
                   </span>
-                  <span className="truncate">{m.handle ? `@${m.handle}` : m.name}</span>
+                  <span className="truncate">{m.name}</span>
                 </>
               );
             })()}
@@ -895,7 +895,7 @@ export default function TaskModal({
                         {m.name.charAt(0).toUpperCase()}
                       </span>
                     )}
-                    <span className="truncate">{m.id === "" ? m.name : (m.handle ? `@${m.handle}` : m.name)}</span>
+                    <span className="truncate">{m.name}</span>
                     {isSelected && (
                       <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M2 6l3 3 5-5"/>
@@ -1564,7 +1564,7 @@ export default function TaskModal({
                         >
                           {m.name.charAt(0).toUpperCase()}
                         </span>
-                        <span>{m.handle ? `@${m.handle}` : m.name}</span>
+                        <span>{m.name}</span>
                       </button>
                       {openMetaProp === "assignee" && (
                         <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
@@ -1595,7 +1595,7 @@ export default function TaskModal({
                                     {bm.name.charAt(0).toUpperCase()}
                                   </span>
                                 )}
-                                <span className="truncate">{bm.id === "" ? bm.name : (bm.handle ? `@${bm.handle}` : bm.name)}</span>
+                                <span className="truncate">{bm.name}</span>
                                 {isSelected && (
                                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M2 6l3 3 5-5"/>
@@ -1858,23 +1858,30 @@ export default function TaskModal({
                 </div>
               ) : comments.length > 0 ? (
                 <div className="space-y-5">
-                  {comments.map((c) => (
+                  {comments.map((c) => {
+                    const commentMember = boardMembers.find(
+                      (bm) => (bm.handle && `@${bm.handle}` === c.author) || bm.name === c.author
+                    );
+                    const avatarColor = commentMember?.color ?? nameToColor(c.author || "A");
+                    const displayName = commentMember?.name ?? c.author;
+                    return (
                     <div key={c.id} className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span
                           className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                          style={{ backgroundColor: nameToColor(c.author || "A") }}
+                          style={{ backgroundColor: avatarColor }}
                         >
-                          {(c.author || "A").charAt(0).toUpperCase()}
+                          {(displayName || "A").charAt(0).toUpperCase()}
                         </span>
                         <span className="text-sm font-semibold text-ink">
-                          {c.author || <span className="italic font-normal text-muted">Anonymous</span>}
+                          {displayName || <span className="italic font-normal text-muted">Anonymous</span>}
                         </span>
                         <span className="text-xs text-muted">{formatTimeAgo(c.createdAt)}</span>
                       </div>
                       <p className="text-[15px] text-ink/85 leading-relaxed pl-8">{c.content}</p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted italic">No comments yet.</p>
