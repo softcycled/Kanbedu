@@ -228,7 +228,7 @@ function LoginContent() {
             </div>
 
             {mode === "login" && (
-              <div className="text-right -mt-1">
+              <div className="text-center -mt-1">
                 <a href="/forgot-password" className="text-xs transition-colors" style={{ color: "#78716C" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
