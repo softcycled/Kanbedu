@@ -110,12 +110,29 @@ function TaskCard({ task, onClick }: Props) {
         {task.assigneeUser && (
           <>
             <span className="text-muted text-xs">·</span>
-            <div
-              className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm"
-              style={{ backgroundColor: task.assigneeUser.color }}
-              title={task.assigneeUser.handle ? `@${task.assigneeUser.handle}` : task.assigneeUser.name}
-            >
-              {task.assigneeUser.name.charAt(0).toUpperCase()}
+            <div className="relative group/assignee flex-shrink-0">
+              <div
+                className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm"
+                style={{ backgroundColor: task.assigneeUser.color }}
+              >
+                {task.assigneeUser.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/assignee:opacity-100 transition-opacity duration-150">
+                <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+                  <span
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                    style={{ backgroundColor: task.assigneeUser.color }}
+                  >
+                    {task.assigneeUser.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-semibold text-white leading-tight">{task.assigneeUser.name}</span>
+                    {task.assigneeUser.handle && (
+                      <span className="text-[11px] text-white/50 leading-tight">@{task.assigneeUser.handle}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         )}
