@@ -5,9 +5,9 @@ import { z } from "zod";
 export const handleSchema = z
   .string()
   .trim()
-  .min(2, "Handle must be at least 2 characters.")
-  .max(30, "Handle must be at most 30 characters.")
-  .regex(/^[a-z0-9_]+$/, "Handle may only contain lowercase letters, numbers, and underscores.");
+  .min(2, "Username must be at least 2 characters.")
+  .max(30, "Username must be at most 30 characters.")
+  .regex(/^[a-z0-9_]+$/, "Username may only contain lowercase letters, numbers, and underscores.");
 
 export const signupSchema = z.object({
   email: z.string().trim().email("Invalid email address.").toLowerCase(),

@@ -47,7 +47,7 @@ export default function HandleSetupForm() {
 
   const statusColor = status === "available" ? "#22C55E" : status === "taken" || status === "invalid" ? "#E8613A" : "#78716C";
   const statusText = status === "available" ? `@${handle} is available`
-    : status === "taken" ? "That handle is already taken"
+    : status === "taken" ? "That username is already taken"
     : status === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
     : status === "checking" ? "Checking availability..."
     : "2–30 chars, lowercase letters, numbers, underscores";
@@ -57,18 +57,18 @@ export default function HandleSetupForm() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>kanbedu</h1>
-          <p className="text-sm mt-1" style={{ color: "#78716C" }}>Choose your @handle</p>
+          <p className="text-sm mt-1" style={{ color: "#78716C" }}>Choose your username</p>
         </div>
 
         <div className="rounded-2xl p-6" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04)" }}>
           <p className="text-sm mb-5" style={{ color: "#78716C" }}>
-            Your handle is how others identify you on Kanbedu. You can change it later in your profile.
+            Your username is how others identify you on Kanbedu. You can change it later in your profile.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "#78716C" }}>
-                Handle
+                Username
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium select-none" style={{ color: "#78716C" }}>@</span>

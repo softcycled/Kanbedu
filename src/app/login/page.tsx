@@ -42,8 +42,8 @@ function LoginContent() {
     setError("");
 
     if (mode === "signup") {
-      if (!handle) { setError("Please choose a handle."); return; }
-      if (handleStatus !== "available") { setError("Please choose a valid, available handle."); return; }
+      if (!handle) { setError("Please choose a username."); return; }
+      if (handleStatus !== "available") { setError("Please choose a valid, available username."); return; }
     }
 
     setLoading(true);
@@ -134,7 +134,7 @@ function LoginContent() {
                     className="block text-xs font-semibold uppercase tracking-widest mb-2"
                     style={{ color: "#78716C" }}
                   >
-                    Handle
+                    Username
                   </label>
                   <div className="relative">
                     <span
@@ -167,7 +167,7 @@ function LoginContent() {
                         : "#78716C"
                     }}>
                       {handleStatus === "available" ? `@${handle} is available`
-                        : handleStatus === "taken" ? "That handle is already taken"
+                        : handleStatus === "taken" ? "That username is already taken"
                         : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
                         : "Checking..."}
                     </p>

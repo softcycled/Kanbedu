@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
     if (existingHandle) {
-      return NextResponse.json({ error: "That handle is already taken." }, { status: 409 });
+      return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
     }
 
     const hashed = await hashPassword(data.password);

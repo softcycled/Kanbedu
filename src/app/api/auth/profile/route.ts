@@ -23,7 +23,7 @@ export async function PATCH(req: Request) {
     if (data.handle !== undefined) {
       const existing = await prisma.user.findUnique({ where: { handle: data.handle } });
       if (existing && existing.id !== session.userId) {
-        return NextResponse.json({ error: "That handle is already taken." }, { status: 409 });
+        return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
       }
       updateData.handle = data.handle;
     }

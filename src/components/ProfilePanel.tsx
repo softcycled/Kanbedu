@@ -460,7 +460,7 @@ export default function ProfilePanel() {
         setHandleSaved(true);
         setTimeout(() => setHandleSaved(false), 2000);
       } else {
-        setHandleError(data.error ?? "Failed to save handle.");
+        setHandleError(data.error ?? "Failed to save username.");
       }
     } catch {
       setHandleError("Something went wrong.");
@@ -621,7 +621,7 @@ export default function ProfilePanel() {
 
                 <SectionItem>
                   <div className="py-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">Handle</label>
+                    <label className="block text-xs font-medium text-muted mb-1.5">Username</label>
                     <div className="relative mb-3">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted select-none">@</span>
                       <input
@@ -642,7 +642,7 @@ export default function ProfilePanel() {
                           : "var(--color-muted)"
                       }}>
                         {handleStatus === "available" ? `@${handleValue} is available`
-                          : handleStatus === "taken" ? "That handle is already taken"
+                          : handleStatus === "taken" ? "That username is already taken"
                           : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
                           : "Checking..."}
                       </p>
@@ -653,7 +653,7 @@ export default function ProfilePanel() {
                       disabled={handleSaving || handleValue === profile?.handle || (handleStatus !== "available")}
                       className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
                     >
-                      {handleSaved ? "Saved" : handleSaving ? "Saving…" : "Save handle"}
+                      {handleSaved ? "Saved" : handleSaving ? "Saving…" : "Save username"}
                     </button>
                   </div>
                 </SectionItem>
