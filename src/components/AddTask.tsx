@@ -7,7 +7,7 @@ interface Props {
   onAdd: (title: string, column: string) => Promise<void>;
 }
 
-const TITLE_WORD_LIMIT = 10;
+const TITLE_WORD_LIMIT = 20;
 const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 
 export default function AddTask({ column, onAdd }: Props) {

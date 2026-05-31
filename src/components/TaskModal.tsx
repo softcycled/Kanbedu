@@ -363,7 +363,7 @@ export default function TaskModal({
   useEffect(() => { isEditingTitleRef.current = isEditingTitle; }, [isEditingTitle]);
   useEffect(() => { isEditingDescriptionRef.current = isEditingDescription; }, [isEditingDescription]);
 
-  const TITLE_WORD_LIMIT = 10;
+  const TITLE_WORD_LIMIT = 20;
   const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 
   // commit title optimistically (non-blocking)
