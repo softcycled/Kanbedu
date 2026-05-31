@@ -52,6 +52,11 @@ export default function PrivacyPage() {
               <li>Basic activity data used for analytics features (e.g. task completion times, workflow phase durations).</li>
               <li>This data is used only to power in-app analytics visible to your board members. It&rsquo;s not shared externally.</li>
             </ul>
+            <SubHeading>Diagnostic data</SubHeading>
+            <ul>
+              <li>If the app encounters an error, we automatically collect diagnostic information including the error details, your browser and operating system type, and a session identifier. This is processed by our error monitoring provider (Sentry) and used solely to identify and fix bugs.</li>
+              <li>Standard server logs, including IP addresses, browser type, and request timestamps, are collected automatically by our hosting infrastructure.</li>
+            </ul>
           </Section>
 
           <Section title="2. What We Don't Collect">
@@ -88,6 +93,9 @@ export default function PrivacyPage() {
 
           <Section title="5. Authentication and Sessions">
             <p>
+              When you create an account, we send a verification email to confirm your address. Your account will have limited access until your email is verified. Verification links are single-use and expire within 24 hours.
+            </p>
+            <p>
               When you log in, Kanbedu issues a signed session token stored as an HTTP-only cookie. This token is used to authenticate your requests and expires after a period of inactivity.
             </p>
             <p>
@@ -110,7 +118,7 @@ export default function PrivacyPage() {
 
           <Section title="7. Data Storage and Security">
             <p>
-              Your data is stored in a database hosted on our infrastructure. We use industry-standard practices to protect it:
+              Your data is stored using third-party infrastructure providers (see Section 9). We use industry-standard practices to protect it:
             </p>
             <ul>
               <li>Passwords are hashed using bcrypt before storage.</li>
@@ -133,13 +141,16 @@ export default function PrivacyPage() {
 
           <Section title="9. Third-Party Services">
             <p>
-              Kanbedu may rely on third-party services for infrastructure (e.g. hosting, deployment, email delivery). These providers are contractually bound to handle your data securely and only as instructed by us.
+              We rely on the following providers to operate Kanbedu. Each is contractually bound to handle your data securely and only as instructed by us.
             </p>
+            <ul>
+              <li><strong>Supabase:</strong> database hosting. Stores all account data, content, and usage data.</li>
+              <li><strong>Vercel:</strong> hosting and deployment. Processes all web requests and server logs including IP addresses.</li>
+              <li><strong>Resend:</strong> email delivery. Receives your email address to send transactional emails (verification links, password resets, and board invites).</li>
+              <li><strong>Sentry:</strong> error monitoring. Receives diagnostic data including session identifiers and browser information when errors occur.</li>
+            </ul>
             <p>
-              We do not integrate with third-party advertising networks, social media trackers, or data brokers.
-            </p>
-            <p>
-              If we introduce new third-party integrations in the future, we will update this policy and disclose what data those services receive.
+              We do not integrate with advertising networks, social media trackers, or data brokers. If we add new providers in the future, we will update this section.
             </p>
           </Section>
 
@@ -188,6 +199,9 @@ export default function PrivacyPage() {
             </p>
             <p>
               Users aged 13 to 17 should use Kanbedu only with the awareness and consent of a parent or guardian, where required by law.
+            </p>
+            <p>
+              Where Kanbedu is used in an institutional or educational setting, the institution is responsible for ensuring that appropriate consents and authorisations are in place for all users, including those under the digital age of consent in their jurisdiction.
             </p>
           </Section>
 

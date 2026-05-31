@@ -49,10 +49,12 @@ export default function TermsPage() {
             </p>
             <ul>
               <li>You must be at least 13 years old to use Kanbedu.</li>
+              <li>We require you to verify your email address before accessing all features of the service.</li>
               <li>You are responsible for keeping your login credentials secure. We are not liable for any loss or damage arising from unauthorised access to your account.</li>
               <li>Don&rsquo;t share your account with others or create accounts on behalf of other people without their permission.</li>
               <li>You are responsible for all activity that occurs under your account.</li>
               <li>Notify us immediately at <Placeholder text="support@kanbedu.com" /> if you suspect your account has been compromised.</li>
+              <li>Where Kanbedu is used in an institutional or educational setting, the institution is responsible for ensuring appropriate consents are in place for all users, including minors. Institutional administrators who invite or onboard users accept these Terms on behalf of their institution.</li>
             </ul>
           </Section>
 
@@ -119,7 +121,7 @@ export default function TermsPage() {
               <li>Any damages arising from your reliance on content or information on the platform.</li>
             </ul>
             <p>
-              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) £100 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at £100.
+              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) SGD 150 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at SGD 150.
             </p>
             <p>
               Some jurisdictions don&rsquo;t allow certain liability exclusions. In those cases, our liability is limited to the fullest extent the law allows.
@@ -152,7 +154,7 @@ export default function TermsPage() {
 
           <Section title="10. Governing Law and Disputes">
             <p>
-              These Terms are governed by applicable law. Any disputes relating to these Terms or your use of Kanbedu will be handled by the courts of the jurisdiction where Kanbedu is registered or primarily operates.
+              These Terms are governed by the laws of Singapore. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Singapore.
             </p>
             <p>
               Before starting any formal legal proceedings, please contact us at <Placeholder text="legal@kanbedu.com" /> first and give us 30 days to try to sort it out informally.
