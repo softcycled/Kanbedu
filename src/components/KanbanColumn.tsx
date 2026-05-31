@@ -72,7 +72,7 @@ function KanbanColumn({
       ref={setSortableRef}
       style={style}
       {...attributes}
-      className="flex flex-col min-w-0 flex-shrink-0 w-[85vw] md:w-96"
+      className="flex flex-col min-w-0 flex-shrink-0 w-[72vw] md:w-80"
     >
       <ColumnHeader
         columnId={columnId}

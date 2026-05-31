@@ -831,7 +831,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             )}
 
             {/* Add column button */}
-            <div className="flex-shrink-0 w-[85vw] md:w-96 flex items-start">
+            <div className="flex-shrink-0 w-[72vw] md:w-80 flex items-start">
               <button
                 onClick={handleAddColumn}
                 className="w-full px-4 py-3 rounded-lg border-2 border-dashed border-border text-sm text-muted hover:text-ink hover:border-ink transition-colors font-medium"
@@ -852,7 +852,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               </div>
             )}
             {activeColumn && (
-              <div className="w-[85vw] md:w-96 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
+              <div className="w-[72vw] md:w-80 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
                 <div className="p-3 font-bold text-sm text-ink">{activeColumn.label}</div>
                 <div className="px-3 pb-3 text-xs text-muted">
                   {getTasksByColumn(activeColumn.id).length} tasks
