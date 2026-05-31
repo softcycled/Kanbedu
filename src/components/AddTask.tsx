@@ -7,8 +7,7 @@ interface Props {
   onAdd: (title: string, column: string) => Promise<void>;
 }
 
-const TITLE_WORD_LIMIT = 20;
-const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+const TITLE_CHAR_LIMIT = 100;
 
 export default function AddTask({ column, onAdd }: Props) {
   const [active, setActive] = useState(false);
@@ -29,7 +28,7 @@ export default function AddTask({ column, onAdd }: Props) {
       inputRef.current?.focus();
       return;
     }
-    if (countWords(trimmed) > TITLE_WORD_LIMIT) {
+    if (trimmed.length > TITLE_CHAR_LIMIT) {
       inputRef.current?.focus();
       return;
     }
@@ -84,8 +83,8 @@ export default function AddTask({ column, onAdd }: Props) {
             ${isEmpty ? "border-red-400" : "border-border"}
           `}
         />
-        <p className={`text-xs mt-1.5 px-1 ${isEmpty || countWords(value) > TITLE_WORD_LIMIT ? "text-red-400" : "text-muted"}`}>
-          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : countWords(value) > TITLE_WORD_LIMIT ? `${countWords(value)}/${TITLE_WORD_LIMIT} words — keep it short` : "Enter to add · Esc to cancel"}
+        <p className={`text-xs mt-1.5 px-1 ${isEmpty || value.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
+          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : value.length > TITLE_CHAR_LIMIT ? `${value.length}/${TITLE_CHAR_LIMIT} characters — too long` : "Enter to add · Esc to cancel"}
         </p>
       </div>
     );

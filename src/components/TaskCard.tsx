@@ -64,7 +64,7 @@ function TaskCard({ task, onClick }: Props) {
       className={rootClass}
     >
 
-      <p className="text-sm font-medium text-ink leading-snug tracking-[-0.01em] pr-3">
+      <p className="text-sm font-medium text-ink leading-snug tracking-[-0.01em] pr-3 break-words">
         {task.title}
       </p>
 
