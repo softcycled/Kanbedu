@@ -67,7 +67,11 @@ function LoginContent() {
         return;
       }
 
-      window.location.href = "/";
+      if (mode === "signup") {
+        window.location.href = `/check-email?email=${encodeURIComponent(email)}`;
+      } else {
+        window.location.href = "/";
+      }
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
