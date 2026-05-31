@@ -86,8 +86,8 @@ function LoginContent() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>
-            kanbedu
+          <h1 className="text-2xl font-bold tracking-tight">
+            <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
           </h1>
           <p className="text-sm mt-1" style={{ color: "#78716C" }}>
             {mode === "login" ? "Sign in to your account" : "Create a new account"}

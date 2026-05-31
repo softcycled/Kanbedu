@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>kanbedu</h1>
+          <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a></h1>
           <p className="text-sm mt-1" style={{ color: "#78716C" }}>
             {done ? "Password updated" : "Set a new password"}
           </p>
