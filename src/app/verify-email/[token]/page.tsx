@@ -22,7 +22,7 @@ export default async function VerifyEmailPage({ params }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
       <div className="w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: "#1C1917" }}>kanbedu</h1>
+        <h1 className="text-2xl font-bold tracking-tight mb-2"><a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a></h1>
         <div className="rounded-2xl p-6 mt-6" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06)" }}>
           <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#FDF0EB" }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#E8613A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -32,8 +32,8 @@ export default async function VerifyEmailPage({ params }: Props) {
           </div>
           <p className="text-sm font-medium mb-1" style={{ color: "#1C1917" }}>Verification failed</p>
           <p className="text-xs" style={{ color: "#78716C" }}>{message}</p>
-          <a href="/login" className="inline-block mt-5 px-4 py-2 text-sm font-medium rounded-xl text-white" style={{ backgroundColor: "#1C1917" }}>
-            Back to login
+          <a href="/" className="inline-block mt-5 px-4 py-2 text-sm font-medium rounded-xl text-white" style={{ backgroundColor: "#1C1917" }}>
+            Back to app
           </a>
         </div>
       </div>
