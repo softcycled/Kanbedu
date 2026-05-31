@@ -363,6 +363,9 @@ export default function TaskModal({
   useEffect(() => { isEditingTitleRef.current = isEditingTitle; }, [isEditingTitle]);
   useEffect(() => { isEditingDescriptionRef.current = isEditingDescription; }, [isEditingDescription]);
 
+  const TITLE_WORD_LIMIT = 10;
+  const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+
   // commit title optimistically (non-blocking)
   const commitTitle = useCallback(() => {
     const trimmed = draftTitle.trim();
@@ -371,6 +374,7 @@ export default function TaskModal({
       setIsEditingTitle(false);
       return;
     }
+    if (countWords(trimmed) > TITLE_WORD_LIMIT) return;
     if (trimmed !== task.title) {
       // show optimistic title instantly
       setOptimisticTitle(trimmed);
@@ -1440,6 +1444,7 @@ export default function TaskModal({
             {/* Title */}
             <div className="px-8 md:px-10 pt-10 pb-4">
               {isEditingTitle ? (
+                <>
                 <input
                   ref={titleInputRef}
                   value={draftTitle}
@@ -1448,6 +1453,12 @@ export default function TaskModal({
                   onBlur={commitTitle}
                   className="w-full text-[30px] font-bold text-ink leading-tight bg-column-bg rounded-lg px-2 py-1 outline-none border-none shadow-none ring-0 appearance-none -mx-2"
                 />
+                {(() => { const wc = countWords(draftTitle); const over = wc > TITLE_WORD_LIMIT; return wc > 0 ? (
+                  <p className={`text-xs mt-1 px-1 ${over ? "text-red-400" : "text-muted"}`}>
+                    {over ? `${wc}/${TITLE_WORD_LIMIT} words — too long` : `${wc}/${TITLE_WORD_LIMIT} words`}
+                  </p>
+                ) : null; })()}
+                </>
               ) : (
                 <h2
                   onClick={() => { setDraftTitle(optimisticTitle ?? task.title); setIsEditingTitle(true); }}

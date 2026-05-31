@@ -63,10 +63,6 @@ function TaskCard({ task, onClick }: Props) {
       data-task
       className={rootClass}
     >
-      {/* Overdue indicator */}
-      {overdue && (
-        <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-red-500" />
-      )}
 
       <p className="text-sm font-medium text-ink leading-snug tracking-[-0.01em] pr-3">
         {task.title}
