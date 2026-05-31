@@ -825,6 +825,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                   onDeleteColumn={handleDeleteColumnClick}
                   onSetDoneColumn={handleSetDoneColumn}
                   isDynamic={columns.length > 1}
+                  isBoardEmpty={tasks.length === 0}
                 />
               ))
             )}

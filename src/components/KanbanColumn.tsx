@@ -22,6 +22,7 @@ interface Props {
   onDeleteColumn: (columnId: string) => void;
   onSetDoneColumn: (columnId: string) => void;
   isDynamic?: boolean;
+  isBoardEmpty?: boolean;
 }
 
 function KanbanColumn({
@@ -36,6 +37,7 @@ function KanbanColumn({
   onDeleteColumn,
   onSetDoneColumn,
   isDynamic = false,
+  isBoardEmpty = false,
 }: Props) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: columnId });
   const {
@@ -107,6 +109,33 @@ function KanbanColumn({
             ))}
           </div>
         </SortableContext>
+
+        {isBoardEmpty && tasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center gap-1.5 py-6 select-none">
+            {isDone ? (
+              <>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
+                  <path d="M4 10l4 4 8-8"/>
+                </svg>
+                <p className="text-xs text-muted/60 text-center leading-relaxed">Finished tasks<br/>will land here</p>
+              </>
+            ) : columnIndex === 0 ? (
+              <>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
+                  <path d="M10 4v12M4 10h12" strokeLinecap="round"/>
+                </svg>
+                <p className="text-xs text-muted/60 text-center leading-relaxed">Add your first task<br/>to get started</p>
+              </>
+            ) : (
+              <>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
+                  <path d="M4 10h12M10 4l6 6-6 6"/>
+                </svg>
+                <p className="text-xs text-muted/60 text-center leading-relaxed">Drag tasks here<br/>as you work</p>
+              </>
+            )}
+          </div>
+        )}
 
         <AddTask column={columnId} onAdd={onAddTask} />
       </div>
