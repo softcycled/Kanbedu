@@ -21,7 +21,7 @@ const nextConfig = {
 
   // Reduce serverless function sizes by keeping heavy client-only libs out of SSR
   experimental: {
-    optimizePackageImports: ["recharts"],
+    optimizePackageImports: ["recharts", "@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
   },
 
   // Disable x-powered-by header in production

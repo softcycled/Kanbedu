@@ -125,10 +125,8 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
     else { setSortKey(key); setSortDir("desc"); }
   };
 
-  // Sort tasks based on active sort key and direction
-  const sorted = [...tasks].sort((a, b) => {
+  const sorted = useMemo(() => [...tasks].sort((a, b) => {
     let diff = 0;
-    
     if (sortKey === "title") {
       diff = a.title.localeCompare(b.title);
     } else if (sortKey === "phase") {
@@ -138,21 +136,17 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
     } else if (sortKey === "priority") {
       diff = (PRIORITY_ORDER[a.priority ?? "medium"] ?? 9) - (PRIORITY_ORDER[b.priority ?? "medium"] ?? 9);
     } else if (sortKey === "deadline") {
-      // Smart deadline prioritization: overdue > due-soon > future > no-deadline
       const priorityA = getDeadlineSortPriority(a.deadline, a.completedAt);
       const priorityB = getDeadlineSortPriority(b.deadline, b.completedAt);
-      
       if (priorityA.priority !== priorityB.priority) {
         diff = priorityA.priority - priorityB.priority;
       } else {
-        // Within same priority level, sort by timestamp
         diff = priorityA.timestamp - priorityB.timestamp;
       }
     }
-    
-    if (diff === 0) diff = a.title.localeCompare(b.title); // stable tie-break
+    if (diff === 0) diff = a.title.localeCompare(b.title);
     return sortDir === "asc" ? diff : -diff;
-  });
+  }), [tasks, sortKey, sortDir, columnMap]);
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0 pl-[4.5rem] pr-6 md:px-10 py-6">

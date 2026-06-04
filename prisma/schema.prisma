@@ -114,6 +114,7 @@ model Task {
   @@index([column])
   @@index([assigneeId])
   @@index([completedAt])
+  @@index([createdAt])
 }
 
 model Tag {
@@ -137,6 +138,7 @@ model TaskColumnHistory {
 
   @@index([taskId])
   @@index([columnId])
+  @@index([taskId, enteredAt])
 }
 
 model Comment {
