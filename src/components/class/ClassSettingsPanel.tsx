@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "../ConfirmModal";
+import { useToasts } from "../Toasts";
 
 interface Props {
   classId: string;
@@ -13,11 +15,13 @@ interface Props {
 
 export default function ClassSettingsPanel({ classId, initialName, initialTerm, archived, joinCode }: Props) {
   const router = useRouter();
+  const { push } = useToasts();
   const [name, setName] = useState(initialName);
   const [term, setTerm] = useState(initialTerm ?? "");
   const [isArchived, setIsArchived] = useState(archived);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [copyMsg, setCopyMsg] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Clone dialog state
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -30,14 +34,19 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
     typeof window !== "undefined" ? `${window.location.origin}/class/join/${joinCode}` : `/class/join/${joinCode}`;
 
   const patch = async (body: any, msg: string) => {
-    const res = await fetch(`/api/classes/${classId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/classes/${classId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("patch failed");
       setSavedMsg(msg);
       setTimeout(() => setSavedMsg(null), 1500);
+      return true;
+    } catch {
+      push({ title: "Couldn't save changes", description: "Please try again." });
+      return false;
     }
   };
 
@@ -46,7 +55,8 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
   const toggleArchive = async () => {
     const next = !isArchived;
     setIsArchived(next);
-    await patch({ archived: next }, next ? "Archived" : "Unarchived");
+    const ok = await patch({ archived: next }, next ? "Archived" : "Unarchived");
+    if (!ok) setIsArchived(!next); // revert on failure
   };
 
   const copyInvite = async () => {
@@ -65,19 +75,23 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: cloneName.trim() || undefined, term: cloneTerm.trim() || undefined, copyRoster }),
       });
-      if (res.ok) {
-        const cls = await res.json();
-        router.push(`/class/${cls.id}`);
-      }
-    } finally {
+      if (!res.ok) throw new Error("clone failed");
+      const cls = await res.json();
+      router.push(`/class/${cls.id}`);
+    } catch {
+      push({ title: "Couldn't clone class", description: "Please try again." });
       setCloning(false);
     }
   };
 
   const doDelete = async () => {
-    if (!confirm("Delete this class permanently? All groups and their boards will be removed. This cannot be undone.")) return;
-    const res = await fetch(`/api/classes/${classId}`, { method: "DELETE" });
-    if (res.ok) router.push("/");
+    try {
+      const res = await fetch(`/api/classes/${classId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("delete failed");
+      router.push("/");
+    } catch {
+      push({ title: "Couldn't delete class", description: "Please try again." });
+    }
   };
 
   return (
@@ -142,12 +156,22 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
           <button onClick={toggleArchive} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">
             {isArchived ? "Unarchive class" : "Archive class"}
           </button>
-          <button onClick={doDelete} className="px-4 py-2 rounded-xl text-sm font-medium border border-red-300 text-red-600 bg-card-bg hover:bg-red-50 transition-colors">
+          <button onClick={() => setConfirmDelete(true)} className="px-4 py-2 rounded-xl text-sm font-medium border border-red-300 text-red-600 bg-card-bg hover:bg-red-50 transition-colors">
             Delete class
           </button>
         </div>
         <p className="text-xs text-muted mt-2">Archiving hides the class and stops new members from joining. Deleting removes everything permanently.</p>
       </section>
+
+      <ConfirmModal
+        isOpen={confirmDelete}
+        danger
+        title="Delete this class?"
+        message={`"${name || initialName}" will be permanently deleted, along with every group and their boards. This cannot be undone.`}
+        confirmLabel="Delete class"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={doDelete}
+      />
     </div>
   );
 }

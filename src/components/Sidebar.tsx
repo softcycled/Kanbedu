@@ -177,6 +177,7 @@ export default function Sidebar({
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [classes, setClasses] = useState<ClassSummary[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 
@@ -191,6 +192,26 @@ export default function Sidebar({
 
   // Load the user's classes once for the sidebar Classes section.
   useEffect(() => { loadClasses(); }, []);
+
+  const activeClasses = classes.filter((c) => !c.archived);
+  const archivedClasses = classes.filter((c) => c.archived);
+
+  const renderClassItem = (c: ClassSummary, archived = false) => (
+    <button
+      key={c.id}
+      onClick={() => { router.push(`/class/${c.id}`); setMobileOpen(false); }}
+      className={`w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
+        archived ? "text-ink/40 hover:bg-ink/5 hover:text-ink/60" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+      }`}
+    >
+      <span className="truncate">{c.name}</span>
+      {archived ? (
+        <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
+      ) : (c.role === "educator" || c.role === "ta") ? (
+        <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+      ) : null}
+    </button>
+  );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -282,7 +303,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          {classes.filter((c) => !c.archived).length === 0 ? (
+          {activeClasses.length === 0 && archivedClasses.length === 0 ? (
             <button
               onClick={() => setIsClassModalOpen(true)}
               className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
@@ -290,20 +311,20 @@ export default function Sidebar({
               + Create or join a class
             </button>
           ) : (
-            classes
-              .filter((c) => !c.archived)
-              .map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => { router.push(`/class/${c.id}`); setMobileOpen(false); }}
-                  className="w-full flex items-center px-2 py-1.5 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors text-left min-w-0"
-                >
-                  <span className="truncate">{c.name}</span>
-                  {(c.role === "educator" || c.role === "ta") && (
-                    <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
-                  )}
-                </button>
-              ))
+            <>
+              {activeClasses.map((c) => renderClassItem(c))}
+              {archivedClasses.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowArchived((v) => !v)}
+                    className="w-full text-left px-2 py-1 mt-0.5 rounded-lg text-[11px] text-muted/70 hover:text-ink transition-colors"
+                  >
+                    {showArchived ? "Hide archived" : `Show archived (${archivedClasses.length})`}
+                  </button>
+                  {showArchived && archivedClasses.map((c) => renderClassItem(c, true))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   DragOverlay,
 } from "@dnd-kit/core";
 import ConfirmModal from "../ConfirmModal";
+import { useToasts } from "../Toasts";
 
 interface Member {
   userId: string;
@@ -48,7 +49,7 @@ function StudentChip({ member, dragging }: { member: Member; dragging?: boolean 
         className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white flex-shrink-0"
         style={{ backgroundColor: member.color || "#4A90A4" }}
       >
-        {(member.name || member.handle || "?").slice(0, 2).toUpperCase()}
+        {(member.name || member.handle || "?").charAt(0).toUpperCase()}
       </span>
       <span className="text-xs text-ink truncate">{label}</span>
     </div>
@@ -96,6 +97,9 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
   const [busy, setBusy] = useState(false);
   // Member pending a "kick from class" confirmation (lobby only).
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
+  // Group pending a delete confirmation (destructive — wipes the group board).
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
+  const { push } = useToasts();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -133,6 +137,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
       onChanged?.();
     } catch {
       setMembers(prev); // revert
+      push({ title: "Couldn't move student", description: "Please try again." });
     }
   };
 
@@ -159,63 +164,90 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      if (res.ok) {
-        const g = await res.json();
-        setGroups((prev) => [...prev, g]);
-        setNewGroupName("");
-        onChanged?.();
-      }
+      if (!res.ok) throw new Error("create failed");
+      const g = await res.json();
+      setGroups((prev) => [...prev, g]);
+      setNewGroupName("");
+      onChanged?.();
+    } catch {
+      push({ title: "Couldn't create group", description: "Please try again." });
     } finally {
       setBusy(false);
     }
   };
 
   const deleteGroup = async (groupId: string) => {
-    const res = await fetch(`/api/classes/${classId}/groups`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId }),
-    });
-    if (res.ok) {
-      setGroups((prev) => prev.filter((g) => g.id !== groupId));
-      // students of that group fall back to the lobby
-      setMembers((prev) => prev.map((m) => (m.groupId === groupId ? { ...m, groupId: null } : m)));
+    const prevGroups = groups;
+    const prevMembers = members;
+    // optimistic: remove the group, return its students to the lobby
+    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+    setMembers((prev) => prev.map((m) => (m.groupId === groupId ? { ...m, groupId: null } : m)));
+    try {
+      const res = await fetch(`/api/classes/${classId}/groups`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId }),
+      });
+      if (!res.ok) throw new Error("delete failed");
       onChanged?.();
+    } catch {
+      setGroups(prevGroups);
+      setMembers(prevMembers);
+      push({ title: "Couldn't delete group", description: "Please try again." });
     }
   };
 
   const renameGroup = async (groupId: string, name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, name: trimmed } : g)));
-    await fetch(`/api/classes/${classId}/groups`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId, name: trimmed }),
-    });
-    onChanged?.();
+    const prev = groups;
+    setGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, name: trimmed } : g)));
+    try {
+      const res = await fetch(`/api/classes/${classId}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId, name: trimmed }),
+      });
+      if (!res.ok) throw new Error("rename failed");
+      onChanged?.();
+    } catch {
+      setGroups(prev);
+      push({ title: "Couldn't rename group", description: "Please try again." });
+    }
   };
 
   const setRole = async (userId: string, role: "student" | "ta") => {
-    setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, role } : m)));
-    await fetch(`/api/classes/${classId}/members`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, role }),
-    });
-    onChanged?.();
+    const prev = members;
+    setMembers((ms) => ms.map((m) => (m.userId === userId ? { ...m, role } : m)));
+    try {
+      const res = await fetch(`/api/classes/${classId}/members`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role }),
+      });
+      if (!res.ok) throw new Error("role failed");
+      onChanged?.();
+    } catch {
+      setMembers(prev);
+      push({ title: "Couldn't update role", description: "Please try again." });
+    }
   };
 
   const removeMember = async (userId: string) => {
     const prev = members;
     setMembers((ms) => ms.filter((m) => m.userId !== userId));
-    const res = await fetch(`/api/classes/${classId}/members`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, remove: true }),
-    });
-    if (!res.ok) setMembers(prev);
-    else onChanged?.();
+    try {
+      const res = await fetch(`/api/classes/${classId}/members`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, remove: true }),
+      });
+      if (!res.ok) throw new Error("remove failed");
+      onChanged?.();
+    } catch {
+      setMembers(prev);
+      push({ title: "Couldn't remove student", description: "Please try again." });
+    }
   };
 
   if (loading) {
@@ -283,7 +315,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
                   />
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button onClick={() => onOpenBoard({ id: g.id, name: g.name, boardId: g.boardId })} className="text-[11px] text-muted hover:text-ink" title="Open board">Open</button>
-                    <button onClick={() => deleteGroup(g.id)} className="text-[11px] text-muted hover:text-red-500" title="Delete group">✕</button>
+                    <button onClick={() => setConfirmDeleteGroup(g)} className="text-[11px] text-muted hover:text-red-500" title="Delete group">✕</button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -339,6 +371,22 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
         onClose={() => setConfirmRemove(null)}
         onConfirm={async () => {
           if (confirmRemove) await removeMember(confirmRemove.userId);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteGroup}
+        danger
+        title="Delete this group?"
+        message={
+          confirmDeleteGroup
+            ? `"${confirmDeleteGroup.name}" and its board — including all of the group's tasks — will be permanently deleted. Students in it return to the lobby. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete group"
+        onClose={() => setConfirmDeleteGroup(null)}
+        onConfirm={async () => {
+          if (confirmDeleteGroup) await deleteGroup(confirmDeleteGroup.id);
         }}
       />
     </div>
