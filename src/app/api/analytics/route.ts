@@ -269,6 +269,7 @@ export async function GET(request: NextRequest) {
   >();
 
   for (const t of taskDetails) {
+    if (t.assignee === "(unassigned)") continue;
     const name = t.assignee;
     if (!assigneeMap.has(name)) {
       assigneeMap.set(name, { total: 0, completed: 0, overdue: 0, cycleTimes: [] });

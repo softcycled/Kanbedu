@@ -221,11 +221,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
     let list = [...data.tasks];
     if (filter === "active") list = list.filter((t) => !t.columnIsDone);
     if (filter === "overdue") list = list.filter((t) => t.deadline && new Date(t.deadline).getTime() < now && !t.columnIsDone);
-    if (filter === "unassigned") list = list.filter((t) => !t.assignee);
+    if (filter === "unassigned") list = list.filter((t) => t.assignee === "(unassigned)");
     list.sort((a, b) => {
-      // Completed tasks always float to the top
-      const doneA = a.columnIsDone ? 0 : 1;
-      const doneB = b.columnIsDone ? 0 : 1;
+      // Completed tasks sink to the bottom; active tasks float up
+      const doneA = a.columnIsDone ? 1 : 0;
+      const doneB = b.columnIsDone ? 1 : 0;
       if (doneA !== doneB) return doneA - doneB;
       // Within each group, apply the active sort key
       let diff = 0;
@@ -241,7 +241,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
     return list;
   }, [data, filter, sortKey, sortDir]);
 
-  const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee) ?? false, [data]);
+  const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee && t.assignee !== "(unassigned)") ?? false, [data]);
 
   if (loading && !data) {
     return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading analytics…</div>;
