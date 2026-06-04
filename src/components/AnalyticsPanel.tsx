@@ -83,6 +83,7 @@ interface AnalyticsData {
     commentDensity: number;
     deadlineAdherence: { onTime: number; total: number } | null;
     suspiciousTasks: SuspiciousTask[];
+    historyTruncated: boolean;
   };
 }
 
@@ -332,6 +333,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
 
       {/* Phase Health */}
       <Section title="Workflow Overview">
+        {summary.historyTruncated && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-700 dark:text-yellow-400">
+            Some tasks predate the 90-day history window. Phase times for those tasks are estimated from their last-moved date.
+          </div>
+        )}
         {(() => {
           const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
           const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
@@ -479,7 +485,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         {summary.suspiciousTasks.length === 0 ? (
           <div className="bg-card-bg rounded-xl border border-border px-5 py-4 flex items-center gap-3">
             <span className="text-green-500 dark:text-green-400 text-lg">✓</span>
-            <span className="text-sm text-muted">No suspicious activity detected across completed tasks.</span>
+            <span className="text-sm text-muted">No suspicious activity detected.</span>
           </div>
         ) : (
           <>
@@ -487,10 +493,10 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
               <span className="text-red-500 dark:text-red-400 mt-0.5">⚠</span>
               <div>
                 <p className="text-sm font-medium text-red-700 dark:text-red-300">
-                  {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
+                  {summary.suspiciousTasks.length} task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
                 </p>
                 <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
-                  Flags indicate tasks completed suspiciously fast, that bypassed intermediate columns, or moved by someone other than the assignee.
+                  Flags indicate tasks completed suspiciously fast, that bypassed intermediate columns, or moved by someone other than the assignee. Includes active tasks.
                 </p>
               </div>
             </div>
@@ -551,15 +557,22 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
       {/* Tasks table */}
       <Section title="All Tasks">
         <div className="flex items-center gap-2 mb-3">
-          {(["all", "active", "overdue", "unassigned"] as FilterKey[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${filter === f ? "bg-ink text-paper border-ink" : "bg-card-bg border-border text-muted hover:text-ink"}`}
-            >
-              {f === "all" ? `All (${data.tasks.length})` : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          {(["all", "active", "overdue", "unassigned"] as FilterKey[]).map((f) => {
+            const unassignedCount = data.tasks.filter((t) => t.assignee === "(unassigned)").length;
+            const label =
+              f === "all" ? `All (${data.tasks.length})` :
+              f === "unassigned" ? `Unassigned (${unassignedCount})` :
+              f.charAt(0).toUpperCase() + f.slice(1);
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${filter === f ? "bg-ink text-paper border-ink" : "bg-card-bg border-border text-muted hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            );
+          })}
           <span className="ml-auto text-xs text-muted">{filteredTasks.length} shown</span>
         </div>
         <div className="bg-card-bg rounded-xl border border-border overflow-hidden">

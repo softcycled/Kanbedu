@@ -139,7 +139,8 @@ export async function GET(request: NextRequest) {
   // Score = currentTaskCount × avgPhaseTimeMs (or currentPhaseMs proxy if no avg).
   // Only non-done columns with at least 1 task are candidates.
   // Exactly one column gets the bottleneck flag — the one with the highest score.
-  const nonDonePhases = phaseStats.filter((p) => !p.isDone && p.currentTaskCount > 0);
+  // Require at least 2 tasks to flag a bottleneck — avoids mislabeling on small boards
+  const nonDonePhases = phaseStats.filter((p) => !p.isDone && p.currentTaskCount >= 2);
   let bottleneckId: string | null = null;
   if (nonDonePhases.length > 0) {
     const scored = nonDonePhases.map((p) => ({
@@ -147,7 +148,6 @@ export async function GET(request: NextRequest) {
       score: p.currentTaskCount * (p.avgPhaseTimeMs ?? 0),
     }));
     scored.sort((a, b) => b.score - a.score);
-    // Only flag if the score is non-zero (need both tasks and time data)
     if (scored[0].score > 0) bottleneckId = scored[0].id;
   }
 
@@ -166,9 +166,10 @@ export async function GET(request: NextRequest) {
     const cycleTimeMs = t.completedAt
       ? t.completedAt.getTime() - t.createdAt.getTime()
       : null;
-    // Use open history enteredAt for currentPhaseMs — same source as phase stats
+    // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done tasks
+    // so they never trip the stagnant threshold in per-column cards.
     const enteredCurrentColumn = getEnteredCurrentColumn(t);
-    const currentPhaseMs = now.getTime() - enteredCurrentColumn.getTime();
+    const currentPhaseMs = isDone ? 0 : now.getTime() - enteredCurrentColumn.getTime();
     // Age freezes at completedAt for done tasks so it doesn't keep growing
     const totalAgeMs = isDone && t.completedAt
       ? t.completedAt.getTime() - t.createdAt.getTime()
@@ -294,6 +295,12 @@ export async function GET(request: NextRequest) {
     }))
     .sort((a, b) => b.total - a.total);
 
+  // Detect tasks whose history was silently truncated by HISTORY_CUTOFF: created before
+  // the cutoff but have no history entries (their move history was pruned).
+  const historyTruncated = tasks.some(
+    (t) => t.createdAt < HISTORY_CUTOFF && t.columnHistory.length === 0
+  );
+
   return NextResponse.json({
     columns: phaseStatsWithBottleneck,
     tasks: taskDetails,
@@ -312,6 +319,7 @@ export async function GET(request: NextRequest) {
           ? { onTime, total: completedWithDeadline.length }
           : null,
       suspiciousTasks,
+      historyTruncated,
     },
   });
 }
