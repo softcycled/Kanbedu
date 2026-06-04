@@ -299,14 +299,8 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
 
       {/* Task rows */}
       {sorted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-sm text-muted">No tasks yet.</p>
-          <button
-            onClick={handleOpenAdd}
-            className="text-xs font-semibold text-accent hover:underline"
-          >
-            + Add your first task
-          </button>
         </div>
       ) : (
         <div className="divide-y divide-border/20">
