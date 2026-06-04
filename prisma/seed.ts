@@ -11,16 +11,18 @@ const prisma = new PrismaClient();
 
 // ── Demo users ────────────────────────────────────────────────
 // All share the password "demo1234" for easy testing.
+// Each has a distinct profile color and username (handle) so avatars and
+// mentions look realistic across boards and the demo class.
 const DEMO_USERS = [
-  { id: "demo-user-alice", name: "Alice",  email: "alice@demo.kanbedu"  },
-  { id: "demo-user-bob",   name: "Bob",    email: "bob@demo.kanbedu"    },
-  { id: "demo-user-carol", name: "Carol",  email: "carol@demo.kanbedu"  },
-  { id: "demo-user-dave",  name: "Dave",   email: "dave@demo.kanbedu"   },
-  { id: "demo-user-jake",  name: "Jake",   email: "jake@demo.kanbedu"   },
-  { id: "demo-user-emma",  name: "Emma",   email: "emma@demo.kanbedu"   },
-  { id: "demo-user-priya", name: "Priya",  email: "priya@demo.kanbedu"  },
-  { id: "demo-user-sam",   name: "Sam",    email: "sam@demo.kanbedu"    },
-  { id: "demo-user-mia",   name: "Mia",    email: "mia@demo.kanbedu"    },
+  { id: "demo-user-alice", name: "Alice",  email: "alice@demo.kanbedu",  handle: "alice", color: "#E8613A" },
+  { id: "demo-user-bob",   name: "Bob",    email: "bob@demo.kanbedu",    handle: "bob",   color: "#4A90A4" },
+  { id: "demo-user-carol", name: "Carol",  email: "carol@demo.kanbedu",  handle: "carol", color: "#8B5CF6" },
+  { id: "demo-user-dave",  name: "Dave",   email: "dave@demo.kanbedu",   handle: "dave",  color: "#2F9E44" },
+  { id: "demo-user-jake",  name: "Jake",   email: "jake@demo.kanbedu",   handle: "jake",  color: "#F59E0B" },
+  { id: "demo-user-emma",  name: "Emma",   email: "emma@demo.kanbedu",   handle: "emma",  color: "#EC4899" },
+  { id: "demo-user-priya", name: "Priya",  email: "priya@demo.kanbedu",  handle: "priya", color: "#3B82F6" },
+  { id: "demo-user-sam",   name: "Sam",    email: "sam@demo.kanbedu",    handle: "sam",   color: "#14B8A6" },
+  { id: "demo-user-mia",   name: "Mia",    email: "mia@demo.kanbedu",    handle: "mia",   color: "#F472B6" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -149,14 +151,31 @@ async function main() {
     DEMO_USERS.map((u) =>
       prisma.user.upsert({
         where: { email: u.email },
-        update: {},
-        create: { id: u.id, name: u.name, email: u.email, password: hashed },
+        update: { name: u.name, handle: u.handle, color: u.color },
+        create: { id: u.id, name: u.name, email: u.email, password: hashed, handle: u.handle, color: u.color, emailVerified: true },
       })
     )
   );
   // name → userId lookup for assigning tasks
   const userMap = new Map(users.map((u) => [u.name, u.id]));
   console.log(`✓ Upserted ${users.length} demo users.`);
+
+  // ── Owner account (optional, env-driven) ──────────────────────
+  // Set SEED_OWNER_EMAIL (+ optional SEED_OWNER_HANDLE) to make a real account
+  // own all boards and teach the class. No personal data is committed; the dev
+  // password is "demo1234". Without the env var, Alice runs the show.
+  const ownerEmail = process.env.SEED_OWNER_EMAIL;
+  const ownerHandle = process.env.SEED_OWNER_HANDLE || "owner";
+  let ownerId = userMap.get("Alice")!;
+  if (ownerEmail) {
+    const owner = await prisma.user.upsert({
+      where: { email: ownerEmail },
+      update: { handle: ownerHandle },
+      create: { name: ownerHandle, email: ownerEmail, password: hashed, handle: ownerHandle, color: "#0EA5E9", emailVerified: true },
+    });
+    ownerId = owner.id;
+    console.log(`✓ Owner account: @${ownerHandle} (${ownerEmail})`);
+  }
 
   // ── Board ──────────────────────────────────────────────────
   const board = await prisma.board.create({
@@ -541,6 +560,7 @@ async function main() {
     const uid = userMap.get(name);
     if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: board.id } }, update: {}, create: { userId: uid, boardId: board.id } });
   }
+  await prisma.boardMember.upsert({ where: { userId_boardId: { userId: ownerId, boardId: board.id } }, update: { role: "owner" }, create: { userId: ownerId, boardId: board.id, role: "owner" } });
   console.log(`✓ Seeded board "${board.name}" with ${tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${board.id}`);
 
@@ -863,6 +883,7 @@ async function main() {
     const uid = userMap.get(name);
     if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: b2.id } }, update: {}, create: { userId: uid, boardId: b2.id } });
   }
+  await prisma.boardMember.upsert({ where: { userId_boardId: { userId: ownerId, boardId: b2.id } }, update: { role: "owner" }, create: { userId: ownerId, boardId: b2.id, role: "owner" } });
   console.log(`✓ Seeded board "${b2.name}" with ${b2Tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${b2.id}`);
 
@@ -1129,8 +1150,110 @@ async function main() {
     const uid = userMap.get(name);
     if (uid) await prisma.boardMember.upsert({ where: { userId_boardId: { userId: uid, boardId: b3.id } }, update: {}, create: { userId: uid, boardId: b3.id } });
   }
+  await prisma.boardMember.upsert({ where: { userId_boardId: { userId: ownerId, boardId: b3.id } }, update: { role: "owner" }, create: { userId: ownerId, boardId: b3.id, role: "owner" } });
   console.log(`✓ Seeded board "${b3.name}" with ${b3Tasks.length} tasks across 4 columns.`);
   console.log(`  Board ID: ${b3.id}`);
+
+  // ── Demo educator class ───────────────────────────────────────
+  await seedDemoClass(userMap, ownerId);
+}
+
+// Creates a showcase Class with two group boards + a lobby, using the existing
+// demo cast (Alice lectures; the rest are students). Designed so the Monitor
+// shows one on-track group and one that "needs attention" (stalled + overdue).
+async function seedDemoClass(userMap: Map<string, string>, ownerId: string) {
+  const lecturerId = ownerId;
+
+  const cls = await prisma.class.create({
+    data: {
+      id: "demo-class-cs301",
+      name: "CS301 — Software Engineering",
+      term: "Fall 2026",
+      ownerId: lecturerId,
+      joinCode: "demo-cs301",
+    },
+  });
+  await prisma.classMember.create({ data: { userId: lecturerId, classId: cls.id, role: "educator" } });
+  await prisma.classPreset.create({
+    data: {
+      classId: cls.id,
+      columns: [
+        { label: "To Do", isDone: false },
+        { label: "In Progress", isDone: false },
+        { label: "Done", isDone: true },
+      ],
+      tasks: [
+        { title: "Read the project brief", description: "", columnIndex: 0, priority: "medium" },
+        { title: "Set up your group repo", description: "", columnIndex: 0, priority: "high" },
+      ],
+    },
+  });
+
+  type GTask = { title: string; col: 0 | 1 | 2; assignee?: string; priority?: string; deadline?: Date | null; stale?: boolean };
+  async function makeGroup(name: string, order: number, students: string[], tasks: GTask[]) {
+    const board = await prisma.board.create({ data: { name, order: 100 + order } });
+    const cols = await Promise.all([
+      prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, boardId: board.id } }),
+      prisma.column.create({ data: { label: "In Progress", order: 1, isDone: false, boardId: board.id } }),
+      prisma.column.create({ data: { label: "Done", order: 2, isDone: true, boardId: board.id } }),
+    ]);
+    const group = await prisma.group.create({ data: { classId: cls.id, name, order, boardId: board.id } });
+    // Educator owns every group board; students are members of their own group only.
+    await prisma.boardMember.create({ data: { userId: lecturerId, boardId: board.id, role: "owner" } });
+    for (const sn of students) {
+      const sid = userMap.get(sn)!;
+      await prisma.boardMember.create({ data: { userId: sid, boardId: board.id, role: "member" } });
+      await prisma.classMember.create({ data: { userId: sid, classId: cls.id, role: "student", groupId: group.id } });
+    }
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      const now = new Date();
+      await prisma.task.create({
+        data: {
+          title: t.title,
+          description: "",
+          column: cols[t.col].id,
+          order: i,
+          priority: t.priority ?? "medium",
+          assigneeId: t.assignee ? userMap.get(t.assignee)! : null,
+          deadline: t.deadline ?? null,
+          createdAt: daysAgo(10),
+          updatedAt: now,
+          completedAt: t.col === 2 ? now : null,
+          columnUpdatedAt: t.stale ? daysAgo(6) : now,
+        },
+      });
+    }
+    console.log(`  ✓ Group "${name}": ${students.length} students, ${tasks.length} tasks`);
+  }
+
+  // On-track group.
+  await makeGroup("Team Alpha", 0, ["Bob", "Carol", "Dave"], [
+    { title: "Project proposal", col: 2, assignee: "Bob", priority: "high" },
+    { title: "Database schema", col: 2, assignee: "Carol", priority: "high" },
+    { title: "Build the REST API", col: 1, assignee: "Dave", priority: "high" },
+    { title: "Frontend mockups", col: 1, assignee: "Carol" },
+    { title: "Write unit tests", col: 0, assignee: "Bob" },
+    { title: "Set up CI pipeline", col: 0 },
+  ]);
+
+  // Needs-attention group (a stalled task and two overdue ones).
+  await makeGroup("Team Beta", 1, ["Jake", "Emma", "Priya"], [
+    { title: "Requirements doc", col: 2, assignee: "Jake", priority: "high" },
+    { title: "Authentication flow", col: 1, assignee: "Emma", priority: "high", stale: true },
+    { title: "Payment integration", col: 1, assignee: "Priya", priority: "urgent", deadline: daysFromNow(-2) },
+    { title: "Landing page", col: 0, assignee: "Jake" },
+    { title: "Deployment", col: 0, priority: "high", deadline: daysFromNow(-1) },
+  ]);
+
+  // Students still waiting in the lobby (not yet placed in a group). When a real
+  // owner is the educator, Alice is freed up and joins the lobby as a student.
+  const lobby = ownerId === userMap.get("Alice") ? ["Sam", "Mia"] : ["Alice", "Sam", "Mia"];
+  for (const sn of lobby) {
+    await prisma.classMember.create({ data: { userId: userMap.get(sn)!, classId: cls.id, role: "student" } });
+  }
+
+  console.log(`✓ Seeded class "${cls.name}" (join code: ${cls.joinCode}) — 2 groups + ${lobby.length} in lobby.`);
 }
 
 async function reseedBoard() {
