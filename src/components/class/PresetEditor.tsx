@@ -115,7 +115,7 @@ export default function PresetEditor({ classId }: Props) {
       <button onClick={addColumn} className="text-xs text-muted hover:text-ink mb-8">+ Add column</button>
 
       {/* Seed tasks */}
-      <h3 className="text-sm font-semibold text-ink mb-2">Seed tasks</h3>
+      <h3 className="text-sm font-semibold text-ink mb-2">Seed Tasks</h3>
       <p className="text-xs text-muted mb-3">Tasks every group starts with (optional).</p>
       <div className="space-y-2 mb-3">
         {tasks.map((t, i) => (

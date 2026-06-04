@@ -12,6 +12,7 @@ import {
   useDroppable,
   DragOverlay,
 } from "@dnd-kit/core";
+import ConfirmModal from "../ConfirmModal";
 
 interface Member {
   userId: string;
@@ -93,6 +94,8 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [busy, setBusy] = useState(false);
+  // Member pending a "kick from class" confirmation (lobby only).
+  const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -257,7 +260,12 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
               {lobby.length === 0 ? (
                 <p className="text-[11px] text-muted">Everyone has been placed.</p>
               ) : (
-                lobby.map((m) => <DraggableStudent key={m.userId} member={m} />)
+                lobby.map((m) => (
+                  <div key={m.userId} className="group/chip flex items-center gap-1">
+                    <div className="flex-1 min-w-0"><DraggableStudent member={m} /></div>
+                    <button onClick={() => setConfirmRemove(m)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
+                  </div>
+                ))
               )}
             </div>
           </DropZone>
@@ -285,7 +293,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
                     groupStudents.map((m) => (
                       <div key={m.userId} className="group/chip flex items-center gap-1">
                         <div className="flex-1 min-w-0"><DraggableStudent member={m} /></div>
-                        <button onClick={() => removeMember(m.userId)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
+                        <button onClick={() => assign(m.userId, null)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-ink transition-opacity" title="Move back to lobby">✕</button>
                       </div>
                     ))
                   )}
@@ -317,6 +325,22 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
           {activeMember ? <StudentChip member={activeMember} dragging /> : null}
         </DragOverlay>
       </DndContext>
+
+      <ConfirmModal
+        isOpen={!!confirmRemove}
+        danger
+        title="Remove from class?"
+        message={
+          confirmRemove
+            ? `${confirmRemove.name || confirmRemove.handle || confirmRemove.email} will be removed from the class and lose access. You can re-invite them with the class link.`
+            : ""
+        }
+        confirmLabel="Remove"
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={async () => {
+          if (confirmRemove) await removeMember(confirmRemove.userId);
+        }}
+      />
     </div>
   );
 }
