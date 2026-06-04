@@ -78,3 +78,29 @@ export async function isMemberOfBoard(userId: string, boardId: string): Promise<
     return false;
   }
 }
+
+// Returns the caller's role within a class ("educator" | "ta" | "student"),
+// or null when they are not a member. Mirrors isMemberOfBoard.
+export async function getClassRole(
+  userId: string,
+  classId: string
+): Promise<"educator" | "ta" | "student" | null> {
+  if (!userId || !classId) return null;
+  try {
+    const membership = await prisma.classMember.findUnique({
+      where: { userId_classId: { userId, classId } },
+      select: { role: true },
+    });
+    if (!membership) return null;
+    return membership.role as "educator" | "ta" | "student";
+  } catch (err) {
+    console.error("getClassRole check failed:", err);
+    return null;
+  }
+}
+
+// True when the caller may manage the class (educator or TA).
+export async function isEducatorOf(userId: string, classId: string): Promise<boolean> {
+  const role = await getClassRole(userId, classId);
+  return role === "educator" || role === "ta";
+}

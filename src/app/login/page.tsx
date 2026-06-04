@@ -3,9 +3,18 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
+// Only allow same-origin relative paths as a post-auth destination, to prevent
+// open-redirect abuse via the ?next= param.
+function safeNext(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  return raw;
+}
+
 function LoginContent() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const next = safeNext(searchParams.get("next"));
 
   useEffect(() => {
     if (searchParams.get("mode") === "signup") setMode("signup");
@@ -68,9 +77,11 @@ function LoginContent() {
       }
 
       if (mode === "signup") {
-        window.location.href = `/check-email?email=${encodeURIComponent(email)}`;
+        // If the user came from a protected link (e.g. a class invite), send them
+        // straight there — they're already signed in; email verification is non-blocking.
+        window.location.href = next || `/check-email?email=${encodeURIComponent(email)}`;
       } else {
-        window.location.href = "/";
+        window.location.href = next || "/";
       }
     } catch {
       setError("Network error. Please try again.");

@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -18,6 +19,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
+import CreateJoinClassModal from "./CreateJoinClassModal";
+
+interface ClassSummary {
+  id: string;
+  name: string;
+  term: string | null;
+  archived: boolean;
+  role: string;
+}
 
 export type Panel = "board" | "analytics" | "settings" | "profile" | "admin";
 
@@ -165,7 +175,22 @@ export default function Sidebar({
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+
+  const loadClasses = async () => {
+    try {
+      const res = await fetch("/api/classes", { cache: "no-store" });
+      if (res.ok) setClasses(await res.json());
+    } catch {
+      /* ignore — Classes section just stays empty */
+    }
+  };
+
+  // Load the user's classes once for the sidebar Classes section.
+  useEffect(() => { loadClasses(); }, []);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -246,7 +271,40 @@ export default function Sidebar({
             </SortableContext>
           </DndContext>
 
-          
+
+        </div>
+
+        <div className="px-3 mt-4">
+          <div className="flex items-center justify-between px-1 mb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Classes</span>
+            <button onClick={() => setIsClassModalOpen(true)} className="text-muted hover:text-ink transition-colors" title="New or join class">
+              <IconPlus />
+            </button>
+          </div>
+
+          {classes.filter((c) => !c.archived).length === 0 ? (
+            <button
+              onClick={() => setIsClassModalOpen(true)}
+              className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
+            >
+              + Create or join a class
+            </button>
+          ) : (
+            classes
+              .filter((c) => !c.archived)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => { router.push(`/class/${c.id}`); setMobileOpen(false); }}
+                  className="w-full flex items-center px-2 py-1.5 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors text-left min-w-0"
+                >
+                  <span className="truncate">{c.name}</span>
+                  {(c.role === "educator" || c.role === "ta") && (
+                    <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+                  )}
+                </button>
+              ))
+          )}
         </div>
       </div>
 
@@ -334,6 +392,11 @@ export default function Sidebar({
           setIsCreateJoinOpen(false);
           setMobileOpen(false);
         }}
+      />
+      <CreateJoinClassModal
+        isOpen={isClassModalOpen}
+        onClose={() => setIsClassModalOpen(false)}
+        onCreated={loadClasses}
       />
     </>
   );

@@ -16,7 +16,8 @@ export default async function Home() {
       select: { isAdmin: true, handle: true },
     }),
     prisma.boardMember.findMany({
-      where: { userId: session.userId },
+      // Exclude class group boards — those live under Classes, not personal Boards.
+      where: { userId: session.userId, board: { group: { is: null } } },
       include: { board: true },
       orderBy: { board: { order: "asc" } },
     }),
