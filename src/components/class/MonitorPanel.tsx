@@ -28,7 +28,7 @@ interface Props {
 }
 
 function Avatar({ member }: { member: MonitorMember }) {
-  const initials = (member.name || member.handle || "?").trim().slice(0, 2).toUpperCase();
+  const initials = (member.name || member.handle || "?").trim().charAt(0).toUpperCase();
   return (
     <span
       title={member.name || member.handle || ""}
