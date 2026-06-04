@@ -84,7 +84,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-2xl">
       {/* Invite */}
       <section className="mb-8">
-        <h3 className="text-sm font-semibold text-ink mb-2">Class invite</h3>
+        <h3 className="text-sm font-semibold text-ink mb-2">Class Invite</h3>
         <p className="text-xs text-muted mb-2">Share this link. Students join the lobby, then you sort them into groups.</p>
         <div className="flex items-center gap-2">
           <input readOnly value={joinUrl} className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-border bg-column-bg text-ink/80 outline-none" />
@@ -113,9 +113,9 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         </div>
       </section>
 
-      {/* Reuse next semester */}
+      {/* Reuse Next Semester */}
       <section className="mb-8 border-t border-border/60 pt-6">
-        <h3 className="text-sm font-semibold text-ink mb-1">Reuse next semester</h3>
+        <h3 className="text-sm font-semibold text-ink mb-1">Reuse Next Semester</h3>
         <p className="text-xs text-muted mb-3">Clone this class&apos;s preset and group structure into a fresh class with empty boards.</p>
         {!cloneOpen ? (
           <button onClick={() => setCloneOpen(true)} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">Clone class…</button>
@@ -137,7 +137,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
 
       {/* Danger zone */}
       <section className="border-t border-border/60 pt-6">
-        <h3 className="text-sm font-semibold text-ink mb-3">Archive &amp; delete</h3>
+        <h3 className="text-sm font-semibold text-ink mb-3">Archive &amp; Delete</h3>
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={toggleArchive} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">
             {isArchived ? "Unarchive class" : "Archive class"}

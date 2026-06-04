@@ -101,14 +101,14 @@ export default function PresetEditor({ classId }: Props) {
             />
             <button
               onClick={() => setDoneColumn(i)}
-              className={`text-[11px] px-2 py-1 rounded-lg border transition-colors ${
+              className={`w-28 shrink-0 text-center text-[11px] py-1.5 rounded-lg border transition-colors ${
                 col.isDone ? "border-emerald-400/70 text-emerald-700 bg-emerald-400/10" : "border-border text-muted hover:text-ink"
               }`}
               title="Mark as the 'done' column"
             >
               {col.isDone ? "Done column" : "Mark done"}
             </button>
-            <button onClick={() => removeColumn(i)} className="text-muted hover:text-red-500 text-sm px-1" title="Remove column">✕</button>
+            <button onClick={() => removeColumn(i)} className="w-6 shrink-0 flex items-center justify-center text-muted hover:text-red-500 text-sm" title="Remove column">✕</button>
           </div>
         ))}
       </div>
