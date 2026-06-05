@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
@@ -51,6 +52,19 @@ export default function ClassWorkspace(props: Props) {
   const isEducator = role === "educator" || role === "ta";
   const [tab, setTab] = useState<Tab>("monitor");
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (openBoard) setOpenBoard(null);
+      else router.push("/");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openBoard, router]);
 
   // Opening a board takes the board info from the caller (Roster/Monitor always
   // have fresh data), since groups created in-session aren't in the page-load
