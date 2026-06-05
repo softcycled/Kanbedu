@@ -241,7 +241,7 @@ export default function LandingPage() {
 
               {/* Sub */}
               <p className="text-[15px] md:text-[17px] text-muted max-w-md mx-auto leading-relaxed mb-10 motion-safe:animate-fade-in [animation-delay:160ms]">
-                Boards, tasks, and collaboration — without the bloat.
+                Boards, tasks, and analytics. Built for students and educators.
               </p>
 
               {/* CTAs */}
@@ -301,7 +301,7 @@ export default function LandingPage() {
                     {/* Text */}
                     <div className="max-w-2xl mx-auto text-center mb-14">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
-                        {item.index} — {item.category}
+                        {item.index} · {item.category}
                       </p>
                       <h3 className="text-3xl md:text-[40px] font-bold text-ink mb-5 tracking-tight leading-[1.1] whitespace-pre-line">
                         {item.headline}
@@ -381,11 +381,11 @@ export default function LandingPage() {
               {/* Eyebrow + two-tone heading */}
               <div className="mb-16 reveal max-w-4xl">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-4">
-                  For classrooms — coming this semester
+                  For educators
                 </p>
                 <h2 className="text-3xl md:text-[44px] font-bold tracking-[-0.02em] leading-[1.15]">
                   <span className="text-ink">Made for the teacher running 12 group projects.</span>{" "}
-                  <span className="text-muted">Class boards, group monitoring, and reusable layouts — built specifically for how teachers actually use Kanban.</span>
+                  <span className="text-muted">Class boards, group monitoring, and reusable layouts. Built specifically for how teachers actually run Kanban.</span>
                 </h2>
               </div>
 
@@ -396,7 +396,7 @@ export default function LandingPage() {
                     Class boards
                   </h3>
                   <p className="text-sm text-muted leading-relaxed">
-                    Run every project in your class from one workspace. Spin up new groups in seconds.
+                    Create a class, invite students with one link, and sort them into groups in seconds. Every group gets its own board.
                   </p>
                 </div>
                 <div className="md:border-l md:border-white/[0.07] md:pl-8">
@@ -404,7 +404,7 @@ export default function LandingPage() {
                     Group monitoring
                   </h3>
                   <p className="text-sm text-muted leading-relaxed">
-                    See every group's progress without opening 12 boards. Spot stuck work before deadlines slip.
+                    Watch every group's progress from a single dashboard. Spot stuck tasks and integrity flags before deadlines slip.
                   </p>
                 </div>
                 <div className="md:border-l md:border-white/[0.07] md:pl-8">
@@ -412,7 +412,7 @@ export default function LandingPage() {
                     Reusable layouts
                   </h3>
                   <p className="text-sm text-muted leading-relaxed">
-                    Build a board once. Reuse it every semester, every cohort, every assignment.
+                    Set up columns and starter tasks once. Clone the whole class structure each semester with one click.
                   </p>
                 </div>
               </div>
