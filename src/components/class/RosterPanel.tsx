@@ -445,7 +445,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             <button
               onClick={autoDistribute}
               disabled={busy}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors disabled:opacity-40"
+              className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors disabled:opacity-50"
               title="Spread everyone in the lobby evenly across groups"
             >
               Auto-distribute
@@ -464,12 +464,6 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         </div>
       </div>
 
-      {readOnly && (
-        <div className="mb-4 text-[11px] text-muted rounded-lg border border-border/60 bg-column-bg/50 px-3 py-2">
-          This class is archived — the roster is read-only. Unarchive it in Settings to make changes.
-        </div>
-      )}
-
       {/* Bulk action bar */}
       {interactive && selected.size > 0 && (
         <div className="mb-4 flex items-center gap-3 flex-wrap rounded-xl border border-ink/15 bg-column-bg px-3 py-2">
@@ -480,7 +474,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               value={bulkTarget}
               onChange={(e) => applyBulk(e.target.value)}
               disabled={busy}
-              className="text-xs rounded-md border border-border bg-card-bg text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer disabled:opacity-40"
+              className="text-xs rounded-md border border-border bg-card-bg text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer disabled:opacity-50"
             >
               <option value="">Choose…</option>
               <option value={LOBBY}>Lobby</option>
@@ -630,7 +624,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               <button
                 onClick={createGroup}
                 disabled={busy || !newGroupName.trim()}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-ink text-card-bg hover:opacity-95 transition-opacity disabled:opacity-40"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50"
               >
                 + Add group
               </button>

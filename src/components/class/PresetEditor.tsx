@@ -91,12 +91,6 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
         This is the starting layout for every <em>new</em> group board. Changing it won&apos;t touch boards that already exist.
       </p>
 
-      {readOnly && (
-        <div className="mb-5 text-[11px] text-muted rounded-lg border border-border/60 bg-column-bg/50 px-3 py-2">
-          This class is archived — the preset is read-only. Unarchive it in Settings to make changes.
-        </div>
-      )}
-
       {/* Columns */}
       <h3 className="text-sm font-semibold text-ink mb-2">Columns</h3>
       <div className="space-y-2 mb-3">
@@ -173,7 +167,7 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
           <button
             onClick={save}
             disabled={saving || columns.length === 0}
-            className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-card-bg hover:opacity-95 transition-opacity disabled:opacity-40"
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save preset"}
           </button>

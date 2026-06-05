@@ -102,7 +102,7 @@ export default function CreateJoinModal({ isOpen, onClose, onCreate, onJoin }: P
             <div className="mt-6 grid gap-3">
               <button
                 onClick={() => setMode("create")}
-                className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-ink text-card-bg hover:opacity-95 transition-colors"
+                className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-colors"
               >
                 Create board
               </button>
