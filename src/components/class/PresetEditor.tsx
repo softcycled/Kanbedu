@@ -28,7 +28,8 @@ export default function PresetEditor({ classId }: Props) {
         setColumns(data.columns || []);
         setTasks(data.tasks || []);
         setLoading(false);
-      });
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [classId]);
 

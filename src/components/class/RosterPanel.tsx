@@ -92,6 +92,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -105,13 +106,18 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch(`/api/classes/${classId}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setMembers(data.members || []);
         setGroups(data.groups || []);
+      } else {
+        setLoadError(true);
       }
+    } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -252,6 +258,14 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged }
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading roster…</div>;
+  }
+  if (loadError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-muted">
+        <p>Failed to load roster.</p>
+        <button onClick={load} className="text-xs underline">Retry</button>
+      </div>
+    );
   }
 
   const activeMember = members.find((m) => m.userId === activeId) || null;

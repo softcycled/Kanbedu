@@ -43,6 +43,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       if (!res.ok) throw new Error("patch failed");
       setSavedMsg(msg);
       setTimeout(() => setSavedMsg(null), 1500);
+      router.refresh();
       return true;
     } catch {
       push({ title: "Couldn't save changes", description: "Please try again." });

@@ -37,12 +37,14 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    fetchBoardData().then((data) => {
-      if (cancelled) return;
-      setTasks(data.tasks);
-      setColumns(data.columns);
-      setIsLoading(false);
-    });
+    fetchBoardData()
+      .then((data) => {
+        if (cancelled) return;
+        setTasks(data.tasks);
+        setColumns(data.columns);
+        setIsLoading(false);
+      })
+      .catch(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
   }, [fetchBoardData]);
 
