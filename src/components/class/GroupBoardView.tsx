@@ -49,7 +49,7 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
   }, [fetchBoardData]);
 
   const handleRefresh = useCallback(async (payload?: any) => {
-    if (payload && payload.task) {
+    if (payload?.task) {
       const t = payload.task;
       setTasks((prev) => {
         const exists = prev.some((p) => p.id === t.id);
@@ -58,6 +58,10 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         if (!hasColumn) return prev;
         return [...prev, t];
       });
+      return;
+    }
+    if (payload?.taskId) {
+      setTasks((prev) => prev.filter((t) => t.id !== payload.taskId));
       return;
     }
     const data = await fetchBoardData();

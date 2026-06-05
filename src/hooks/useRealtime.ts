@@ -1,39 +1,46 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { RealtimeChannel } from "@supabase/supabase-js";
 
 export function useRealtime(channelSecret: string | null, onRefresh?: (payload?: unknown) => void) {
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  // Stable ref so the subscribe callback always calls the latest version
-  // without triggering a reconnect on every render
   const onRefreshRef = useRef(onRefresh);
   useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
 
   useEffect(() => {
     if (!channelSecret) return;
 
-    // Connects to an unpredictable channel name, completely preventing eavesdropping
-    const channel = supabase.channel(`board-${channelSecret}`);
-    
-    channel
-      .on("broadcast", { event: "refresh" }, (ev) => {
-        // Pass payload through to the refresh handler (may contain task-level patch)
-        try {
-          onRefreshRef.current?.(ev?.payload ?? ev);
-        } catch (err) {
-          // swallow
-        }
-      })
-      .subscribe();
+    let destroyed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    // Mutable ref so both setup() and the cleanup closure always point to the
+    // current channel, including after a retry creates a new one.
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    channelRef.current = channel;
+    const setup = () => {
+      if (destroyed) return;
+      channel = supabase.channel(`board-${channelSecret}`);
+      channel
+        .on("broadcast", { event: "refresh" }, (ev) => {
+          try {
+            onRefreshRef.current?.(ev?.payload ?? ev);
+          } catch {}
+        })
+        .subscribe((status) => {
+          // TIMED_OUT means the initial subscribe handshake failed (transient network).
+          // Remove the dead channel and retry once after a short delay.
+          if (status === "TIMED_OUT" && !destroyed) {
+            if (channel) { supabase.removeChannel(channel); channel = null; }
+            retryTimer = setTimeout(setup, 5000);
+          }
+        });
+    };
+
+    setup();
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
+      destroyed = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [channelSecret]); // onRefresh intentionally omitted — stable via ref
+  }, [channelSecret]);
 }

@@ -87,12 +87,11 @@ export default function BoardContainer({
 
   const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
-    // If other clients broadcasted a patch with the changed task, apply it surgically
-    if (payload && payload.task) {
+
+    if (payload?.task) {
       const t = payload.task;
       setTasks((prev) => {
         const exists = prev.some((p) => p.id === t.id);
-        // If task exists, patch it; otherwise append only if its column belongs to this board
         if (exists) return prev.map((p) => (p.id === t.id ? { ...p, ...t } : p));
         const hasColumn = columnsRef.current.some((c) => c.id === t.column);
         if (!hasColumn) return prev;
@@ -101,9 +100,13 @@ export default function BoardContainer({
       return;
     }
 
-    // Fallback: full board fetch
+    if (payload?.taskId) {
+      setTasks((prev) => prev.filter((t) => t.id !== payload.taskId));
+      return;
+    }
+
+    // Fallback: full board fetch (column changes, etc.)
     const data = await fetchBoardData(boardId);
-    // Only apply if still on the same board
     if (activeBoardIdRef.current === boardId) {
       setTasks(data.tasks);
       setColumns(data.columns);
