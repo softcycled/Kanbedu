@@ -28,6 +28,10 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const role = me.role as "educator" | "ta" | "student";
   const isEducator = role === "educator" || role === "ta";
 
+  // Students live inside the main app shell, not this dedicated workspace.
+  // Deep-links and the join flow land here, so bounce them to /?class=<id>.
+  if (!isEducator) redirect(`/?class=${cls.id}`);
+
   let groups: WorkspaceGroup[];
   if (isEducator) {
     groups = cls.groups.map((g) => ({

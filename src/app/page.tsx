@@ -5,9 +5,16 @@ import BoardContainer from "@/components/BoardContainer";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ class?: string | string[] }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/landing");
+
+  const sp = await searchParams;
+  const classIdParam = typeof sp.class === "string" ? sp.class : undefined;
 
   // Run user lookup + board memberships in parallel
   let [user, memberships] = await Promise.all([
@@ -102,6 +109,33 @@ export default async function Home() {
 
   const resolvedIsAdmin = !!user?.isAdmin;
 
+  // Deep-link into a student's class (/?class=<id>): resolve their own group
+  // board reference server-side so the class view paints without a flicker.
+  // Only ever exposes the caller's own group secret.
+  let initialClass = null;
+  if (classIdParam) {
+    const membership = await prisma.classMember.findUnique({
+      where: { userId_classId: { userId: session.userId, classId: classIdParam } },
+      include: {
+        class: { select: { id: true, name: true, term: true, archived: true } },
+        group: { select: { name: true, boardId: true, board: { select: { realtimeSecret: true } } } },
+      },
+    });
+    if (membership && membership.role === "student") {
+      initialClass = {
+        id: membership.class.id,
+        name: membership.class.name,
+        term: membership.class.term,
+        archived: membership.class.archived,
+        role: membership.role,
+        myGroupId: membership.groupId,
+        groupName: membership.group?.name ?? null,
+        boardId: membership.group?.boardId ?? null,
+        realtimeSecret: membership.group?.board?.realtimeSecret ?? null,
+      };
+    }
+  }
+
   return (
     <BoardContainer
       initialTasks={serializedTasks}
@@ -110,6 +144,7 @@ export default async function Home() {
       initialColumns={boardColumns}
       currentUserId={session.userId}
       isAdmin={resolvedIsAdmin}
+      initialClass={initialClass}
     />
   );
 }

@@ -27,6 +27,12 @@ export async function GET() {
             _count: { select: { groups: true, members: true } },
           },
         },
+        // The caller's OWN group (their membership's group) and its board ref.
+        // This only ever reveals the user's own group secret — never another
+        // group's — so students can render their board inside the app shell.
+        group: {
+          select: { id: true, name: true, boardId: true, board: { select: { realtimeSecret: true } } },
+        },
       },
       orderBy: { class: { createdAt: "asc" } },
     });
@@ -39,6 +45,9 @@ export async function GET() {
       createdAt: m.class.createdAt.toISOString(),
       role: m.role,
       myGroupId: m.groupId,
+      groupName: m.group?.name ?? null,
+      boardId: m.group?.boardId ?? null,
+      realtimeSecret: m.group?.board?.realtimeSecret ?? null,
       groupCount: m.class._count.groups,
       memberCount: m.class._count.members,
     }));

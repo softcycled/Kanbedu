@@ -1,7 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -21,12 +20,18 @@ import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
 import CreateJoinClassModal from "./CreateJoinClassModal";
 
-interface ClassSummary {
+export interface ClassSummary {
   id: string;
   name: string;
   term: string | null;
   archived: boolean;
   role: string;
+  // The caller's own group board reference (students only). Lets a student
+  // open their group board inside the app shell instead of a separate page.
+  myGroupId?: string | null;
+  groupName?: string | null;
+  boardId?: string | null;
+  realtimeSecret?: string | null;
 }
 
 export type Panel = "board" | "analytics" | "settings" | "profile" | "admin";
@@ -35,6 +40,10 @@ interface Props {
   boards: Board[];
   activeBoardId: string;
   activePanel: Panel;
+  classes: ClassSummary[];
+  activeClassId?: string | null;
+  onClassSelect: (c: ClassSummary) => void;
+  onClassesReload: () => void;
   onPanelChange: (panel: Panel) => void;
   onBoardSwitch: (id: string) => void;
   onCreateBoard: (name: string) => Promise<void>;
@@ -163,6 +172,10 @@ export default function Sidebar({
   boards,
   activeBoardId,
   activePanel,
+  classes,
+  activeClassId,
+  onClassSelect,
+  onClassesReload,
   onPanelChange,
   onBoardSwitch,
   onCreateBoard,
@@ -176,42 +189,35 @@ export default function Sidebar({
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const router = useRouter();
-
-  const loadClasses = async () => {
-    try {
-      const res = await fetch("/api/classes", { cache: "no-store" });
-      if (res.ok) setClasses(await res.json());
-    } catch {
-      /* ignore — Classes section just stays empty */
-    }
-  };
-
-  // Load the user's classes once for the sidebar Classes section.
-  useEffect(() => { loadClasses(); }, []);
 
   const activeClasses = classes.filter((c) => !c.archived);
   const archivedClasses = classes.filter((c) => c.archived);
 
-  const renderClassItem = (c: ClassSummary, archived = false) => (
-    <button
-      key={c.id}
-      onClick={() => { router.push(`/class/${c.id}`); setMobileOpen(false); }}
-      className={`w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
-        archived ? "text-ink/40 hover:bg-ink/5 hover:text-ink/60" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
-      }`}
-    >
-      <span className="truncate">{c.name}</span>
-      {archived ? (
-        <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
-      ) : (c.role === "educator" || c.role === "ta") ? (
-        <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
-      ) : null}
-    </button>
-  );
+  const renderClassItem = (c: ClassSummary, archived = false) => {
+    const isActive = activeClassId === c.id;
+    return (
+      <button
+        key={c.id}
+        onClick={() => { onClassSelect(c); setMobileOpen(false); }}
+        className={`w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
+          isActive
+            ? "bg-ink/8 text-ink font-medium"
+            : archived
+            ? "text-ink/40 hover:bg-ink/5 hover:text-ink/60"
+            : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+        }`}
+      >
+        <span className="truncate">{c.name}</span>
+        {archived ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
+        ) : (c.role === "educator" || c.role === "ta") ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+        ) : null}
+      </button>
+    );
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -280,7 +286,7 @@ export default function Sidebar({
                 <SortableBoardItem
                   key={board.id}
                   board={board}
-                  isActive={activeBoardId === board.id && activePanel === "board"}
+                  isActive={activeBoardId === board.id && activePanel === "board" && !activeClassId}
                   onClick={() => {
                     onBoardSwitch(board.id);
                     onPanelChange("board");
@@ -335,7 +341,7 @@ export default function Sidebar({
             key={item.id}
             onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}
             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
-              activePanel === item.id
+              activePanel === item.id && !activeClassId
                 ? "bg-ink/8 text-ink font-medium"
                 : "text-ink/70 hover:bg-ink/5 hover:text-ink"
             }`}
@@ -389,7 +395,7 @@ export default function Sidebar({
               key={item.id}
               onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                activePanel === item.id ? "text-ink" : "text-muted"
+                activePanel === item.id && !activeClassId ? "text-ink" : "text-muted"
               }`}
             >
               {item.icon}
@@ -417,7 +423,7 @@ export default function Sidebar({
       <CreateJoinClassModal
         isOpen={isClassModalOpen}
         onClose={() => setIsClassModalOpen(false)}
-        onCreated={loadClasses}
+        onCreated={onClassesReload}
       />
     </>
   );
