@@ -45,7 +45,7 @@ export default function ConfirmModal({
     : "px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+    <div data-modal-open role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
       <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
         {title && <p className="text-sm font-semibold text-ink">{title}</p>}
         <p className="text-xs text-muted mt-1">{message}</p>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import BoardChannel from "./BoardChannel";
 
 interface MonitorMember {
   id: string;
@@ -12,6 +13,7 @@ interface MonitorGroup {
   groupId: string;
   name: string;
   boardId: string;
+  realtimeSecret: string | null;
   total: number;
   done: number;
   percent: number;
@@ -48,8 +50,10 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // silent = background refresh (live realtime updates) that must not flash the
+  // full-screen loading/error states over already-rendered cards.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/classes/${classId}/monitor`, { cache: "no-store" });
@@ -58,13 +62,22 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
       setGroups(data.groups || []);
       setStallDays(data.stallDays ?? 3);
     } catch (e: any) {
-      setError(e?.message || "Failed to load monitor.");
+      if (!silent) setError(e?.message || "Failed to load monitor.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Coalesce bursts of board events (a student dragging several tasks) into one
+  // refetch ~0.7s after activity settles.
+  const reloadTimer = useRef<number | null>(null);
+  const scheduleLiveReload = useCallback(() => {
+    if (reloadTimer.current) window.clearTimeout(reloadTimer.current);
+    reloadTimer.current = window.setTimeout(() => load(true), 700);
+  }, [load]);
+  useEffect(() => () => { if (reloadTimer.current) window.clearTimeout(reloadTimer.current); }, []);
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading overview…</div>;
@@ -73,7 +86,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-muted">
         <p>{error}</p>
-        <button onClick={load} className="text-xs underline">Retry</button>
+        <button onClick={() => load()} className="text-xs underline">Retry</button>
       </div>
     );
   }
@@ -87,11 +100,24 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6">
+      {/* Live subscriptions: refresh when any group board changes. */}
+      {groups.map((g) =>
+        g.realtimeSecret ? (
+          <BoardChannel key={g.groupId} secret={g.realtimeSecret} onSignal={scheduleLiveReload} />
+        ) : null
+      )}
+
       <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-muted">
-          Each group&apos;s own progress. Amber marks a group that may need a hand — not a ranking.
+          Each group&apos;s own progress. Orange marks a group that may need a hand — not a ranking.
         </p>
-        <button onClick={load} className="text-xs text-muted hover:text-ink transition-colors">Refresh</button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </span>
+          <button onClick={() => load()} className="text-xs text-muted hover:text-ink transition-colors">Refresh</button>
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -100,7 +126,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
             key={g.groupId}
             onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
             className={`text-left rounded-2xl border bg-card-bg p-5 transition-colors hover:bg-column-bg ${
-              g.needsAttention ? "border-amber-400/70" : "border-border/70"
+              g.needsAttention ? "border-orange-300 dark:border-orange-800" : "border-border/70"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
@@ -125,12 +151,12 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
             {(g.stalled > 0 || g.overdue > 0) && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {g.overdue > 0 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-700">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                     {g.overdue} overdue
                   </span>
                 )}
                 {g.stalled > 0 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-700">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                     {g.stalled} stalled &gt;{stallDays}d
                   </span>
                 )}

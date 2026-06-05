@@ -82,6 +82,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         groupId: g.id,
         name: g.name,
         boardId: g.boardId,
+        realtimeSecret: g.board.realtimeSecret ?? null,
         total,
         done,
         percent: total === 0 ? 0 : Math.round((done / total) * 100),

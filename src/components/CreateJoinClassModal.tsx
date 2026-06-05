@@ -89,7 +89,7 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+    <div data-modal-open role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
       <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md motion-safe:animate-modal-in p-6 relative">
         <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 p-1 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>

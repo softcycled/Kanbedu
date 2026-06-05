@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
 
 const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <div /> });
+const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <div /> });
 const RosterPanel = dynamic(() => import("./RosterPanel"), { ssr: false, loading: () => <div /> });
 const PresetEditor = dynamic(() => import("./PresetEditor"), { ssr: false, loading: () => <div /> });
 const ClassSettingsPanel = dynamic(() => import("./ClassSettingsPanel"), { ssr: false, loading: () => <div /> });
@@ -33,7 +34,7 @@ interface Props {
   myGroupName?: string | null;
 }
 
-type Tab = "monitor" | "roster" | "preset" | "settings";
+type Tab = "monitor" | "integrity" | "roster" | "preset" | "settings";
 
 function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
   return (
@@ -59,6 +60,9 @@ export default function ClassWorkspace(props: Props) {
       if (e.key !== "Escape") return;
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // Don't hijack Esc while a modal (e.g. a delete confirmation) is open —
+      // the user expects Esc to dismiss the dialog, not leave the class.
+      if (document.querySelector("[data-modal-open]")) return;
       if (openBoard) setOpenBoard(null);
       else router.push("/");
     };
@@ -89,7 +93,7 @@ export default function ClassWorkspace(props: Props) {
         </div>
         {archived && <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink/10 text-muted">Archived</span>}
       </div>
-      <Link href="/" className="text-xs text-muted hover:text-ink transition-colors">← Back to app</Link>
+      <Link href="/" className="text-xs text-muted hover:text-ink transition-colors">← Back</Link>
     </header>
   );
 
@@ -137,6 +141,7 @@ export default function ClassWorkspace(props: Props) {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "monitor", label: "Monitor" },
+    { id: "integrity", label: "Integrity" },
     { id: "roster", label: "Roster" },
     { id: "preset", label: "Preset" },
     { id: "settings", label: "Settings" },
@@ -161,6 +166,7 @@ export default function ClassWorkspace(props: Props) {
       </nav>
 
       {tab === "monitor" && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
+      {tab === "integrity" && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
       {tab === "roster" && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} />}
       {tab === "preset" && <PresetEditor classId={classId} />}
       {tab === "settings" && (
