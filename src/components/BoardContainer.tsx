@@ -179,6 +179,21 @@ export default function BoardContainer({
     setActiveClass(c);
   }, [router]);
 
+  // Student leaves a class from within the shell: remove it server-side, then
+  // drop it from the list and fall back to the personal board.
+  const handleLeaveClass = useCallback(async (classId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/classes/${classId}/members`, { method: "DELETE" });
+      if (!res.ok) return false;
+    } catch {
+      return false;
+    }
+    setClasses((prev) => prev.filter((c) => c.id !== classId));
+    setActiveClass(null);
+    setActivePanel("board");
+    return true;
+  }, []);
+
   const handleBoardSwitch = useCallback(async (boardId: string) => {
     setActiveClass(null); // switching to a personal board leaves the class view
     if (boardId === activeBoardIdRef.current) return;
@@ -336,7 +351,7 @@ export default function BoardContainer({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activeClass && (
           <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
-            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} />
+            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} />
           </main>
         )}
         {!activeClass && activePanel === "board" && (

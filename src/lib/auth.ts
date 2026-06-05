@@ -104,3 +104,17 @@ export async function isEducatorOf(userId: string, classId: string): Promise<boo
   const role = await getClassRole(userId, classId);
   return role === "educator" || role === "ta";
 }
+
+// True when the class is archived. Archived classes are read-only at the
+// management level — group/roster/preset/detail edits are rejected until the
+// educator unarchives. Student group boards stay usable.
+export async function isClassArchived(classId: string): Promise<boolean> {
+  if (!classId) return false;
+  try {
+    const cls = await prisma.class.findUnique({ where: { id: classId }, select: { archived: true } });
+    return !!cls?.archived;
+  } catch (err) {
+    console.error("isClassArchived check failed:", err);
+    return false;
+  }
+}

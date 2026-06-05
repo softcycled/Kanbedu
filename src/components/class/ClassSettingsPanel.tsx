@@ -115,15 +115,19 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         <div className="space-y-2">
           <label className="block">
             <span className="text-xs text-muted">Class name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
+            <input value={name} onChange={(e) => setName(e.target.value)} disabled={isArchived} className="mt-1 w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30 disabled:opacity-60" />
           </label>
           <label className="block">
             <span className="text-xs text-muted">Term (optional)</span>
-            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="e.g. Fall 2026" className="mt-1 w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
+            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="e.g. Fall 2026" disabled={isArchived} className="mt-1 w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30 disabled:opacity-60" />
           </label>
           <div className="flex items-center gap-3 pt-1">
-            <button onClick={saveDetails} className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-card-bg hover:opacity-95 transition-opacity">Save</button>
-            {savedMsg && <span className="text-xs text-emerald-600">{savedMsg}</span>}
+            <button onClick={saveDetails} disabled={isArchived} className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-card-bg hover:opacity-95 transition-opacity disabled:opacity-40">Save</button>
+            {isArchived ? (
+              <span className="text-xs text-muted">Unarchive below to edit details.</span>
+            ) : (
+              savedMsg && <span className="text-xs text-emerald-600">{savedMsg}</span>
+            )}
           </div>
         </div>
       </section>

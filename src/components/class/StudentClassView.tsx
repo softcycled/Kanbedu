@@ -1,19 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { ClassSummary } from "../Sidebar";
+import ConfirmModal from "../ConfirmModal";
+import { useToasts } from "../Toasts";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), { ssr: false, loading: () => <div /> });
 
 interface Props {
   activeClass: ClassSummary;
   currentUserId: string;
+  // Leaves the class server-side, then clears it from the shell. Returns false
+  // if the request failed so the view can surface an error.
+  onLeave: (classId: string) => Promise<boolean>;
 }
 
 // A student's class experience rendered INSIDE the main app shell (sidebar +
 // content area), not the dedicated educator workspace. Shows the group board
 // once the student is placed, otherwise a lobby waiting screen.
-export default function StudentClassView({ activeClass, currentUserId }: Props) {
+export default function StudentClassView({ activeClass, currentUserId, onLeave }: Props) {
+  const { push } = useToasts();
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // ConfirmModal handles its own processing state and closes itself afterward;
+  // we only surface a toast if the leave request fails.
+  const leave = async () => {
+    const ok = await onLeave(activeClass.id);
+    if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
+  };
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Slim context bar: class name · group name · understated Class chip. */}
@@ -22,6 +38,13 @@ export default function StudentClassView({ activeClass, currentUserId }: Props) 
         <span className="text-muted">/</span>
         <span className="text-sm font-semibold text-ink truncate">{activeClass.groupName || "Your group"}</span>
         <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-ink/8 text-muted flex-shrink-0">Class</span>
+        <button
+          onClick={() => setConfirmLeave(true)}
+          className="ml-auto flex-shrink-0 text-[11px] text-muted hover:text-red-500 transition-colors"
+          title="Leave this class"
+        >
+          Leave class
+        </button>
       </div>
 
       {activeClass.boardId ? (
@@ -40,6 +63,16 @@ export default function StudentClassView({ activeClass, currentUserId }: Props) 
           <p className="text-sm text-muted mt-1 max-w-sm">Waiting to be placed into a group. Your teacher will assign you shortly — your group board will appear here.</p>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmLeave}
+        danger
+        title="Leave this class?"
+        message={`You'll lose access to ${activeClass.groupName ? `"${activeClass.groupName}"` : "your group board"} in ${activeClass.name}. You can rejoin later with the class link.`}
+        confirmLabel="Leave class"
+        onClose={() => setConfirmLeave(false)}
+        onConfirm={leave}
+      />
     </div>
   );
 }

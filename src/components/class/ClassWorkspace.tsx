@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
+import EmailVerificationBanner from "../EmailVerificationBanner";
 
 const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <div /> });
 const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <div /> });
@@ -127,6 +128,7 @@ export default function ClassWorkspace(props: Props) {
   if (openBoard) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
+        <EmailVerificationBanner />
         {header}
         <BackBar onBack={() => setOpenBoard(null)} title={openBoard.name} />
         <GroupBoardView
@@ -149,14 +151,15 @@ export default function ClassWorkspace(props: Props) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      <EmailVerificationBanner />
       {header}
 
-      <nav className="flex-shrink-0 flex items-center gap-1 px-6 md:px-10 border-b border-border/60">
+      <nav className="flex-shrink-0 flex items-center gap-1 px-6 md:px-10 border-b border-border/60 overflow-x-auto no-scrollbar">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+            className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
               tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -165,10 +168,17 @@ export default function ClassWorkspace(props: Props) {
         ))}
       </nav>
 
+      {archived && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-2 text-[11px] font-medium bg-amber-50 border-b border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4" /></svg>
+          This class is archived — management is read-only. Unarchive it in Settings to make changes.
+        </div>
+      )}
+
       {tab === "monitor" && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
       {tab === "integrity" && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
-      {tab === "roster" && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} />}
-      {tab === "preset" && <PresetEditor classId={classId} />}
+      {tab === "roster" && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}
+      {tab === "preset" && <PresetEditor classId={classId} readOnly={archived} />}
       {tab === "settings" && (
         <ClassSettingsPanel
           classId={classId}

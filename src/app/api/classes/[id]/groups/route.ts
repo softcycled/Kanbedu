@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole } from "@/lib/auth";
+import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { createGroupSchema, updateGroupSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 
@@ -8,6 +8,9 @@ async function requireEducator(userId: string, classId: string) {
   const role = await getClassRole(userId, classId);
   return role === "educator" || role === "ta";
 }
+
+const archivedError = () =>
+  NextResponse.json({ error: "This class is archived. Unarchive it to make changes." }, { status: 403 });
 
 // POST: create a group. Also creates its board seeded from the class preset.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,6 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
+    if (await isClassArchived(id)) return archivedError();
 
     const raw = await req.json();
     const result = parseBody(createGroupSchema, raw);
@@ -59,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
+    if (await isClassArchived(id)) return archivedError();
 
     const raw = await req.json();
 
@@ -114,6 +119,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
+    if (await isClassArchived(id)) return archivedError();
 
     const raw = await req.json().catch(() => ({}));
     const groupId = typeof raw?.groupId === "string" ? raw.groupId : "";

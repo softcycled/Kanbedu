@@ -154,6 +154,21 @@ export const updateMemberSchema = z.object({
   remove: z.boolean().optional(),
 });
 
+// Batch assignment: move several students to groups at once. Powers
+// multi-select assign and "auto-distribute the lobby" in the roster.
+export const assignMembersSchema = z.object({
+  assignments: z
+    .array(
+      z.object({
+        userId: z.string().min(1),
+        // null = send to the lobby; a string = assign to that group.
+        groupId: z.string().nullable(),
+      })
+    )
+    .min(1, "No assignments provided.")
+    .max(500, "Too many assignments at once."),
+});
+
 export const savePresetSchema = z.object({
   columns: z
     .array(

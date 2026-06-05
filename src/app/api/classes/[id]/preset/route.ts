@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole } from "@/lib/auth";
+import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { savePresetSchema, parseBody } from "@/lib/validations";
 import { coercePreset } from "@/lib/classBoards";
 
@@ -34,6 +34,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
       return NextResponse.json({ error: "Only educators can edit the preset." }, { status: 403 });
+    }
+    if (await isClassArchived(id)) {
+      return NextResponse.json({ error: "This class is archived. Unarchive it to make changes." }, { status: 403 });
     }
 
     const raw = await req.json();

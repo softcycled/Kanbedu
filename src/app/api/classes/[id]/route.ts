@@ -96,6 +96,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const result = parseBody(updateClassSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
 
+    // Archived classes are read-only: detail edits (name/term) are rejected
+    // unless the same request also unarchives. Toggling archived is always OK.
+    const editingDetails = result.data.name !== undefined || result.data.term !== undefined;
+    if (editingDetails) {
+      const current = await prisma.class.findUnique({ where: { id }, select: { archived: true } });
+      if (!current) return NextResponse.json({ error: "Class not found." }, { status: 404 });
+      const willBeArchived = result.data.archived ?? current.archived;
+      if (willBeArchived) {
+        return NextResponse.json({ error: "This class is archived. Unarchive it to edit details." }, { status: 403 });
+      }
+    }
+
     const updated = await prisma.class.update({
       where: { id },
       data: {
