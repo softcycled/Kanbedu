@@ -344,7 +344,7 @@ export default function LandingPage() {
               <div className="mb-20 reveal max-w-4xl">
                 <h2 className="text-3xl md:text-[44px] font-bold tracking-[-0.02em] leading-[1.15]">
                   <span className="text-ink">A Kanban tool built for the classroom.</span>{" "}
-                  <span className="text-muted">Stripped to the essentials so students and teachers can focus on the work — not on learning the tool.</span>
+                  <span className="text-muted">Stripped to the essentials so students and teachers can focus on the work, not on learning the tool.</span>
                 </h2>
               </div>
 
