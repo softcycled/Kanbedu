@@ -80,7 +80,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   if (groups.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Groups tab — each group gets its own board to track here.
+        No groups yet. Create groups in the Roster tab — each group gets its own board to track here.
       </div>
     );
   }

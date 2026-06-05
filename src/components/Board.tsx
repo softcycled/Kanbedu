@@ -498,16 +498,23 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         prev.map((t) => (t.id === activeId ? updatedTask : t))
       );
       broadcastRefresh({ type: "task:update", task: updatedTask });
-    }
 
-    // Update sibling orders in a single bulk request — fire-and-forget
-    const siblings = reordered.filter((t) => t.id !== activeId);
-    if (siblings.length > 0) {
-      fetch("/api/tasks", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
-      }).catch((err) => console.error("Failed to bulk update task order:", err));
+      // Update sibling orders only if the primary move succeeded
+      const siblings = reordered.filter((t) => t.id !== activeId);
+      if (siblings.length > 0) {
+        fetch("/api/tasks", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
+        }).catch((err) => console.error("Failed to bulk update task order:", err));
+      }
+    } else {
+      // Revert optimistic move — restore original column and order
+      onTasksChange((prev) =>
+        prev.map((t) =>
+          t.id === activeId ? { ...t, column: task.column, order: task.order } : t
+        )
+      );
     }
 
   };
@@ -532,7 +539,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       columnUpdatedAt: now,
       assigneeId: null,
       order: maxOrder + 1,
-      priority: "normal",
+      priority: "medium",
       movedByNonAssignee: false,
       comments: [],
       tags: [],

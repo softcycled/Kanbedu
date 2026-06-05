@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     const memberCount = await prisma.boardMember.count({
-      where: { userId: session.userId },
+      where: { userId: session.userId, board: { group: { is: null } } },
     });
 
     const board = await prisma.$transaction(async (tx) => {
