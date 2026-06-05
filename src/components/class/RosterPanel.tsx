@@ -110,7 +110,7 @@ function AssignSelect({
       onChange={(e) => onPick(e.target.value === LOBBY ? null : e.target.value)}
       title="Assign to group"
       aria-label="Assign to group"
-      className="flex-shrink-0 max-w-[7rem] text-[11px] rounded-md border border-border bg-column-bg text-muted hover:text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer"
+      className="flex-shrink-0 max-w-[7rem] text-[11px] rounded-md border border-border bg-column-bg text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer"
     >
       <option value={LOBBY}>Lobby</option>
       {groups.map((g) => (
@@ -257,13 +257,6 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
     const groupId = target === LOBBY ? null : target;
     batchAssign([...selected].map((userId) => ({ userId, groupId })));
     setBulkTarget("");
-  };
-
-  // Spread everyone currently in the lobby evenly across the groups (round-robin).
-  const autoDistribute = () => {
-    if (groups.length === 0 || lobby.length === 0 || busy) return;
-    const assignments = lobby.map((m, i) => ({ userId: m.userId, groupId: groups[i % groups.length].id }));
-    batchAssign(assignments);
   };
 
   const toggleSelect = (userId: string) =>
@@ -441,16 +434,6 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           </span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {interactive && lobby.length > 0 && groups.length > 0 && (
-            <button
-              onClick={autoDistribute}
-              disabled={busy}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors disabled:opacity-50"
-              title="Spread everyone in the lobby evenly across groups"
-            >
-              Auto-distribute
-            </button>
-          )}
           <span className="flex items-center gap-1.5 text-[11px] text-muted" title="The roster auto-updates as students join">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Live
