@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
+import Skeleton from "../Skeleton";
 
 interface FlaggedTask {
   id: string;
@@ -89,7 +90,13 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
   useEffect(() => () => { if (reloadTimer.current) window.clearTimeout(reloadTimer.current); }, []);
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-muted">Checking integrity…</div>;
+    return (
+      <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-4xl space-y-4">
+        <Skeleton className="h-16 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl" />
+      </div>
+    );
   }
   if (error) {
     return (

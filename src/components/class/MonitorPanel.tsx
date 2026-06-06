@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
+import Skeleton from "../Skeleton";
 
 interface MonitorMember {
   id: string;
@@ -80,7 +81,15 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   useEffect(() => () => { if (reloadTimer.current) window.clearTimeout(reloadTimer.current); }, []);
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading overview…</div>;
+    return (
+      <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
   }
   if (error) {
     return (

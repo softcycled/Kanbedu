@@ -7,11 +7,21 @@ import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
 import EmailVerificationBanner from "../EmailVerificationBanner";
 
-const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <div /> });
-const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <div /> });
-const RosterPanel = dynamic(() => import("./RosterPanel"), { ssr: false, loading: () => <div /> });
-const PresetEditor = dynamic(() => import("./PresetEditor"), { ssr: false, loading: () => <div /> });
-const ClassSettingsPanel = dynamic(() => import("./ClassSettingsPanel"), { ssr: false, loading: () => <div /> });
+function PanelSkeleton() {
+  return (
+    <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 space-y-3" aria-hidden>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="h-14 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
+const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
+const RosterPanel = dynamic(() => import("./RosterPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
+const PresetEditor = dynamic(() => import("./PresetEditor"), { ssr: false, loading: () => <PanelSkeleton /> });
+const ClassSettingsPanel = dynamic(() => import("./ClassSettingsPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 
 export interface WorkspaceGroup {
   id: string;

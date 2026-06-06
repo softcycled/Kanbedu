@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
+import Skeleton from "./Skeleton";
 
 interface Props {
   boardName: string;
@@ -245,7 +237,17 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee && t.assignee !== "(unassigned)") ?? false, [data]);
 
   if (loading && !data) {
-    return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading analytics…</div>;
+    return (
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+    );
   }
   if (!data) {
     return (

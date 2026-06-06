@@ -91,6 +91,16 @@ function IconPlus() {
   );
 }
 
+function IconBoard() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="4" height="12" rx="1" />
+      <rect x="6.5" y="2" width="4" height="8" rx="1" />
+      <rect x="12" y="2" width="3" height="5" rx="1" />
+    </svg>
+  );
+}
+
 function IconHelp() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -247,13 +257,13 @@ export default function Sidebar({
 
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    { id: "settings", label: "Boards", icon: <IconSettings /> },
-    { id: "profile", label: "Settings", icon: <IconUser /> },
+    { id: "settings", label: "Settings", icon: <IconSettings /> },
+    { id: "profile", label: "Profile", icon: <IconUser /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
   ];
 
   const mobileNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
-    { id: "board", label: "Board", icon: <IconSettings /> },
+    { id: "board", label: "Board", icon: <IconBoard /> },
     ...desktopNavItems,
   ];
 

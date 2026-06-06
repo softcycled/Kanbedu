@@ -6,7 +6,21 @@ import type { ClassSummary } from "../Sidebar";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 
-const GroupBoardView = dynamic(() => import("./GroupBoardView"), { ssr: false, loading: () => <div /> });
+const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 overflow-hidden flex gap-7 px-10 pt-6" aria-hidden>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="flex-shrink-0 w-72 space-y-3">
+          <div className="h-5 w-32 rounded-md bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+          {Array.from({ length: 3 }).map((__, j) => (
+            <div key={j} className="h-14 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+});
 
 interface Props {
   activeClass: ClassSummary;

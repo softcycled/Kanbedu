@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
+import Skeleton from "../Skeleton";
 
 interface Member {
   userId: string;
@@ -409,7 +410,13 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   };
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading roster…</div>;
+    return (
+      <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 rounded-xl" />
+        ))}
+      </div>
+    );
   }
   if (loadError) {
     return (

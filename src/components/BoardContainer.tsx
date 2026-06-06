@@ -7,7 +7,19 @@ import BoardComp from "./Board";
 import Sidebar, { Panel, ClassSummary } from "./Sidebar";
 import StudentClassView from "./class/StudentClassView";
 import dynamic from "next/dynamic";
-const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), { ssr: false, loading: () => <div /> });
+const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 space-y-4" aria-hidden>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+        ))}
+      </div>
+      <div className="h-48 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+    </div>
+  ),
+});
 import SettingsPanel from "./SettingsPanel";
 import ClientErrorBoundary from "./ClientErrorBoundary";
 import ProfilePanel from "./ProfilePanel";
