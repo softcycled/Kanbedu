@@ -229,7 +229,7 @@ export default function LandingPage() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-14 reveal">
+              <div className="hidden md:grid md:grid-cols-3 gap-x-10 gap-y-14 reveal">
                 {PILLARS.map((pillar, i) => (
                   <div key={pillar.fig}>
                     <p className="text-[10px] font-medium tracking-[0.18em] text-muted/60 mb-5 font-mono uppercase">
@@ -248,6 +248,30 @@ export default function LandingPage() {
                     </p>
                   </div>
                 ))}
+              </div>
+
+              {/* Mobile horizontal scroll carousel */}
+              <div className="md:hidden -mx-6 px-6 overflow-x-auto snap-x snap-mandatory flex gap-4 pb-4 reveal no-scrollbar">
+                {PILLARS.map((pillar, i) => (
+                  <div key={pillar.fig} className="snap-center flex-none w-[78vw]">
+                    <p className="text-[10px] font-medium tracking-[0.18em] text-muted/60 mb-5 font-mono uppercase">
+                      {pillar.fig}
+                    </p>
+                    <div className="mb-7">
+                      <PillarIconFrame index={i}>
+                        <pillar.Icon />
+                      </PillarIconFrame>
+                    </div>
+                    <h3 className="text-sm font-semibold text-ink mb-2 tracking-tight">
+                      {pillar.title}
+                    </h3>
+                    <p className="text-sm text-muted leading-relaxed">
+                      {pillar.description}
+                    </p>
+                  </div>
+                ))}
+                {/* trailing spacer so last card doesn't sit flush against edge */}
+                <div className="flex-none w-2" />
               </div>
             </div>
           </section>

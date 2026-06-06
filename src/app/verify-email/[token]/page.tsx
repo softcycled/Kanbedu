@@ -1,3 +1,6 @@
+import { prisma } from "@/lib/prisma";
+import { createSession } from "@/lib/auth";
+
 interface Props {
   params: Promise<{ token: string }>;
 }
@@ -5,15 +8,28 @@ interface Props {
 export default async function VerifyEmailPage({ params }: Props) {
   const { token } = await params;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
-    cache: "no-store",
-  });
+  let success = false;
+  let errorMessage = "Something went wrong. Please try again.";
 
-  const success = res.ok;
-  const errorMessage = success
-    ? null
-    : (await res.json().catch(() => ({}))).error ?? "Something went wrong. Please try again.";
+  try {
+    const record = await prisma.emailVerification.findUnique({ where: { token } });
+
+    if (!record) {
+      errorMessage = "Invalid or expired verification link.";
+    } else if (record.expiresAt < new Date()) {
+      await prisma.emailVerification.delete({ where: { id: record.id } });
+      errorMessage = "This verification link has expired. Please request a new one.";
+    } else {
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } }),
+        prisma.emailVerification.deleteMany({ where: { userId: record.userId } }),
+      ]);
+      await createSession(record.userId);
+      success = true;
+    }
+  } catch {
+    errorMessage = "Something went wrong. Please try again.";
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
