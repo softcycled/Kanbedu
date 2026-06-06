@@ -62,6 +62,9 @@ function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
 export default function ClassWorkspace(props: Props) {
   const { classId, name, term, archived, ownerId, currentUserId, joinCode, groups } = props;
   const [tab, setTab] = useState<Tab>("monitor");
+  // Track which tabs have ever been opened so we can keep them mounted after
+  // first visit — switching back is instant with no re-fetch.
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
   const router = useRouter();
 
@@ -141,7 +144,10 @@ export default function ClassWorkspace(props: Props) {
         {tabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
+            }}
             className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
               tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
             }`}
@@ -158,19 +164,29 @@ export default function ClassWorkspace(props: Props) {
         </div>
       )}
 
-      {tab === "monitor" && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
-      {tab === "integrity" && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
-      {tab === "roster" && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}
-      {tab === "preset" && <PresetEditor classId={classId} readOnly={archived} />}
-      {tab === "settings" && (
-        <ClassSettingsPanel
-          classId={classId}
-          initialName={name}
-          initialTerm={term}
-          archived={archived}
-          joinCode={joinCode || ""}
-        />
-      )}
+      <div className={tab === "monitor" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
+      </div>
+      <div className={tab === "integrity" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
+      </div>
+      <div className={tab === "roster" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("roster") && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}
+      </div>
+      <div className={tab === "preset" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("preset") && <PresetEditor classId={classId} readOnly={archived} />}
+      </div>
+      <div className={tab === "settings" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("settings") && (
+          <ClassSettingsPanel
+            classId={classId}
+            initialName={name}
+            initialTerm={term}
+            archived={archived}
+            joinCode={joinCode || ""}
+          />
+        )}
+      </div>
     </div>
   );
 }
