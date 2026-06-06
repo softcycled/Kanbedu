@@ -20,7 +20,7 @@ export default async function Home({
   let [user, memberships] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { isAdmin: true, handle: true },
+      select: { isAdmin: true, handle: true, emailVerified: true },
     }),
     prisma.boardMember.findMany({
       // Exclude class group boards — those live under Classes, not personal Boards.
@@ -34,6 +34,9 @@ export default async function Home({
 
   // Existing users without a handle must set one up first
   if (user && !user.handle) redirect("/handle-setup");
+
+  // Hard gate: email must be verified before accessing the app
+  if (user && user.emailVerified === false) redirect("/verify-email-required");
 
   // First-time user: create a default board
   if (boards.length === 0) {
@@ -50,7 +53,7 @@ export default async function Home({
           update: {},
         });
         // Refresh `user` value (only need isAdmin for later checks).
-        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true, handle: true } });
+        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true, handle: true, emailVerified: true } });
       }
     }
 

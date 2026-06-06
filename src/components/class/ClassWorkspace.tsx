@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
-import EmailVerificationBanner from "../EmailVerificationBanner";
 
 function PanelSkeleton() {
   return (
@@ -114,7 +113,6 @@ export default function ClassWorkspace(props: Props) {
   if (openBoard) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
-        <EmailVerificationBanner />
         {header}
         <BackBar onBack={() => setOpenBoard(null)} title={openBoard.name} />
         <GroupBoardView
@@ -137,7 +135,6 @@ export default function ClassWorkspace(props: Props) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <EmailVerificationBanner />
       {header}
 
       <nav className="flex-shrink-0 flex items-center gap-1 px-6 md:px-10 border-b border-border/60 overflow-x-auto no-scrollbar">

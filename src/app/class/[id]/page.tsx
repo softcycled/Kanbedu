@@ -10,6 +10,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const session = await getSession();
   if (!session) redirect("/landing");
 
+  const { emailVerified } = (await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { emailVerified: true },
+  })) ?? {};
+  if (emailVerified === false) redirect("/verify-email-required");
+
   const cls = await prisma.class.findUnique({
     where: { id },
     include: {
