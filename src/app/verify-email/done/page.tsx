@@ -1,35 +1,15 @@
-import { prisma } from "@/lib/prisma";
-import { createSession } from "@/lib/auth";
+import { Suspense } from "react";
 
-interface Props {
-  params: Promise<{ token: string }>;
-}
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid: "Invalid or expired verification link.",
+  expired: "This verification link has expired. Please request a new one.",
+  unknown: "Something went wrong. Please try again.",
+};
 
-export default async function VerifyEmailPage({ params }: Props) {
-  const { token } = await params;
-
-  let success = false;
-  let errorMessage = "Something went wrong. Please try again.";
-
-  try {
-    const record = await prisma.emailVerification.findUnique({ where: { token } });
-
-    if (!record) {
-      errorMessage = "Invalid or expired verification link.";
-    } else if (record.expiresAt < new Date()) {
-      await prisma.emailVerification.delete({ where: { id: record.id } });
-      errorMessage = "This verification link has expired. Please request a new one.";
-    } else {
-      await prisma.$transaction([
-        prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } }),
-        prisma.emailVerification.deleteMany({ where: { userId: record.userId } }),
-      ]);
-      await createSession(record.userId);
-      success = true;
-    }
-  } catch {
-    errorMessage = "Something went wrong. Please try again.";
-  }
+function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
+  const error = searchParams.error;
+  const success = !error;
+  const errorMessage = error ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.unknown) : "";
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
@@ -69,5 +49,14 @@ export default async function VerifyEmailPage({ params }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default async function VerifyDonePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const sp = await searchParams;
+  return (
+    <Suspense>
+      <DoneContent searchParams={sp} />
+    </Suspense>
   );
 }

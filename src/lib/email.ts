@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM = "Kanbedu <noreply@kanbedu.com>";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -13,6 +11,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
     return;
   }
 
+  const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: FROM,
     to,
@@ -32,11 +31,11 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   const verifyUrl = `${BASE_URL}/verify-email/${token}`;
 
   if (!process.env.RESEND_API_KEY) {
-    // In dev without a key, log the link so you can verify manually
     console.info(`[email] Verification link for ${to}: ${verifyUrl}`);
     return;
   }
 
+  const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: FROM,
     to,
