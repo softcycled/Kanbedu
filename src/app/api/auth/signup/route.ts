@@ -33,9 +33,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
     }
 
+    const AVATAR_COLORS = ["#4A90A4","#A8CCE0","#2C4A6E","#4A7C59","#7CC8A0","#7A8C52","#3D8B6B","#D4A847","#C9B87A","#BE6A43","#C45C6A","#D47060","#A83252","#D4A0A8","#9B8CC4","#7A5FAF"];
+    const randomColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+
     const hashed = await hashPassword(data.password);
     const user = await prisma.user.create({
-      data: { email: data.email, password: hashed, name: data.name, handle: data.handle },
+      data: { email: data.email, password: hashed, name: data.name, handle: data.handle, color: randomColor },
     });
 
     // Create a 24-hour verification token and send the email (fire-and-forget)
