@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ResendButton from "./ResendButton";
+import SignOutButton from "./SignOutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +49,9 @@ export default async function VerifyEmailRequired() {
           </p>
           <ResendButton />
         </div>
-        <form action="/api/auth/logout" method="POST" className="mt-4">
-          <button type="submit" className="text-xs" style={{ color: "#A8A29E" }}>
-            Sign out
-          </button>
-        </form>
+        <div className="mt-4">
+          <SignOutButton />
+        </div>
       </div>
     </div>
   );
