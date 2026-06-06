@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PriorityIcon from "../PriorityIcon";
 
 // ── Visual mockups — match the real app's design language ─────────────────────
@@ -268,15 +268,28 @@ const STEPS = [
 export default function EducatorSteps() {
   const [active, setActive] = useState(0);
   const [manual, setManual] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (manual) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible || manual) return;
     const id = setInterval(() => setActive((p) => (p + 1) % STEPS.length), 4000);
     return () => clearInterval(id);
-  }, [manual]);
+  }, [visible, manual]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+    <div ref={rootRef} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
       {/* Left: step list */}
       <div className="space-y-1">
         {STEPS.map((step, i) => (
