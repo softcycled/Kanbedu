@@ -151,7 +151,10 @@ export default function BoardContainer({
         if (exists) return prev.map((p) => (p.id === t.id ? { ...p, ...t } : p));
         const hasColumn = columnsRef.current.some((c) => c.id === t.column);
         if (!hasColumn) return prev;
-        return [...prev, t];
+        return [...prev, t].sort((a, b) => {
+          if (a.column !== b.column) return a.column < b.column ? -1 : 1;
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
       });
       return;
     }

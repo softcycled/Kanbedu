@@ -239,11 +239,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         setColumnToDelete(null);
         broadcastRefresh();
 
-        // Show undo for best-effort recreation
+        // Show recreate toast — tasks are gone, so this only restores an empty column
         toasts.push({
           title: "Column deleted",
           description: deletedLabel,
-          actionLabel: "Undo",
+          actionLabel: "Recreate",
           onAction: async () => {
             try {
               const r = await fetch("/api/columns", {
@@ -616,12 +616,22 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             const r = await fetch("/api/tasks", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: prevTask.title, column: prevTask.column }),
+              body: JSON.stringify({
+                title: prevTask.title,
+                column: prevTask.column,
+                description: prevTask.description || undefined,
+                assigneeId: prevTask.assigneeId || undefined,
+                priority: prevTask.priority !== "medium" ? prevTask.priority : undefined,
+                deadline: prevTask.deadline ? String(prevTask.deadline) : undefined,
+                tagIds: prevTask.tags?.map((t) => t.id),
+              }),
             });
             if (!r.ok) throw new Error("Restore failed");
             const restored = await r.json();
-            onTasksChange((prev) => [...prev, restored]);
-            broadcastRefresh({ type: "task:create", task: restored });
+            // Merge display-only fields the API doesn't return (assigneeUser name/color)
+            const withDisplay = { ...restored, assigneeUser: prevTask.assigneeUser ?? null };
+            onTasksChange((prev) => [...prev, withDisplay]);
+            broadcastRefresh({ type: "task:create", task: withDisplay });
           } catch (err) {
             console.error("Undo restore failed", err);
           }

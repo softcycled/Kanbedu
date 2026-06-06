@@ -85,6 +85,11 @@ export const deleteColumnSchema = z
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1, "Title is required."),
   column: z.string().min(1, "Column ID is required."),
+  description: z.string().optional(),
+  assigneeId: z.string().nullable().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  deadline: z.string().nullable().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 export const updateTaskSchema = z.object({

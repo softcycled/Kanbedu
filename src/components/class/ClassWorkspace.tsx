@@ -60,8 +60,7 @@ function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
 }
 
 export default function ClassWorkspace(props: Props) {
-  const { classId, name, term, archived, role, ownerId, currentUserId, joinCode, groups, myGroupId, myGroupName } = props;
-  const isEducator = role === "educator" || role === "ta";
+  const { classId, name, term, archived, ownerId, currentUserId, joinCode, groups } = props;
   const [tab, setTab] = useState<Tab>("monitor");
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
   const router = useRouter();
@@ -107,32 +106,6 @@ export default function ClassWorkspace(props: Props) {
       <Link href="/" className="text-xs text-muted hover:text-ink transition-colors">← Back</Link>
     </header>
   );
-
-  // ---- Student view: their board, or the lobby waiting screen ----
-  if (!isEducator) {
-    const myBoard = groups.find((g) => g.id === myGroupId) || groups[0];
-    return (
-      <div className="flex flex-col h-screen overflow-hidden">
-        {header}
-        {myGroupId && myBoard ? (
-          <GroupBoardView
-            boardId={myBoard.boardId}
-            boardName={myGroupName || myBoard.name}
-            currentUserId={currentUserId}
-            realtimeSecret={myBoard.realtimeSecret}
-          />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <div className="w-12 h-12 rounded-full bg-ink/5 flex items-center justify-center mb-4">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-muted"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 4-6 8-6s8 2 8 6" /></svg>
-            </div>
-            <h2 className="text-base font-semibold text-ink">You&apos;re in {name}</h2>
-            <p className="text-sm text-muted mt-1 max-w-sm">Waiting to be placed into a group. Your teacher will assign you shortly — your group board will appear here.</p>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // ---- Educator view ----
   if (openBoard) {
