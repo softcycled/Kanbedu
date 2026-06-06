@@ -42,22 +42,14 @@ function CheckEmailContent() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold" style={{ color: "#1C1917" }}>We sent you a verification email</p>
+            <p className="text-sm font-semibold" style={{ color: "#1C1917" }}>Verify your email to continue</p>
             {email && (
               <p className="text-xs mt-1" style={{ color: "#78716C" }}>
-                Check <span className="font-medium" style={{ color: "#1C1917" }}>{email}</span> and click the link to verify your account.
+                We sent a link to <span className="font-medium" style={{ color: "#1C1917" }}>{email}</span>. Click it to activate your account.
               </p>
             )}
-            <p className="text-xs mt-1" style={{ color: "#A8A29E" }}>Don't forget to check your spam folder.</p>
+            <p className="text-xs mt-2" style={{ color: "#A8A29E" }}>Don't forget to check your spam folder.</p>
           </div>
-
-          <a
-            href="/"
-            className="block w-full py-2.5 text-sm font-medium rounded-xl transition-colors"
-            style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}
-          >
-            Continue to app →
-          </a>
 
           <div className="pt-1 border-t border-[#E2DED8]">
             {sent ? (
