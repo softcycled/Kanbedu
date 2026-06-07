@@ -7,19 +7,9 @@ type Tab = "support" | "changelog";
 // Add entries here when ready for launch
 const CHANGELOG: { date: string; title: string; description: string }[] = [
   {
-    date: "Jun 7, 2026",
-    title: "Help & Changelog",
-    description: "You can now submit bug reports and feedback directly from the app, and view updates as they ship.",
-  },
-  {
     date: "Jun 1, 2026",
     title: "Educator Tools",
     description: "Classes, groups, monitor, and integrity panel are now live. Educators can create classes, assign students to groups, and track progress in real time.",
-  },
-  {
-    date: "May 20, 2026",
-    title: "Email Verification",
-    description: "Accounts now require email verification before accessing the app. Verification links expire after 24 hours and can be resent from the gate page.",
   },
 ];
 
