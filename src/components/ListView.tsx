@@ -149,7 +149,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
   }), [tasks, sortKey, sortDir, columnMap]);
 
   return (
-    <div className="flex-1 overflow-y-auto min-h-0 pl-[4.5rem] pr-6 md:px-10 py-6">
+    <div className="flex-1 overflow-y-auto min-h-0 px-4 md:px-10 py-6">
       {/* Toolbar: Add task */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted font-medium tabular-nums">

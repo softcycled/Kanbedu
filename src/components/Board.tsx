@@ -842,13 +842,13 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   return (
     <>
       {/* Header row: board name left, filters right */}
-      <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
+      <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 pl-[4.5rem] pr-4 md:px-10 pt-6 pb-5 border-b border-border/60">
         {headerTitle ?? (
-          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+          <h1 className="hidden sm:block text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
         )}
         {/* When the task side panel is open, hide the filter bar and view toggle visually but
             keep them in the layout so the header height stays stable (no upward shift). */}
-        <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
+        <div className={`flex items-center gap-2 sm:gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
             <FilterBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
