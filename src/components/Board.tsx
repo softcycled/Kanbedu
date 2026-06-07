@@ -213,11 +213,19 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     async (moveToColumnId?: string) => {
       if (!columnToDelete) return;
 
+      // Capture everything needed for a full undo before any state mutation:
+      // the column, its tasks (in order), and where the tasks went.
+      const deleted = columnToDelete;
+      const movedTo = moveToColumnId || null;
+      const deletedTasks = tasksRef.current
+        .filter((t) => t.column === deleted.id)
+        .sort((a, b) => a.order - b.order);
+
       try {
-        const res = await fetch(`/api/columns/${columnToDelete.id}`, {
+        const res = await fetch(`/api/columns/${deleted.id}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ moveToColumnId: moveToColumnId || null }),
+          body: JSON.stringify({ moveToColumnId: movedTo }),
         });
 
         if (!res.ok) {
@@ -227,41 +235,113 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           return;
         }
 
-        onColumnsChange((prev) => prev.filter((col) => col.id !== columnToDelete.id));
-        if (moveToColumnId) {
+        onColumnsChange((prev) => prev.filter((col) => col.id !== deleted.id));
+        if (movedTo) {
           onTasksChange((prev) =>
             prev.map((t) =>
-              t.column === columnToDelete.id ? { ...t, column: moveToColumnId } : t
+              t.column === deleted.id ? { ...t, column: movedTo } : t
             )
           );
         } else {
-          onTasksChange((prev) => prev.filter((t) => t.column !== columnToDelete.id));
+          onTasksChange((prev) => prev.filter((t) => t.column !== deleted.id));
         }
         setDeleteError(null);
         setDeleteModalOpen(false);
-        // capture label for undo toast before clearing state
-        const deletedLabel = columnToDelete.label;
         setColumnToDelete(null);
         broadcastRefresh();
 
-        // Show recreate toast — tasks are gone, so this only restores an empty column
+        // Full undo: recreate the column and bring its tasks back. Tasks that were
+        // moved elsewhere are moved back; tasks that were deleted are recreated
+        // (with new ids — their comments/history can't be recovered).
         toasts.push({
           title: "Column deleted",
-          description: deletedLabel,
-          actionLabel: "Recreate",
+          description: deleted.label,
+          actionLabel: "Undo",
           onAction: async () => {
             try {
               const r = await fetch("/api/columns", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ label: deletedLabel, boardId }),
+                body: JSON.stringify({ label: deleted.label, boardId }),
               });
               if (!r.ok) throw new Error("Restore failed");
               const created = await r.json();
               onColumnsChange((prev) => [...prev, created]);
+
+              if (deletedTasks.length > 0) {
+                if (movedTo) {
+                  // Move the original tasks back into the recreated column.
+                  const ids = new Set(deletedTasks.map((t) => t.id));
+                  await Promise.all(
+                    deletedTasks.map((t) =>
+                      fetch(`/api/tasks/${t.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ column: created.id, order: t.order }),
+                      }).catch((err) => console.error("Undo: move task back failed", err))
+                    )
+                  );
+                  onTasksChange((prev) =>
+                    prev.map((t) =>
+                      ids.has(t.id) ? { ...t, column: created.id } : t
+                    )
+                  );
+                } else {
+                  // Recreate the deleted tasks (sequentially to preserve order).
+                  const restored: Task[] = [];
+                  for (const t of deletedTasks) {
+                    try {
+                      const tr = await fetch("/api/tasks", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: t.title,
+                          column: created.id,
+                          description: t.description || undefined,
+                          assigneeId: t.assigneeId || undefined,
+                          priority: t.priority !== "medium" ? t.priority : undefined,
+                          deadline: t.deadline ? String(t.deadline) : undefined,
+                          tagIds: t.tags?.map((tg) => tg.id),
+                        }),
+                      });
+                      if (tr.ok) {
+                        const nt: Task = await tr.json();
+                        restored.push({ ...nt, assigneeUser: t.assigneeUser ?? null });
+                      }
+                    } catch (err) {
+                      console.error("Undo: recreate task failed", err);
+                    }
+                  }
+                  if (restored.length > 0) {
+                    onTasksChange((prev) => [...prev, ...restored]);
+                  }
+                }
+              }
+
+              // Restore the done flag last so its server-side completion sweep
+              // applies to the tasks now back in the column.
+              if (deleted.isDone) {
+                try {
+                  const dr = await fetch(`/api/columns/${created.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isDone: true }),
+                  });
+                  if (dr.ok) {
+                    const doneCol = await dr.json();
+                    onColumnsChange((prev) =>
+                      prev.map((c) => (c.id === created.id ? doneCol : c))
+                    );
+                  }
+                } catch (err) {
+                  console.error("Undo: restore done flag failed", err);
+                }
+              }
+
               broadcastRefresh();
             } catch (err) {
               console.error("Undo restore column failed", err);
+              toasts.push({ title: "Couldn't undo", description: "Please try again." });
             }
           },
         });
