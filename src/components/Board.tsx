@@ -6,7 +6,8 @@ import {
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -77,7 +78,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const toasts = useToasts();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Mouse: start dragging after a 5px move — snappy on desktop.
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Touch: require a 200ms press-and-hold before dragging, so a normal swipe
+    // scrolls the board/column instead of grabbing a card. Without this, every
+    // touch-move grabs a card and the board is unscrollable on mobile.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
