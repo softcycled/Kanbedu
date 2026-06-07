@@ -1,19 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Initialize a server-side Supabase client using the Anon Key.
-// Since our channels are protected by cryptographic secrecy (the realtimeSecret UUID),
-// using the Anon Key to broadcast is perfectly secure.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Lazily create the server-side Supabase client used for realtime broadcasts.
+// Created on first use (not at module load) so importing this module never
+// throws when the Supabase env vars are absent — e.g. unit tests that import a
+// route handler transitively. The instance is reused across warm invocations.
+let client: ReturnType<typeof createClient> | null = null;
 
-// Note: In Next.js serverless environments, we create this outside the function 
-// so it is reused across warm invocations.
-export const realtimeServerClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  }
-});
+function getRealtimeClient(): ReturnType<typeof createClient> | null {
+  if (client) return client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+  client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return client;
+}
 
 /**
  * Broadcasts a refresh event to a securely generated board channel.
@@ -22,10 +24,13 @@ export const realtimeServerClient = createClient(supabaseUrl, supabaseAnonKey, {
  */
 export async function broadcastToBoard(realtimeSecret: string, payload?: any) {
   if (!realtimeSecret) return;
-  
+
+  const supa = getRealtimeClient();
+  if (!supa) return;
+
   // Use httpSend (explicit REST delivery) — server-side Next.js functions have no
   // persistent WebSocket, so send() was silently falling back to REST anyway.
-  realtimeServerClient
+  supa
     .channel(`board-${realtimeSecret}`)
     .httpSend("refresh", payload || { timestamp: new Date().toISOString() })
     .catch((err) => {
