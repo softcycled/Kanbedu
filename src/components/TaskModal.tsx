@@ -1032,7 +1032,7 @@ export default function TaskModal({
                 onClick={() => { userHasEdited.current = true; setDeadline(""); }}
                 title="Remove deadline"
                 aria-label="Remove deadline"
-                className="w-4 h-4 rounded-full flex items-center justify-center bg-muted/20 hover:bg-muted/40 text-muted hover:text-ink transition-colors flex-shrink-0 self-center"
+                className="w-4 h-4 rounded-full flex items-center justify-center bg-muted/20 hover:bg-muted/40 text-muted hover:text-ink transition-colors flex-shrink-0 self-center ml-1"
               >
                 <svg width="7" height="7" viewBox="0 0 7 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ transform: "translate(0px, 0.5px)" }}>
                   <path d="M1 1l5 5M6 1L1 6" />
