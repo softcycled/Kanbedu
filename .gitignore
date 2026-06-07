@@ -21,3 +21,6 @@ prisma/dev.db-journal
 *.log
 .vercel
 scripts
+
+# Local-only working docs (roadmap, QA scripts, audit notes) — never committed
+docs-local/
