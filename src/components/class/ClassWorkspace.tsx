@@ -64,7 +64,17 @@ export default function ClassWorkspace(props: Props) {
   // first visit — switching back is instant with no re-fetch.
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
+  const [integrityFlagCount, setIntegrityFlagCount] = useState<number | null>(null);
   const router = useRouter();
+
+  // Fetch flag count on mount so the Integrity tab badge is visible before the
+  // user has ever visited that tab.
+  useEffect(() => {
+    fetch(`/api/classes/${classId}/integrity`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d && setIntegrityFlagCount(d.totalFlagged))
+      .catch(() => {});
+  }, [classId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -124,9 +134,9 @@ export default function ClassWorkspace(props: Props) {
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: { id: Tab; label: string; badge?: number | null }[] = [
     { id: "monitor", label: "Monitor" },
-    { id: "integrity", label: "Integrity" },
+    { id: "integrity", label: "Integrity", badge: integrityFlagCount },
     { id: "roster", label: "Roster" },
     { id: "preset", label: "Preset" },
     { id: "settings", label: "Settings" },
@@ -144,11 +154,16 @@ export default function ClassWorkspace(props: Props) {
               setTab(t.id);
               setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
             }}
-            className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+            className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
               tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t.label}
+            {t.badge != null && t.badge > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold bg-orange-500 text-white leading-none">
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -164,7 +179,7 @@ export default function ClassWorkspace(props: Props) {
         {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
       </div>
       <div className={tab === "integrity" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
+        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} onFlagCount={setIntegrityFlagCount} />}
       </div>
       <div className={tab === "roster" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
         {visitedTabs.has("roster") && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}

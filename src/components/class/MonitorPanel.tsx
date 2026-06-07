@@ -68,6 +68,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   const [stallDays, setStallDays] = useState(3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   // silent = background refresh (live realtime updates) that must not flash the
   // full-screen loading/error states over already-rendered cards.
@@ -134,18 +135,34 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
         ) : null
       )}
 
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 gap-4">
         <p className="text-xs text-muted">
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live
-        </span>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search groups…"
+            className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
+          />
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </span>
+        </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {groups.map((g) => (
+      {(() => {
+        const visible = search.trim()
+          ? groups.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
+          : groups;
+        return visible.length === 0 ? (
+          <p className="text-sm text-muted">No groups match &ldquo;{search}&rdquo;.</p>
+        ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((g) => (
           <button
             key={g.groupId}
             onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
@@ -202,8 +219,10 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
               )}
             </div>
           </button>
-        ))}
-      </div>
+          ))}
+        </div>
+        );
+      })()}
     </div>
   );
 }

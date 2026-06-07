@@ -68,6 +68,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
   const [error, setError] = useState<string | null>(null);
   const [flagFilter, setFlagFilter] = useState<FlagFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("flagCount");
+  const [groupSearch, setGroupSearch] = useState("");
 
   // silent = background refresh from live realtime events; keeps the rendered
   // list in place instead of flashing the loading/error states.
@@ -125,6 +126,21 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
   const flaggedGroups = data.groups.filter((g) => g.flagged.length > 0);
   const clearCount = data.teamCount - data.flaggedTeamCount;
 
+  const displayGroups = flaggedGroups
+    .map((g) => ({
+      ...g,
+      flagged: flagFilter === "all" ? g.flagged : g.flagged.filter((t) =>
+        flagFilter === "speedRun" ? t.isSpeedRun :
+        flagFilter === "columnSkip" ? t.isColumnSkip :
+        t.isMovedByOther
+      ),
+    }))
+    .filter((g) => g.flagged.length > 0)
+    .filter((g) => !groupSearch.trim() || g.name.toLowerCase().includes(groupSearch.toLowerCase()))
+    .sort((a, b) =>
+      sortOrder === "flagCount" ? b.flagged.length - a.flagged.length : a.name.localeCompare(b.name)
+    );
+
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-4xl">
       {/* Live subscriptions: re-check integrity when any group board changes. */}
@@ -164,8 +180,50 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
             </p>
           </div>
 
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {([
+                { id: "all", label: "All" },
+                { id: "speedRun", label: "Speed-run" },
+                { id: "columnSkip", label: "Skipped column" },
+                { id: "movedByOther", label: "Moved by other" },
+              ] as { id: FlagFilter; label: string }[]).map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFlagFilter(f.id)}
+                  className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
+                    flagFilter === f.id
+                      ? "bg-ink text-paper"
+                      : "bg-ink/8 text-ink/70 hover:bg-ink/12 hover:text-ink"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <input
+                type="text"
+                value={groupSearch}
+                onChange={(e) => setGroupSearch(e.target.value)}
+                placeholder="Search groups…"
+                className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
+              />
+              <button
+                onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}
+                className="text-[11px] text-muted hover:text-ink transition-colors whitespace-nowrap"
+              >
+                {sortOrder === "flagCount" ? "Most flagged ↓" : "A–Z ↑"}
+              </button>
+            </div>
+          </div>
+
+          {displayGroups.length === 0 ? (
+            <p className="text-sm text-muted py-4">No groups match this filter.</p>
+          ) : (
           <div className="space-y-5">
-            {flaggedGroups.map((g) => (
+            {displayGroups.map((g) => (
               <section key={g.groupId} className="rounded-2xl border border-border/70 bg-card-bg overflow-hidden">
                 <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-border/60">
                   <div className="flex items-center gap-2 min-w-0">
@@ -202,6 +260,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
               </section>
             ))}
           </div>
+          )}
 
           {clearCount > 0 && (
             <p className="text-[11px] text-muted mt-5">
