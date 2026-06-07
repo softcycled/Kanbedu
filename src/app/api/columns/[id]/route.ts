@@ -36,9 +36,10 @@ export async function PATCH(
     }
     const data = result.data;
 
-    const updateData: { label?: string; isDone?: boolean } = {};
+    const updateData: { label?: string; isDone?: boolean; color?: string | null } = {};
     if (data.label !== undefined) updateData.label = data.label;
     if (data.isDone !== undefined) updateData.isDone = data.isDone;
+    if (data.color !== undefined) updateData.color = data.color;
 
     // Enforce only one done column per board: clear isDone on all siblings first,
     // and clear completedAt on any tasks that were in those sibling "done" columns.

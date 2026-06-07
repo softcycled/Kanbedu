@@ -21,6 +21,8 @@ interface Props {
   onRenameColumn: (columnId: string, newLabel: string) => Promise<void>;
   onDeleteColumn: (columnId: string) => void;
   onSetDoneColumn: (columnId: string) => void;
+  color?: string | null;
+  onSetColor?: (columnId: string, name: string | null) => void;
   isDynamic?: boolean;
   isBoardEmpty?: boolean;
 }
@@ -36,6 +38,8 @@ function KanbanColumn({
   onRenameColumn,
   onDeleteColumn,
   onSetDoneColumn,
+  color = null,
+  onSetColor,
   isDynamic = false,
   isBoardEmpty = false,
 }: Props) {
@@ -83,6 +87,8 @@ function KanbanColumn({
         onRename={handleRename}
         onDelete={handleDelete}
         onSetDone={handleSetDone}
+        color={color}
+        onSetColor={onSetColor ? (name) => onSetColor(columnId, name) : undefined}
         isDynamic={isDynamic}
         isDragging={isDragging}
         dragListeners={listeners}

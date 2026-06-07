@@ -206,6 +206,27 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
   }, [columns, broadcastRefresh, toasts]);
 
+  const handleSetColumnColor = useCallback(async (columnId: string, color: string | null) => {
+    const prev = columns.find((c) => c.id === columnId);
+    // Optimistic: apply the color immediately, roll back on failure.
+    onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? { ...c, color } : c)));
+    try {
+      const res = await fetch(`/api/columns/${columnId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color }),
+      });
+      if (!res.ok) throw new Error("Color update failed");
+      const updated = await res.json();
+      onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? updated : c)));
+      broadcastRefresh();
+    } catch (error) {
+      console.error("Failed to set column color:", error);
+      if (prev) onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? prev : c)));
+      toasts.push({ title: "Could not update color", description: "Please try again." });
+    }
+  }, [columns, onColumnsChange, broadcastRefresh, toasts]);
+
   const handleDeleteColumnClick = useCallback((columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
     if (columnData) {
@@ -939,6 +960,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                   onRenameColumn={handleRenameColumn}
                   onDeleteColumn={handleDeleteColumnClick}
                   onSetDoneColumn={handleSetDoneColumn}
+                  color={col.color}
+                  onSetColor={handleSetColumnColor}
                   isDynamic={columns.length > 1}
                   isBoardEmpty={tasks.length === 0}
                 />
