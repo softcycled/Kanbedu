@@ -339,7 +339,7 @@ export default function Sidebar({
   const sidebarContent = (
     <>
       <div className="px-4 border-b border-border/60 flex items-center justify-between" style={{ paddingTop: 29, paddingBottom: 24.75 }}>
-        <span className="text-lg font-bold tracking-tight text-ink">kanbedu</span>
+        <a href="https://kanbedu.com" className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity">kanbedu</a>
         <button
           onClick={() => setMobileOpen(false)}
           className="md:hidden p-1 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors"
