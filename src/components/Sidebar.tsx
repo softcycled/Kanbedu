@@ -73,11 +73,12 @@ function IconSettings() {
   );
 }
 
-function IconUser() {
+function IconLayers() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="5" r="3" />
-      <path d="M1.5 14.5c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" />
+      <path d="M8 1.5 1.5 5 8 8.5 14.5 5 8 1.5z" />
+      <path d="M1.5 8 8 11.5 14.5 8" />
+      <path d="M1.5 11 8 14.5 14.5 11" />
     </svg>
   );
 }
@@ -257,8 +258,9 @@ export default function Sidebar({
 
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    { id: "settings", label: "Settings", icon: <IconSettings /> },
-    { id: "profile", label: "Profile", icon: <IconUser /> },
+    // "Boards" → board settings panel; "Settings" → the profile/account panel.
+    { id: "settings", label: "Boards", icon: <IconLayers /> },
+    { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
   ];
 
