@@ -26,7 +26,7 @@ export default function TermsPage() {
         <div className="mb-12">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Legal</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Terms of Service</h1>
-          <p className="text-sm text-muted">Last updated: 31st May 2026</p>
+          <p className="text-sm text-muted">Last updated: 7th June 2026</p>
         </div>
 
         <div>
@@ -121,7 +121,7 @@ export default function TermsPage() {
               <li>Any damages arising from your reliance on content or information on the platform.</li>
             </ul>
             <p>
-              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) SGD 150 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at SGD 150.
+              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) MYR 500 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at MYR 500.
             </p>
             <p>
               Some jurisdictions don&rsquo;t allow certain liability exclusions. In those cases, our liability is limited to the fullest extent the law allows.
@@ -154,7 +154,7 @@ export default function TermsPage() {
 
           <Section title="10. Governing Law and Disputes">
             <p>
-              These Terms are governed by the laws of Singapore. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Singapore.
+              These Terms are governed by and construed in accordance with the laws of Malaysia, without regard to its conflict of law provisions. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Malaysia.
             </p>
             <p>
               Before starting any formal legal proceedings, please contact us at <Placeholder text="legal@kanbedu.com" /> first and give us 30 days to try to sort it out informally.

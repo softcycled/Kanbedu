@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         <div className="mb-12">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Legal</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Privacy Policy</h1>
-          <p className="text-sm text-muted">Last updated: 31st May 2026</p>
+          <p className="text-sm text-muted">Last updated: 7th June 2026</p>
         </div>
 
         <div>
@@ -81,7 +81,10 @@ export default function PrivacyPage() {
 
           <Section title="4. Legal Basis for Processing">
             <p>
-              If data protection law applies to you, here are the legal grounds we rely on to process your data:
+              We process your personal data in accordance with Malaysia&rsquo;s Personal Data Protection Act 2010 (the &ldquo;PDPA&rdquo;) and the data protection principles it sets out, including the General Principle, the Notice and Choice Principle, the Security Principle, and the Retention Principle. By creating an account and providing your data, you consent to us processing it for the purposes described in this policy. You can withdraw your consent at any time as described in Section 11.
+            </p>
+            <p>
+              Where other data protection laws also apply to you, we rely on the following grounds to process your data:
             </p>
             <ul>
               <li><strong>Performance of a contract:</strong> processing your account information and content is necessary to provide the service you signed up for.</li>
@@ -132,10 +135,10 @@ export default function PrivacyPage() {
 
           <Section title="8. International Data Transfers">
             <p>
-              Kanbedu may store and process your personal data in countries other than your own, including countries that may not provide the same level of data protection as your home jurisdiction. Where we transfer personal data internationally, we take steps to ensure appropriate safeguards are in place, for example by relying on infrastructure providers that maintain standard contractual clauses or equivalent protections recognised under applicable law.
+              As Kanbedu relies on infrastructure providers that operate servers globally (see Section 9), your personal data may be transferred to, stored, and processed outside Malaysia. Consistent with the PDPA, we take reasonable steps to ensure that any party we transfer your data to provides a standard of protection comparable to that required under Malaysian law, for example by relying on providers that maintain standard contractual clauses or equivalent safeguards recognised under applicable law.
             </p>
             <p>
-              By using Kanbedu, you acknowledge that your data may be transferred to and processed in other countries as described in this policy.
+              By using Kanbedu, you consent to your personal data being transferred to and processed in countries other than Malaysia as described in this policy.
             </p>
           </Section>
 
@@ -165,7 +168,10 @@ export default function PrivacyPage() {
           </Section>
 
           <Section title="11. Your Rights">
-            <p>Depending on where you live, you may have some or all of the following rights over your data:</p>
+            <p>
+              Under the PDPA, you have the right to access and correct your personal data, and to withdraw your consent to our processing of it. To exercise these rights, contact us at <Placeholder text="privacy@kanbedu.com" />.
+            </p>
+            <p>Depending on where you live, you may also have some or all of the following rights over your data:</p>
             <ul>
               <li><strong>Access:</strong> request a copy of the data we hold about you.</li>
               <li><strong>Correction:</strong> update inaccurate information (most can be changed directly in the app).</li>
@@ -216,7 +222,7 @@ export default function PrivacyPage() {
               If you have questions or concerns about this policy or how we handle your data, reach us at <Placeholder text="privacy@kanbedu.com" />. General support is at <Placeholder text="support@kanbedu.com" />.
             </p>
             <p>
-              If you are in the European Economic Area and believe we have not adequately addressed your concern, you have the right to contact your local supervisory authority.
+              If you are in Malaysia and believe we have not adequately addressed your concern, you may lodge a complaint with the Personal Data Protection Commissioner (Jabatan Perlindungan Data Peribadi). If you are in the European Economic Area, you have the right to contact your local supervisory authority.
             </p>
           </Section>
         </div>
