@@ -136,7 +136,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
 
       <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-muted">
-          Each group&apos;s own progress. Orange marks a group that may need a hand — not a ranking.
+          Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
