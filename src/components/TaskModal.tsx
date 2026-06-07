@@ -1019,12 +1019,27 @@ export default function TaskModal({
           )}
         </div>
         <div>
-          <input
-            type="date"
-            value={deadline}
-            onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-            className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
-          />
+          <div className="inline-flex items-center gap-0">
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+              className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
+            />
+            {deadline && (
+              <button
+                type="button"
+                onClick={() => { userHasEdited.current = true; setDeadline(""); }}
+                title="Remove deadline"
+                aria-label="Remove deadline"
+                className="w-4 h-4 rounded-full flex items-center justify-center bg-muted/20 hover:bg-muted/40 text-muted hover:text-ink transition-colors flex-shrink-0 self-center"
+              >
+                <svg width="7" height="7" viewBox="0 0 7 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ transform: "translate(0px, 0.5px)" }}>
+                  <path d="M1 1l5 5M6 1L1 6" />
+                </svg>
+              </button>
+            )}
+          </div>
           {showDeadlineStatus && (
             <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
               deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :

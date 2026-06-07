@@ -161,3 +161,8 @@ select option:checked {
 @media (prefers-reduced-motion: reduce) {
   .trans-micro, .trans-default { transition: none !important; }
 }
+
+/* Pull the native date picker calendar icon closer to the date text */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: -18px;
+}
