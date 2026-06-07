@@ -41,11 +41,15 @@ export async function POST(req: Request) {
       data: { email: data.email, password: hashed, name: data.name, handle: data.handle, color: randomColor },
     });
 
-    // Create a 24-hour verification token and send the email (fire-and-forget)
-    prisma.emailVerification.create({
-      data: { userId: user.id, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
-    }).then((record) => sendVerificationEmail(user.email, record.token))
-      .catch((err) => console.error("Failed to send verification email:", err));
+    // Create a 24-hour verification token and send the email
+    try {
+      const record = await prisma.emailVerification.create({
+        data: { userId: user.id, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+      });
+      await sendVerificationEmail(user.email, record.token);
+    } catch (err) {
+      console.error("Failed to send verification email:", err);
+    }
 
     await createSession(user.id);
 
