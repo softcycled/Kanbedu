@@ -44,7 +44,7 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
     if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
   };
 
-  // Single header label: class name (muted) → group name (bold). Wraps onto a
+  // Single header label: class name (muted) then group name (bold). Wraps onto a
   // second line and stays compact when the names are long, so it never pushes
   // the filters or the Leave action off screen.
   const breadcrumb = (

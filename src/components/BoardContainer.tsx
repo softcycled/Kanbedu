@@ -104,7 +104,7 @@ export default function BoardContainer({
     return () => clearInterval(interval);
   }, [activeClass, loadClasses]);
 
-  // Per-board cache: boardId → { tasks, columns, fetchedAt }
+  // Per-board cache: boardId maps to { tasks, columns, fetchedAt }
   const boardCache = useRef<Map<string, BoardCache>>(
     new Map([
       [initialBoardId, { tasks: initialTasks, columns: initialColumns, fetchedAt: Date.now() }],

@@ -324,7 +324,7 @@ export default function Sidebar({
 
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    // "Boards" → board settings panel; "Settings" → the profile/account panel.
+    // "Boards" opens the board settings panel; "Settings" opens the profile/account panel.
     { id: "settings", label: "Boards", icon: <IconLayers /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
