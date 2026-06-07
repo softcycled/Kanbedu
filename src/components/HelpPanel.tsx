@@ -140,9 +140,17 @@ function SupportTab() {
         {status === "error" && (
           <p className="text-xs text-red-500">{errorMessage}</p>
         )}
-        <p className="text-xs text-muted leading-relaxed">
-          All reports are reviewed, but we&apos;re unable to notify you directly when an issue has been resolved.
-        </p>
+        <div className="space-y-2">
+          <p className="text-xs text-muted leading-relaxed">
+            All reports are reviewed, but we&apos;re unable to notify you directly when an issue has been resolved.
+          </p>
+          <p className="text-xs text-muted leading-relaxed">
+            Bug reports and feedback should be submitted in good faith and for legitimate platform issues or suggestions. Kanbedu reserves the right to restrict access, remove submissions, or take appropriate action against users who misuse the reporting system, submit spam, or intentionally provide false or disruptive reports.
+          </p>
+          <p className="text-xs text-muted leading-relaxed">
+            Submitting a bug report does not guarantee that an issue will be fixed immediately. Prioritization is based on severity, impact, and available development resources.
+          </p>
+        </div>
         <button
           type="submit"
           disabled={isSubmitting}
