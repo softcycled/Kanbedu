@@ -106,20 +106,29 @@ function AssignSelect({
   onPick: (groupId: string | null) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onPick(e.target.value === LOBBY ? null : e.target.value)}
-      title="Assign to group"
-      aria-label="Assign to group"
-      className="flex-shrink-0 max-w-[7rem] text-[11px] rounded-md border border-border bg-column-bg text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer"
-    >
-      <option value={LOBBY}>Lobby</option>
-      {groups.map((g) => (
-        <option key={g.id} value={g.id}>
-          {g.name}
-        </option>
-      ))}
-    </select>
+    <div className="relative flex-shrink-0">
+      <select
+        value={value}
+        onChange={(e) => onPick(e.target.value === LOBBY ? null : e.target.value)}
+        title="Assign to group"
+        aria-label="Assign to group"
+        className="appearance-none max-w-[8rem] text-xs rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2.5 pr-6 outline-none focus:border-ink/30 cursor-pointer transition-colors hover:border-border"
+      >
+        <option value={LOBBY}>Lobby</option>
+        {groups.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.name}
+          </option>
+        ))}
+      </select>
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted"
+        width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+      >
+        <path d="m6 9 6 6 6-6"/>
+      </svg>
+    </div>
   );
 }
 
@@ -460,18 +469,27 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           <span className="text-xs font-medium text-ink">{selected.size} selected</span>
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Assign to
-            <select
-              value={bulkTarget}
-              onChange={(e) => applyBulk(e.target.value)}
-              disabled={busy}
-              className="text-xs rounded-md border border-border bg-card-bg text-ink py-1 px-1.5 outline-none focus:border-ink/30 cursor-pointer disabled:opacity-50"
-            >
-              <option value="">Choose…</option>
-              <option value={LOBBY}>Lobby</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={bulkTarget}
+                onChange={(e) => applyBulk(e.target.value)}
+                disabled={busy}
+                className="appearance-none text-xs rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2.5 pr-6 outline-none focus:border-ink/30 cursor-pointer disabled:opacity-50 transition-colors hover:border-border"
+              >
+                <option value="">Choose…</option>
+                <option value={LOBBY}>Lobby</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+              <svg
+                aria-hidden
+                className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted"
+                width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              >
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </div>
           </label>
           <button onClick={() => setSelected(new Set())} className="text-[11px] text-muted hover:text-ink ml-auto">
             Clear
