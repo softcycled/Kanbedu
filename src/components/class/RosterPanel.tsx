@@ -317,7 +317,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   useEffect(() => {
     const iv = setInterval(() => {
       const s = idleRef.current;
-      if (s.activeId || s.selectedSize > 0 || s.busy || inflightRef.current > 0) return;
+      if (document.hidden || s.activeId || s.selectedSize > 0 || s.busy || inflightRef.current > 0) return;
       load(true);
     }, POLL_MS);
     return () => clearInterval(iv);

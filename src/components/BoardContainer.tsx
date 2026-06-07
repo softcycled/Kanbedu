@@ -100,6 +100,7 @@ export default function BoardContainer({
   useEffect(() => {
     if (!activeClass || activeClass.boardId) return;
     const interval = setInterval(async () => {
+      if (document.hidden) return;
       const data = await loadClasses();
       if (!data) return;
       const updated = data.find((c) => c.id === activeClass.id);
