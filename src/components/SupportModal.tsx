@@ -100,7 +100,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Brief summary of the issue..."
-                  className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
+                  className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none hover:border-border focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
                 />
               </div>
 
@@ -112,7 +112,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What happened? How can we reproduce it? Any extra info helps!"
                   rows={5}
-                  className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all resize-none"
+                  className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none hover:border-border focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all resize-none"
                 />
               </div>
 
@@ -124,6 +124,10 @@ export default function SupportModal({ isOpen, onClose }: Props) {
                   <p className="text-xs text-red-600 font-medium">{errorMessage}</p>
                 </div>
               )}
+
+              <p className="text-xs text-muted leading-relaxed">
+                All reports are reviewed, but we&apos;re unable to notify you directly when an issue has been resolved.
+              </p>
 
               <div className="pt-2">
                 <button
