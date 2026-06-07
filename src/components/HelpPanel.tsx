@@ -5,7 +5,42 @@ import { useState } from "react";
 type Tab = "support" | "changelog";
 
 // Add entries here when ready for launch
-const CHANGELOG: { date: string; title: string; description: string }[] = [];
+const CHANGELOG: { date: string; title: string; description: string }[] = [
+  {
+    date: "Jun 7, 2026",
+    title: "Help & Changelog",
+    description: "You can now submit bug reports and feedback directly from the app, and view updates as they ship.",
+  },
+  {
+    date: "Jun 1, 2026",
+    title: "Educator Tools",
+    description: "Classes, groups, monitor, and integrity panel are now live. Educators can create classes, assign students to groups, and track progress in real time.",
+  },
+  {
+    date: "May 20, 2026",
+    title: "Email Verification",
+    description: "Accounts now require email verification before accessing the app. Verification links expire after 24 hours and can be resent from the gate page.",
+  },
+];
+
+function IconSupport() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1z" />
+      <path d="M5.5 6a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5" />
+      <circle cx="8" cy="12" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconChangelog() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M8 5v3l2 2" />
+    </svg>
+  );
+}
 
 function SupportTab() {
   const [title, setTitle] = useState("");
@@ -64,11 +99,7 @@ function SupportTab() {
   }
 
   return (
-    <div className="max-w-lg space-y-6">
-      <div>
-        <h2 className="text-base font-semibold text-ink">Support & Feedback</h2>
-        <p className="text-sm text-muted mt-0.5">Found a bug or have a suggestion? Let us know.</p>
-      </div>
+    <div className="max-w-lg space-y-5">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-widest text-muted">Subject</label>
@@ -110,11 +141,6 @@ function SupportTab() {
 function ChangelogTab() {
   return (
     <div className="max-w-lg">
-      <div className="mb-8">
-        <h2 className="text-base font-semibold text-ink">Changelog</h2>
-        <p className="text-sm text-muted mt-0.5">New updates and improvements to Kanbedu.</p>
-      </div>
-
       {CHANGELOG.length === 0 ? (
         <div className="py-16 text-center">
           <div className="w-10 h-10 rounded-full bg-ink/5 flex items-center justify-center mx-auto mb-4">
@@ -127,13 +153,20 @@ function ChangelogTab() {
           <p className="text-xs text-muted mt-1">Check back after launch.</p>
         </div>
       ) : (
-        <div className="relative pl-6 border-l-2 border-border space-y-10">
+        <div>
           {CHANGELOG.map((entry, i) => (
-            <div key={i} className="relative">
-              <div className="absolute -left-[calc(0.75rem+1px)] top-1.5 w-3 h-3 rounded-full bg-ink border-2 border-paper" />
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-1">{entry.date}</p>
-              <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
-              <p className="text-sm text-muted leading-relaxed">{entry.description}</p>
+            <div key={i} className="flex gap-4">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div className="w-2 h-2 rounded-full bg-ink mt-1 flex-shrink-0" />
+                {i < CHANGELOG.length - 1 && (
+                  <div className="w-px bg-border flex-1 mt-1.5" />
+                )}
+              </div>
+              <div className={i < CHANGELOG.length - 1 ? "pb-8" : ""}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-1">{entry.date}</p>
+                <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
+                <p className="text-sm text-muted leading-relaxed">{entry.description}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -142,32 +175,37 @@ function ChangelogTab() {
   );
 }
 
+const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "support", label: "Support & Feedback", icon: <IconSupport /> },
+  { id: "changelog", label: "Changelog", icon: <IconChangelog /> },
+];
+
 export default function HelpPanel() {
   const [tab, setTab] = useState<Tab>("support");
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "support", label: "Support & Feedback" },
-    { id: "changelog", label: "Changelog" },
-  ];
-
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 border-b border-border px-6 flex items-end gap-1" style={{ height: 82 }}>
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.id
-                ? "border-ink text-ink"
-                : "border-transparent text-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex-1 overflow-y-auto px-6 py-8 no-scrollbar">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 px-3 no-scrollbar flex md:block items-center gap-1">
+        <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Help</p>
+        <ul className="flex md:block space-y-0 md:space-y-0.5 gap-1">
+          {NAV_ITEMS.map((item) => (
+            <li key={item.id}>
+              <button
+                onClick={() => setTab(item.id)}
+                className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  tab === item.id
+                    ? "bg-ink/8 text-ink font-medium"
+                    : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
         {tab === "support" ? <SupportTab /> : <ChangelogTab />}
       </div>
     </div>

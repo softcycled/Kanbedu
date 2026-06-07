@@ -205,7 +205,7 @@ export default function SettingsPanel({
         <div className="flex flex-col md:flex-row min-h-0">
           {/* Board list sidebar */}
           <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-4 md:py-7 px-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted px-2 mb-2">Your Boards</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Your Boards</p>
             {boards.map((b) => (
               <button
                 key={b.id}
