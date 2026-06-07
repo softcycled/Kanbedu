@@ -226,7 +226,7 @@ function AppearanceTab() {
 
   return (
     <div className="max-w-lg space-y-8">
-      <div className="pl-14 md:pl-0">
+      <div>
         <h2 className="text-base font-semibold text-ink">Appearance</h2>
         <p className="text-sm text-muted mt-0.5">Customize the look and feel of Kanbedu</p>
       </div>
@@ -508,7 +508,7 @@ export default function ProfilePanel() {
         {/* Account */}
         {activeTab === "account" && (
           <div className="max-w-lg space-y-8">
-            <div className="pl-14 md:pl-0">
+            <div>
               <h2 className="text-base font-semibold text-ink">Account</h2>
               <p className="text-sm text-muted mt-0.5">Manage your personal details</p>
             </div>
@@ -740,7 +740,7 @@ export default function ProfilePanel() {
         {/* Notifications */}
         {activeTab === "notifications" && (
           <div className="max-w-lg space-y-8">
-            <div className="pl-14 md:pl-0">
+            <div>
               <h2 className="text-base font-semibold text-ink">Notifications</h2>
               <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
             </div>
@@ -780,7 +780,7 @@ export default function ProfilePanel() {
         {/* Boards */}
         {activeTab === "boards" && (
           <div className="max-w-lg space-y-8">
-            <div className="pl-14 md:pl-0">
+            <div>
               <h2 className="text-base font-semibold text-ink">Boards</h2>
               <p className="text-sm text-muted mt-0.5">Defaults and display preferences for your boards</p>
             </div>
@@ -805,7 +805,7 @@ export default function ProfilePanel() {
         {/* Accessibility */}
         {activeTab === "accessibility" && (
           <div className="max-w-lg space-y-8">
-            <div className="pl-14 md:pl-0">
+            <div>
               <h2 className="text-base font-semibold text-ink">Accessibility</h2>
               <p className="text-sm text-muted mt-0.5">Make Kanbedu work better for you</p>
             </div>
@@ -835,7 +835,7 @@ export default function ProfilePanel() {
         {/* Privacy & Security */}
         {activeTab === "privacy" && (
           <div className="max-w-lg space-y-8">
-            <div className="pl-14 md:pl-0">
+            <div>
               <h2 className="text-base font-semibold text-ink">Privacy & Security</h2>
               <p className="text-sm text-muted mt-0.5">Control your data and account security</p>
             </div>
