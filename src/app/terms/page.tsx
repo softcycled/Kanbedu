@@ -59,7 +59,7 @@ export default async function TermsPage() {
               <li>You are responsible for keeping your login credentials secure. We are not liable for any loss or damage arising from unauthorised access to your account.</li>
               <li>Don&rsquo;t share your account with others or create accounts on behalf of other people without their permission.</li>
               <li>You are responsible for all activity that occurs under your account.</li>
-              <li>Notify us immediately at <Placeholder text="support@kanbedu.com" /> if you suspect your account has been compromised.</li>
+              <li>Notify us immediately if you suspect your account has been compromised.</li>
               <li>Where Kanbedu is used in an institutional or educational setting, the institution is responsible for ensuring appropriate consents are in place for all users, including minors. Institutional administrators who invite or onboard users accept these Terms on behalf of their institution.</li>
             </ul>
           </Section>
@@ -148,7 +148,7 @@ export default async function TermsPage() {
 
           <Section title="9. Termination">
             <p>
-              You can stop using Kanbedu and request deletion of your account at any time by contacting us at <Placeholder text="support@kanbedu.com" />.
+              You can stop using Kanbedu and request deletion of your account at any time by contacting us through the Help panel in the app.
             </p>
             <p>
               We may suspend or terminate your access if you violate these Terms, if required by law, or if we decide to shut down the service. Where possible, we&rsquo;ll give you advance notice and a reasonable opportunity to export your data.
@@ -163,7 +163,7 @@ export default async function TermsPage() {
               These Terms are governed by and construed in accordance with the laws of Malaysia, without regard to its conflict of law provisions. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Malaysia.
             </p>
             <p>
-              Before starting any formal legal proceedings, please contact us at <Placeholder text="legal@kanbedu.com" /> first and give us 30 days to try to sort it out informally.
+              Before starting any formal legal proceedings, please contact us first and give us 30 days to try to sort it out informally.
             </p>
           </Section>
 
@@ -196,7 +196,7 @@ export default async function TermsPage() {
 
           <Section title="13. Contact">
             <p>
-              Questions about these Terms? Reach us at <Placeholder text="legal@kanbedu.com" />. General support is at <Placeholder text="support@kanbedu.com" />.
+              Questions about these Terms? Use the Help &amp; Support panel within the app.
             </p>
           </Section>
         </div>
@@ -228,8 +228,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Placeholder({ text }: { text: string }) {
-  return (
-    <span className="font-medium text-accent">{text}</span>
-  );
-}

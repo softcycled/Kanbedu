@@ -135,7 +135,7 @@ export default async function PrivacyPage() {
               <li>Access to production data is restricted to authorised personnel only.</li>
             </ul>
             <p>
-              No system is perfectly secure. While we take reasonable precautions, we cannot guarantee absolute security. If you suspect unauthorised access to your account, contact us at <Placeholder text="support@kanbedu.com" /> immediately.
+              No system is perfectly secure. While we take reasonable precautions, we cannot guarantee absolute security. If you suspect unauthorised access to your account, contact us immediately through the Help panel in the app.
             </p>
           </Section>
 
@@ -175,13 +175,13 @@ export default async function PrivacyPage() {
 
           <Section title="11. Your Rights">
             <p>
-              Under the PDPA, you have the right to access and correct your personal data, and to withdraw your consent to our processing of it. To exercise these rights, contact us at <Placeholder text="privacy@kanbedu.com" />.
+              Under the PDPA, you have the right to access and correct your personal data, and to withdraw your consent to our processing of it. To exercise these rights, use the Help &amp; Support panel within the app.
             </p>
             <p>Depending on where you live, you may also have some or all of the following rights over your data:</p>
             <ul>
               <li><strong>Access:</strong> request a copy of the data we hold about you.</li>
               <li><strong>Correction:</strong> update inaccurate information (most can be changed directly in the app).</li>
-              <li><strong>Deletion:</strong> ask us to delete your account and associated data by contacting us at <Placeholder text="support@kanbedu.com" />.</li>
+              <li><strong>Deletion:</strong> ask us to delete your account and associated data by contacting us through the Help panel in the app.</li>
               <li><strong>Portability:</strong> request your data in a structured, machine-readable format where technically feasible.</li>
               <li><strong>Restriction:</strong> ask us to limit how we process your data in certain circumstances.</li>
               <li><strong>Objection:</strong> object to processing based on our legitimate interests, including any profiling.</li>
@@ -207,7 +207,7 @@ export default async function PrivacyPage() {
               Kanbedu is intended for users aged 13 and over. We do not knowingly collect personal data from children under 13. If you are under 13, please do not use Kanbedu or provide any personal information.
             </p>
             <p>
-              If a parent or guardian believes a child under 13 has created an account, please contact us at <Placeholder text="support@kanbedu.com" /> and we will promptly delete the account and associated data.
+              If a parent or guardian believes a child under 13 has created an account, please contact us through the Help panel in the app and we will promptly delete the account and associated data.
             </p>
             <p>
               Users aged 13 to 17 should use Kanbedu only with the awareness and consent of a parent or guardian, where required by law.
@@ -225,10 +225,10 @@ export default async function PrivacyPage() {
 
           <Section title="15. Contact">
             <p>
-              If you have questions or concerns about this policy or how we handle your data, reach us at <Placeholder text="privacy@kanbedu.com" />. General support is at <Placeholder text="support@kanbedu.com" />.
+              If you have questions or concerns about this policy or how we handle your data, use the Help &amp; Support panel within the app.
             </p>
             <p>
-              If you are in Malaysia and believe we have not adequately addressed your concern, you may lodge a complaint with the Personal Data Protection Commissioner (Jabatan Perlindungan Data Peribadi). If you are in the European Economic Area, you have the right to contact your local supervisory authority.
+              If you are in Malaysia and believe we have not adequately addressed your concern, you may lodge a complaint with the Personal Data Protection Commissioner (Jabatan Perlindungan Data Peribadi).
             </p>
           </Section>
         </div>
@@ -266,8 +266,3 @@ function SubHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Placeholder({ text }: { text: string }) {
-  return (
-    <span className="font-medium text-accent">{text}</span>
-  );
-}
