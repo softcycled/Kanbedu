@@ -173,6 +173,20 @@ export default function BoardContainer({
 
   useRealtime(activeBoard?.realtimeSecret ?? null, handleRefresh);
 
+  // Escape closes any open panel and returns to the board view.
+  // Skips when the user is typing so form inputs can catch it first.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (activePanel === "board") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
+      setActivePanel("board");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activePanel]);
+
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
       analyticsKey.current += 1;
