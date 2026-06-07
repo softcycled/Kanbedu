@@ -1423,16 +1423,24 @@ export default function TaskModal({
               <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
             </svg>
           </button>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
-            title="Close"
-            aria-label="Close"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M1 1l12 12M13 1L1 13"/>
-            </svg>
-          </button>
+          <div className="relative group/close">
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M1 1l12 12M13 1L1 13"/>
+              </svg>
+            </button>
+            {/* Hover tooltip surfacing the Esc shortcut */}
+            <div className="pointer-events-none absolute top-full right-0 mt-2 z-50 opacity-0 group-hover/close:opacity-100 transition-opacity duration-150">
+              <div className="flex items-center gap-1.5 bg-[#1C1917] border border-white/10 rounded-lg px-2.5 py-1.5 shadow-lg whitespace-nowrap">
+                <span className="text-xs text-white/90">Close</span>
+                <kbd className="rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">Esc</kbd>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Body: single column on mobile, 2-column (main | properties sidebar) on desktop ── */}
