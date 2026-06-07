@@ -195,16 +195,18 @@ export default function HelpPanel() {
             </li>
           ))}
         </ul>
+        {/* Legal links — moved here from the page footer, beneath the nav items */}
+        <div className="flex md:block items-center gap-1 md:mt-2 md:pt-2 md:border-t md:border-border/50">
+          <Link href="/terms" className="whitespace-nowrap block md:w-full px-3 py-2 md:py-1.5 rounded-lg text-xs text-ink/55 hover:bg-ink/5 hover:text-ink transition-colors">
+            Terms of Service
+          </Link>
+          <Link href="/privacy" className="whitespace-nowrap block md:w-full px-3 py-2 md:py-1.5 rounded-lg text-xs text-ink/55 hover:bg-ink/5 hover:text-ink transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
       </nav>
-      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar flex flex-col min-h-0">
-        <div className="flex-1 min-h-0">
-          {tab === "support" ? <SupportTab /> : <ChangelogTab />}
-        </div>
-        <div className="mt-12 pt-5 border-t border-border/60 flex items-center gap-3 text-xs text-muted flex-shrink-0">
-          <Link href="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
-          <span className="text-muted/40">·</span>
-          <Link href="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
+        {tab === "support" ? <SupportTab /> : <ChangelogTab />}
       </div>
     </div>
   );
