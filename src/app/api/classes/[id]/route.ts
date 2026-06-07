@@ -68,6 +68,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         userId: m.userId,
         role: m.role,
         groupId: m.groupId,
+        displayName: m.displayName ?? null,
         name: m.user.name,
         handle: m.user.handle,
         color: m.user.color,

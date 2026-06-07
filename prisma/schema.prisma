@@ -229,26 +229,41 @@ model Class {
   archived  Boolean       @default(false)
   createdAt DateTime      @default(now())
   owner     User          @relation("ClassOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members   ClassMember[]
-  groups    Group[]
-  preset    ClassPreset?
+  members       ClassMember[]
+  groups        Group[]
+  preset        ClassPreset?
+  rosterEntries ClassRosterEntry[]
 
   @@index([ownerId])
 }
 
 model ClassMember {
-  id      String  @id @default(cuid())
-  userId  String
-  classId String
-  role    String  @default("student") // "educator" | "ta" | "student"
-  groupId String? // null = lobby (not yet sorted)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  id          String  @id @default(cuid())
+  userId      String
+  classId     String
+  role        String  @default("student") // "educator" | "ta" | "student"
+  groupId     String? // null = lobby (not yet sorted)
+  displayName String? // educator-set override from CSV import; shown instead of user.name in class contexts
+  class       Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@unique([userId, classId])
   @@index([classId])
   @@index([groupId])
+}
+
+model ClassRosterEntry {
+  id        String  @id @default(cuid())
+  classId   String
+  email     String  // normalized: lowercase + trim
+  name      String  // display name from CSV
+  groupName String? // pre-assigned group name from CSV column
+  claimedBy String? // userId of the matched account; null = hasn't joined yet
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, email])
+  @@index([classId])
 }
 
 model Group {

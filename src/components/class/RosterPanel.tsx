@@ -20,6 +20,7 @@ interface Member {
   userId: string;
   role: string;
   groupId: string | null;
+  displayName: string | null;
   name: string;
   handle: string | null;
   color: string;
@@ -47,14 +48,14 @@ const LOBBY = "__lobby__";
 const POLL_MS = 12_000;
 
 function StudentChip({ member, dragging }: { member: Member; dragging?: boolean }) {
-  const label = member.name || member.handle || member.email;
+  const label = member.displayName || member.name || member.handle || member.email;
   return (
     <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card-bg border border-border/70 ${dragging ? "shadow-modal" : ""}`}>
       <span
         className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white flex-shrink-0"
         style={{ backgroundColor: member.color || "#4A90A4" }}
       >
-        {(member.name || member.handle || "?").charAt(0).toUpperCase()}
+        {(member.displayName || member.name || member.handle || "?").charAt(0).toUpperCase()}
       </span>
       <span className="text-xs text-ink truncate">{label}</span>
     </div>
@@ -230,6 +231,13 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
   // Group pending a delete confirmation (destructive — wipes the group board).
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
+  // CSV import state
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { push } = useToasts();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -260,6 +268,32 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   );
 
   useEffect(() => { load(); }, [load]);
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const res = await fetch(`/api/classes/${classId}/import`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportError(data.error || "Import failed.");
+      } else {
+        setImportResult(data);
+        setImportFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        await load(true);
+        onChanged?.();
+      }
+    } catch {
+      setImportError("Import failed. Please try again.");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Tracks in-flight optimistic mutations so the background poll never reads
   // stale server data mid-write and reverts a change the teacher just made.
@@ -532,11 +566,56 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             {students.length} student{students.length === 1 ? "" : "s"} · {lobby.length} in lobby
           </span>
         </div>
-        <span className="flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0" title="The roster auto-updates as students join">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live
-        </span>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {interactive && (
+            <button
+              onClick={() => { setShowImport((v) => !v); setImportResult(null); setImportError(null); }}
+              className="text-[11px] text-muted hover:text-ink transition-colors"
+            >
+              {showImport ? "Cancel" : "Import CSV"}
+            </button>
+          )}
+          <span className="flex items-center gap-1.5 text-[11px] text-muted" title="The roster auto-updates as students join">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </span>
+        </div>
       </div>
+
+      {/* CSV import panel */}
+      {interactive && showImport && (
+        <div className="mb-5 rounded-xl border border-border/60 bg-column-bg/40 p-4 space-y-3">
+          <p className="text-[11px] text-muted leading-relaxed">
+            Upload a CSV with <span className="font-mono bg-column-bg px-1 rounded">name</span> and <span className="font-mono bg-column-bg px-1 rounded">email</span> columns.
+            Optional: add a <span className="font-mono bg-column-bg px-1 rounded">group</span> column to auto-create groups and sort students.
+            Matched accounts get their display name set automatically.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportResult(null); setImportError(null); }}
+              className="text-xs text-ink file:mr-2 file:text-xs file:px-2.5 file:py-1 file:rounded-md file:border file:border-border/60 file:bg-card-bg file:text-ink file:cursor-pointer hover:file:bg-column-bg"
+            />
+            <button
+              onClick={handleImport}
+              disabled={!importFile || importing}
+              className="text-xs px-3 py-1.5 rounded-lg bg-ink text-card-bg disabled:opacity-40 hover:bg-ink/80 transition-colors"
+            >
+              {importing ? "Importing…" : "Import"}
+            </button>
+          </div>
+          {importError && <p className="text-[11px] text-red-500">{importError}</p>}
+          {importResult && (
+            <p className="text-[11px] text-emerald-500">
+              {importResult.total} rows processed — {importResult.matched} matched
+              {importResult.unmatched > 0 && `, ${importResult.unmatched} unmatched (will match when they join)`}
+              {importResult.groupsCreated > 0 && `, ${importResult.groupsCreated} group${importResult.groupsCreated === 1 ? "" : "s"} created`}.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Bulk action bar */}
       {interactive && selected.size > 0 && (

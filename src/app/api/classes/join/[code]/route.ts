@@ -49,9 +49,45 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
       return NextResponse.json({ message: "You are already in this class.", classId: cls.id, name: cls.name });
     }
 
-    await prisma.classMember.create({
-      data: { userId: session.userId, classId: cls.id, role: "student" },
+    // Check if this user's email matches a roster entry — set displayName + groupId if so
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { email: true },
     });
+    const normalizedEmail = user?.email?.toLowerCase().trim() ?? "";
+
+    const rosterEntry = normalizedEmail
+      ? await prisma.classRosterEntry.findUnique({
+          where: { classId_email: { classId: cls.id, email: normalizedEmail } },
+        })
+      : null;
+
+    let groupId: string | null = null;
+    if (rosterEntry?.groupName) {
+      const group = await prisma.group.findFirst({
+        where: { classId: cls.id, name: rosterEntry.groupName },
+        select: { id: true },
+      });
+      groupId = group?.id ?? null;
+    }
+
+    await prisma.classMember.create({
+      data: {
+        userId: session.userId,
+        classId: cls.id,
+        role: "student",
+        ...(rosterEntry ? { displayName: rosterEntry.name } : {}),
+        ...(groupId ? { groupId } : {}),
+      },
+    });
+
+    // Mark the roster entry as claimed
+    if (rosterEntry) {
+      await prisma.classRosterEntry.update({
+        where: { classId_email: { classId: cls.id, email: normalizedEmail } },
+        data: { claimedBy: session.userId },
+      });
+    }
 
     return NextResponse.json({ message: "You have joined the class.", classId: cls.id, name: cls.name });
   } catch (error) {
