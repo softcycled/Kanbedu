@@ -204,7 +204,7 @@ export default function SettingsPanel({
       <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
         <div className="flex flex-col md:flex-row min-h-0">
           {/* Board list sidebar */}
-          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-4 md:py-7 px-2">
+          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-4 md:py-7 pl-14 pr-2 md:px-2">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Your Boards</p>
             {boards.map((b) => (
               <button
@@ -228,7 +228,7 @@ export default function SettingsPanel({
           </div>
 
           {/* Board detail */}
-          <div className="flex-1 px-6 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
+          <div className="flex-1 pl-14 pr-6 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
             {/* Identity */}
             <section>
               <div className="flex items-start gap-4">
@@ -349,13 +349,13 @@ export default function SettingsPanel({
               <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
 
                 {/* Transfer ownership row */}
-                <div className={`flex items-center justify-between px-4 py-3.5 gap-4 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3.5 gap-3 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">Transfer ownership</p>
                     <p className="text-xs text-muted mt-0.5">Pass board ownership to another member.</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div ref={transferDropdownRef} className="relative w-44">
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
+                    <div ref={transferDropdownRef} className="relative flex-1 sm:flex-none sm:w-44">
                       <button
                         type="button"
                         onClick={() => setTransferDropdownOpen((v) => !v)}
@@ -412,13 +412,13 @@ export default function SettingsPanel({
                 <div className="border-t border-border/60 mx-4" />
 
                 {/* Remove member row */}
-                <div className={`flex items-center justify-between px-4 py-3.5 gap-4 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3.5 gap-3 ${currentUserRole !== "owner" ? "opacity-40 pointer-events-none select-none" : ""}`}>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">Remove member</p>
                     <p className="text-xs text-muted mt-0.5">Revoke a member's access to this board.</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div ref={removeDropdownRef} className="relative w-44">
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
+                    <div ref={removeDropdownRef} className="relative flex-1 sm:flex-none sm:w-44">
                       <button
                         type="button"
                         onClick={() => setRemoveDropdownOpen((v) => !v)}
