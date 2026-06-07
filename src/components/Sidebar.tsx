@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -119,6 +120,29 @@ function IconShield() {
   );
 }
 
+function IconSignOut() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+// Account-row avatar helpers (mirrors ProfilePanel's avatar rendering).
+function getInitials(name: string) {
+  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+}
+
+function getTextColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.57 ? "#1C1917" : "#FAFAF9";
+}
+
 function GripDots() {
   return (
     <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
@@ -200,6 +224,50 @@ export default function Sidebar({
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const router = useRouter();
+  const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d) {
+          setAccount({ name: d.name ?? "", email: d.email ?? "", handle: d.handle ?? null, color: d.color ?? "#4A90A4" });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAccountOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [accountOpen]);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
+  };
 
   const activeClasses = classes.filter((c) => !c.archived);
   const archivedClasses = classes.filter((c) => c.archived);
@@ -361,6 +429,59 @@ export default function Sidebar({
             {item.label}
           </button>
         ))}
+      </div>
+
+      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3">
+        {accountOpen && account && (
+          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20">
+            <div className="px-3 py-2 border-b border-border/60">
+              <p className="text-sm font-medium text-ink truncate">{account.name || "Your account"}</p>
+              <p className="text-xs text-muted truncate">{account.handle ? `@${account.handle}` : account.email}</p>
+            </div>
+            <button
+              onClick={() => { onPanelChange("profile"); setAccountOpen(false); setMobileOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:bg-ink/5 transition-colors"
+            >
+              <IconSettings />
+              Settings
+            </button>
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors disabled:opacity-50"
+            >
+              <IconSignOut />
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={() => setAccountOpen((v) => !v)}
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+          aria-label="Account menu"
+        >
+          {account ? (
+            <span
+              className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold"
+              style={{ backgroundColor: account.color, color: getTextColor(account.color) }}
+            >
+              {getInitials(account.name) || "?"}
+            </span>
+          ) : (
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-ink/10 motion-safe:animate-pulse" />
+          )}
+          <span className="flex-1 min-w-0 text-sm font-medium text-ink truncate">
+            {account ? account.name || "Account" : ""}
+          </span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className={`flex-shrink-0 text-muted transition-transform ${accountOpen ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
       </div>
     </>
   );
