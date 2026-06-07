@@ -32,14 +32,32 @@ interface Props {
 
 function Avatar({ member }: { member: MonitorMember }) {
   const initials = (member.name || member.handle || "?").trim().charAt(0).toUpperCase();
+  const color = member.color || "#4A90A4";
   return (
-    <span
-      title={member.name || member.handle || ""}
-      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-semibold text-white ring-2 ring-card-bg"
-      style={{ backgroundColor: member.color || "#4A90A4" }}
-    >
-      {initials}
-    </span>
+    <div className="relative group/avatar hover:z-10">
+      <span
+        className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-semibold text-white ring-2 ring-card-bg"
+        style={{ backgroundColor: color }}
+      >
+        {initials}
+      </span>
+      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150">
+        <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+          <span
+            className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+            style={{ backgroundColor: color }}
+          >
+            {initials}
+          </span>
+          <div className="flex flex-col">
+            <span className="text-[13px] font-semibold text-white leading-tight">{member.name || member.handle || "Unknown"}</span>
+            {member.handle && (
+              <span className="text-[11px] text-white/50 leading-tight">@{member.handle}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
