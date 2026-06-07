@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import PriorityIcon from "../PriorityIcon";
 
 // ── Visual mockups — match the real app's design language ─────────────────────
@@ -32,60 +32,93 @@ function CreateClassVisual() {
   );
 }
 
-const LOBBY_STUDENTS = [
-  { color: "#4A90A4", name: "Emma Chen",  group: null       },
-  { color: "#7C3AED", name: "Raj Patel",  group: "Group 1"  },
-  { color: "#059669", name: "Sofia Lee",  group: "Group 1"  },
-  { color: "#D97706", name: "James K.",   group: null       },
-  { color: "#DB2777", name: "Mia Torres", group: "Group 2"  },
+const ROSTER_LOBBY = [
+  { color: "#4A90A4", name: "Emma Chen" },
+  { color: "#D97706", name: "James K." },
+];
+const ROSTER_GROUP = [
+  { color: "#7C3AED", name: "Raj Patel" },
+  { color: "#059669", name: "Sofia Lee" },
 ];
 
-function Chip({ color, name }: { color: string; name: string }) {
+// One student row: avatar chip on the left, reassign dropdown on the right —
+// mirrors the real RosterPanel rows (and the RosterDropdown styling).
+function RosterRow({ color, name, group }: { color: string; name: string; group: string }) {
   return (
-    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card-bg border border-border/70">
-      <span
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white flex-shrink-0"
-        style={{ backgroundColor: color }}
-      >
-        {name.charAt(0)}
-      </span>
-      <span className="text-xs text-ink">{name}</span>
+    <div className="flex items-center gap-1.5">
+      <div className="flex-1 min-w-0 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card-bg border border-border/70">
+        <span
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white flex-shrink-0"
+          style={{ backgroundColor: color }}
+        >
+          {name.charAt(0)}
+        </span>
+        <span className="text-xs text-ink truncate">{name}</span>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0 text-[11px] rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2 pr-1.5">
+        <span className="truncate max-w-[60px]">{group}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted flex-shrink-0">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// Lobby is a dashed card, groups are solid — same as the real roster columns.
+function RosterCard({ title, count, dashed, children }: { title: string; count: string; dashed?: boolean; children: ReactNode }) {
+  return (
+    <div className={`flex-1 min-w-0 rounded-2xl p-3 ${dashed ? "border border-dashed border-border bg-column-bg/40" : "border border-border/70 bg-card-bg"}`}>
+      <div className="flex items-center justify-between mb-2.5 gap-2">
+        <h4 className="text-xs font-semibold text-ink truncate">{title}</h4>
+        <span className="text-[10px] text-muted flex-shrink-0">{count}</span>
+      </div>
+      <div className="space-y-1.5">{children}</div>
     </div>
   );
 }
 
 function InviteVisual() {
   return (
-    <div className="bg-card-bg rounded-2xl shadow-modal w-full p-6 border border-border/70">
+    <div className="bg-card-bg rounded-2xl shadow-modal w-full p-5 border border-border/70">
+      {/* Class Invite link */}
       <h3 className="text-sm font-semibold text-ink mb-1">Class Invite</h3>
       <p className="text-xs text-muted mb-3">
         Share this link. Students join the lobby, then you sort them into groups.
       </p>
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2">
         <input
           readOnly
           value="kanbedu.com/class/join/bio-2026"
-          className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-border bg-column-bg text-ink/80 outline-none"
+          className="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border bg-column-bg text-ink/80 outline-none"
         />
-        <button className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-on-primary">
+        <button className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-on-primary flex-shrink-0">
           Copy
         </button>
       </div>
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted/60 mb-2">
-        Lobby (2 unassigned)
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {LOBBY_STUDENTS.filter((s) => !s.group).map((s) => (
-          <Chip key={s.name} color={s.color} name={s.name} />
-        ))}
+
+      {/* Roster: Lobby + group columns, each row with a reassign dropdown */}
+      <div className="flex items-center justify-between mt-5 mb-2.5 gap-2">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h3 className="text-sm font-semibold text-ink">Roster</h3>
+          <span className="text-[11px] text-muted truncate">4 students · 2 in lobby</span>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
       </div>
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted/60 mb-2 mt-4">
-        Group 1
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {LOBBY_STUDENTS.filter((s) => s.group === "Group 1").map((s) => (
-          <Chip key={s.name} color={s.color} name={s.name} />
-        ))}
+      <div className="flex gap-2.5 items-start">
+        <RosterCard title="Lobby" count="2 waiting" dashed>
+          {ROSTER_LOBBY.map((s) => (
+            <RosterRow key={s.name} color={s.color} name={s.name} group="Lobby" />
+          ))}
+        </RosterCard>
+        <RosterCard title="Group 1" count="2">
+          {ROSTER_GROUP.map((s) => (
+            <RosterRow key={s.name} color={s.color} name={s.name} group="Group 1" />
+          ))}
+        </RosterCard>
       </div>
     </div>
   );
