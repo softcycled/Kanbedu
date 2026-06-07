@@ -16,6 +16,7 @@ import {
 import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
+import MarkdownText from "./MarkdownText";
 import { getColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 
@@ -1833,9 +1834,7 @@ export default function TaskModal({
                     className="min-h-[6rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
                   >
                     {description ? (
-                      <div className="whitespace-pre-wrap break-words text-[15px] leading-[1.7]" style={{ whiteSpace: "pre-wrap" }}>
-                        {description}
-                      </div>
+                      <MarkdownText text={description} className="text-[15px] leading-[1.7]" />
                     ) : (
                       <span className="text-muted text-[15px]">Write a detailed description...</span>
                     )}
@@ -1884,7 +1883,7 @@ export default function TaskModal({
                         </span>
                         <span className="text-xs text-muted">{formatTimeAgo(c.createdAt)}</span>
                       </div>
-                      <p className="text-[15px] text-ink/85 leading-relaxed pl-8">{c.content}</p>
+                      <MarkdownText text={c.content} className="text-[15px] text-ink/85 leading-relaxed pl-8" />
                     </div>
                     );
                   })}
