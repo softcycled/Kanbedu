@@ -17,6 +17,7 @@ import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
 import MarkdownText from "./MarkdownText";
+import MarkdownToolbar from "./MarkdownToolbar";
 import { getColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 
@@ -1805,6 +1806,7 @@ export default function TaskModal({
               </label>
               <div className="max-w-[720px]">
                 {isEditingDescription ? (
+                  <div className="relative">
                   <textarea
                     ref={descriptionTextareaRef}
                     value={description}
@@ -1825,6 +1827,12 @@ export default function TaskModal({
                     placeholder="Write a detailed description..."
                     className="w-full min-h-[6rem] bg-column-bg/40 rounded-lg px-3 py-2.5 text-[15px] leading-[1.7] text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
+                  <MarkdownToolbar
+                    textareaRef={descriptionTextareaRef}
+                    value={description}
+                    onChange={(v) => { userHasEdited.current = true; setDescription(v); }}
+                  />
+                  </div>
                 ) : (
                   <div
                     onClick={() => {
