@@ -105,7 +105,7 @@ export default function ColumnHeader({
       {/* Done-column badge / toggle */}
       {isDone ? (
         <span
-          title="This is the Done column — click to unmark"
+          title="This is the Done column. Click to unmark"
           onClick={(e) => { e.stopPropagation(); onSetDone(); }}
           className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 cursor-pointer hover:bg-green-200 dark:hover:bg-green-950/60 transition-colors select-none"
         >

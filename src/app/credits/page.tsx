@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Credits — Kanbedu",
+  title: "Credits | Kanbedu",
   description: "Kanbedu acknowledgements and credits.",
 };
 

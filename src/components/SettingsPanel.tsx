@@ -312,7 +312,7 @@ export default function SettingsPanel({
             {/* Members */}
             <section>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-                Members — {members.length}
+                Members ({members.length})
               </h4>
               <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
                 {loadingMembers ? (

@@ -109,7 +109,7 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
   if (!data || data.teamCount === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab — each group&apos;s board is checked here.
+        No groups yet. Create groups in the Roster tab. Each group&apos;s board is checked here.
       </div>
     );
   }
@@ -128,7 +128,7 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
 
       <div className="flex items-start justify-between gap-4 mb-5">
         <p className="text-xs text-muted max-w-xl">
-          Tasks that may have been completed dishonestly — finished suspiciously fast
+          Tasks that may have been completed dishonestly, finished suspiciously fast
           (under {data.speedRunMinutes}m), moved straight to done without passing through
           earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
         </p>

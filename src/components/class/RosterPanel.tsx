@@ -740,7 +740,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         title="Delete this group?"
         message={
           confirmDeleteGroup
-            ? `"${confirmDeleteGroup.name}" and its board — including all of the group's tasks — will be permanently deleted. Students in it return to the lobby. This cannot be undone.`
+            ? `"${confirmDeleteGroup.name}" and its board, including all of the group's tasks, will be permanently deleted. Students in it return to the lobby. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete group"

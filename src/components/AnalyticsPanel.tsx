@@ -402,7 +402,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           <HealthMetric
             label="3+ days in phase"
             value={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""}`}
-            sub={`${Math.round(summary.stagnantRate * 100)}% of active — in phase 3+ days`}
+            sub={`${Math.round(summary.stagnantRate * 100)}% of active, in phase 3+ days`}
             color={summary.stagnantRate > 0.3 ? "text-red-500" : summary.stagnantRate > 0.1 ? "text-yellow-600" : "text-green-600"}
           />
           <HealthMetric

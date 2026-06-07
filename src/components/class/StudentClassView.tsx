@@ -93,7 +93,7 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-muted"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 4-6 8-6s8 2 8 6" /></svg>
             </div>
             <h2 className="text-base font-semibold text-ink">You&apos;re in {activeClass.name}</h2>
-            <p className="text-sm text-muted mt-1 max-w-sm">Waiting to be placed into a group. Your teacher will assign you shortly — your group board will appear here.</p>
+            <p className="text-sm text-muted mt-1 max-w-sm">Waiting to be placed into a group. Your teacher will assign you shortly. Your group board will appear here.</p>
           </div>
         </>
       )}

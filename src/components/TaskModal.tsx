@@ -1454,7 +1454,7 @@ export default function TaskModal({
                 />
                 {draftTitle.length > 0 && (
                   <p className={`text-xs mt-1 px-1 ${draftTitle.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
-                    {draftTitle.length > TITLE_CHAR_LIMIT ? `${draftTitle.length}/${TITLE_CHAR_LIMIT} characters — too long` : `${draftTitle.length}/${TITLE_CHAR_LIMIT}`}
+                    {draftTitle.length > TITLE_CHAR_LIMIT ? `${draftTitle.length}/${TITLE_CHAR_LIMIT} characters, too long` : `${draftTitle.length}/${TITLE_CHAR_LIMIT}`}
                   </p>
                 )}
                 </>

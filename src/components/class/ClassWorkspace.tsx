@@ -157,7 +157,7 @@ export default function ClassWorkspace(props: Props) {
       {archived && (
         <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-2 text-[11px] font-medium bg-amber-50 border-b border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4" /></svg>
-          This class is archived — management is read-only. Unarchive it in Settings to make changes.
+          This class is archived. Management is read-only. Unarchive it in Settings to make changes.
         </div>
       )}
 

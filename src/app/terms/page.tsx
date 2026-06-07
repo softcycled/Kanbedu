@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Kanbedu",
+  title: "Terms of Service | Kanbedu",
   description: "Kanbedu Terms of Service",
 };
 

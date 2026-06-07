@@ -84,7 +84,7 @@ export default function AddTask({ column, onAdd }: Props) {
           `}
         />
         <p className={`text-xs mt-1.5 px-1 ${isEmpty || value.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
-          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : value.length > TITLE_CHAR_LIMIT ? `${value.length}/${TITLE_CHAR_LIMIT} characters — too long` : "Enter to add · Esc to cancel"}
+          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : value.length > TITLE_CHAR_LIMIT ? `${value.length}/${TITLE_CHAR_LIMIT} characters, too long` : "Enter to add · Esc to cancel"}
         </p>
       </div>
     );

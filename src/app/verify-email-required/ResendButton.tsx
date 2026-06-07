@@ -16,7 +16,7 @@ export default function ResendButton() {
   };
 
   if (state === "sent") {
-    return <p className="text-sm" style={{ color: "#16A34A" }}>Email sent — check your inbox.</p>;
+    return <p className="text-sm" style={{ color: "#16A34A" }}>Email sent. Check your inbox.</p>;
   }
 
   return (
@@ -26,7 +26,7 @@ export default function ResendButton() {
       className="text-sm underline underline-offset-2 disabled:opacity-50 transition-opacity"
       style={{ color: "#78716C" }}
     >
-      {state === "sending" ? "Sending…" : state === "error" ? "Failed — try again" : "Resend verification email"}
+      {state === "sending" ? "Sending…" : state === "error" ? "Failed. Try again" : "Resend verification email"}
     </button>
   );
 }
