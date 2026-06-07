@@ -118,7 +118,7 @@ function SupportTab() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Brief summary of the issue…"
-            className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
+            className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none hover:border-border focus:border-ink/30 transition-all"
           />
         </div>
         <div className="space-y-1.5">
@@ -129,12 +129,15 @@ function SupportTab() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What happened? How can we reproduce it? Any extra info helps!"
             rows={5}
-            className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all resize-none"
+            className="w-full bg-column-bg/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-ink outline-none hover:border-border focus:border-ink/30 transition-all resize-none"
           />
         </div>
         {status === "error" && (
           <p className="text-xs text-red-500">{errorMessage}</p>
         )}
+        <p className="text-xs text-muted leading-relaxed">
+          All reports are reviewed, but we&apos;re unable to notify you directly when an issue has been resolved.
+        </p>
         <button
           type="submit"
           disabled={isSubmitting}
@@ -194,7 +197,7 @@ export default function HelpPanel() {
 
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 px-3 no-scrollbar flex md:block items-center gap-1">
+      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 pl-14 pr-3 md:px-3 no-scrollbar flex md:block items-center gap-1">
         <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Help</p>
         <ul className="flex md:block space-y-0 md:space-y-0.5 gap-1">
           {NAV_ITEMS.map((item) => (
@@ -225,7 +228,7 @@ export default function HelpPanel() {
           </Link>
         </div>
       </nav>
-      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pl-14 pr-4 md:px-10 py-6 md:py-8 no-scrollbar">
         {tab === "support" ? <SupportTab /> : <ChangelogTab />}
       </div>
     </div>

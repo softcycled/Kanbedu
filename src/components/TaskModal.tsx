@@ -16,6 +16,8 @@ import {
 import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
+import MarkdownText from "./MarkdownText";
+import MarkdownToolbar from "./MarkdownToolbar";
 import { getColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 
@@ -1017,12 +1019,27 @@ export default function TaskModal({
           )}
         </div>
         <div>
-          <input
-            type="date"
-            value={deadline}
-            onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
-            className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
-          />
+          <div className="inline-flex items-center gap-0">
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+              className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
+            />
+            {deadline && (
+              <button
+                type="button"
+                onClick={() => { userHasEdited.current = true; setDeadline(""); }}
+                title="Remove deadline"
+                aria-label="Remove deadline"
+                className="w-4 h-4 rounded-full flex items-center justify-center bg-muted/20 hover:bg-muted/40 text-muted hover:text-ink transition-colors flex-shrink-0 self-center"
+              >
+                <svg width="7" height="7" viewBox="0 0 7 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ transform: "translate(0px, 0.5px)" }}>
+                  <path d="M1 1l5 5M6 1L1 6" />
+                </svg>
+              </button>
+            )}
+          </div>
           {showDeadlineStatus && (
             <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${
               deadlineInfo.severity === "overdue"  ? "text-red-600 dark:text-red-400" :
@@ -1424,7 +1441,7 @@ export default function TaskModal({
             {/* Hover tooltip surfacing the Esc shortcut */}
             <div className="pointer-events-none absolute top-full left-0 mt-2 z-50 opacity-0 group-hover/close:opacity-100 transition-opacity duration-150">
               <div className="flex items-center gap-1.5 bg-[#1C1917] border border-white/10 rounded-lg px-2.5 py-2 shadow-lg whitespace-nowrap">
-                <span className="text-xs text-white/90">Back</span>
+                <span className="text-xs text-white/90">Return To Board</span>
                 <kbd className="font-sans rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">Esc</kbd>
               </div>
             </div>
@@ -1804,6 +1821,7 @@ export default function TaskModal({
               </label>
               <div className="max-w-[720px]">
                 {isEditingDescription ? (
+                  <div className="relative">
                   <textarea
                     ref={descriptionTextareaRef}
                     value={description}
@@ -1824,6 +1842,12 @@ export default function TaskModal({
                     placeholder="Write a detailed description..."
                     className="w-full min-h-[6rem] bg-column-bg/40 rounded-lg px-3 py-2.5 text-[15px] leading-[1.7] text-ink ring-1 ring-transparent focus:ring-border/60 focus:outline-none resize-none"
                   />
+                  <MarkdownToolbar
+                    textareaRef={descriptionTextareaRef}
+                    value={description}
+                    onChange={(v) => { userHasEdited.current = true; setDescription(v); }}
+                  />
+                  </div>
                 ) : (
                   <div
                     onClick={() => {
@@ -1833,9 +1857,7 @@ export default function TaskModal({
                     className="min-h-[6rem] px-3 py-2.5 rounded-lg bg-column-bg/40 cursor-text hover:bg-column-bg transition-colors text-ink"
                   >
                     {description ? (
-                      <div className="whitespace-pre-wrap break-words text-[15px] leading-[1.7]" style={{ whiteSpace: "pre-wrap" }}>
-                        {description}
-                      </div>
+                      <MarkdownText text={description} className="text-[15px] leading-[1.7]" />
                     ) : (
                       <span className="text-muted text-[15px]">Write a detailed description...</span>
                     )}
@@ -1884,7 +1906,7 @@ export default function TaskModal({
                         </span>
                         <span className="text-xs text-muted">{formatTimeAgo(c.createdAt)}</span>
                       </div>
-                      <p className="text-[15px] text-ink/85 leading-relaxed pl-8">{c.content}</p>
+                      <MarkdownText text={c.content} className="text-[15px] text-ink/85 leading-relaxed pl-8" />
                     </div>
                     );
                   })}
