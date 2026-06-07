@@ -96,6 +96,101 @@ function DropZone({
 }
 
 // Compact "assign to group" picker — the keyboard-accessible, no-drag path.
+// Custom dropdown that fully matches the app's styling. A native <select> can't
+// be used here because the OS renders its option popup (blue highlight, square
+// corners) and ignores CSS — see FilterBar / ListView for the same pattern.
+function RosterDropdown({
+  value,
+  options,
+  onPick,
+  placeholder = "Select",
+  disabled = false,
+  ariaLabel,
+  align = "left",
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onPick: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  ariaLabel?: string;
+  align?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        className="flex items-center gap-1.5 max-w-[8rem] text-xs rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2.5 pr-2 outline-none focus:border-ink/30 cursor-pointer transition-colors hover:border-border disabled:opacity-50 disabled:cursor-default"
+      >
+        <span className="truncate">{selected?.label ?? placeholder}</span>
+        <svg
+          aria-hidden
+          className={`flex-shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+          width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[8rem] max-h-60 overflow-y-auto bg-card-bg border border-border rounded-xl shadow-modal p-1`}
+        >
+          {options.map((o) => {
+            const isSelected = o.value === value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => { onPick(o.value); setOpen(false); }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors ${
+                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                }`}
+              >
+                <span className="truncate">{o.label}</span>
+                {isSelected && (
+                  <svg className="flex-shrink-0 text-accent" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssignSelect({
   value,
   groups,
@@ -105,30 +200,18 @@ function AssignSelect({
   groups: Group[];
   onPick: (groupId: string | null) => void;
 }) {
+  const options = [
+    { value: LOBBY, label: "Lobby" },
+    ...groups.map((g) => ({ value: g.id, label: g.name })),
+  ];
   return (
-    <div className="relative flex-shrink-0">
-      <select
-        value={value}
-        onChange={(e) => onPick(e.target.value === LOBBY ? null : e.target.value)}
-        title="Assign to group"
-        aria-label="Assign to group"
-        className="appearance-none max-w-[8rem] text-xs rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2.5 pr-6 outline-none focus:border-ink/30 cursor-pointer transition-colors hover:border-border"
-      >
-        <option value={LOBBY}>Lobby</option>
-        {groups.map((g) => (
-          <option key={g.id} value={g.id}>
-            {g.name}
-          </option>
-        ))}
-      </select>
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted"
-        width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-      >
-        <path d="m6 9 6 6 6-6"/>
-      </svg>
-    </div>
+    <RosterDropdown
+      value={value}
+      options={options}
+      onPick={(v) => onPick(v === LOBBY ? null : v)}
+      ariaLabel="Assign to group"
+      align="right"
+    />
   );
 }
 
@@ -469,27 +552,17 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           <span className="text-xs font-medium text-ink">{selected.size} selected</span>
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Assign to
-            <div className="relative">
-              <select
-                value={bulkTarget}
-                onChange={(e) => applyBulk(e.target.value)}
-                disabled={busy}
-                className="appearance-none text-xs rounded-xl border border-border/60 bg-paper text-ink py-1 pl-2.5 pr-6 outline-none focus:border-ink/30 cursor-pointer disabled:opacity-50 transition-colors hover:border-border"
-              >
-                <option value="">Choose…</option>
-                <option value={LOBBY}>Lobby</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-              <svg
-                aria-hidden
-                className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted"
-                width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-              >
-                <path d="m6 9 6 6 6-6"/>
-              </svg>
-            </div>
+            <RosterDropdown
+              value={bulkTarget}
+              options={[
+                { value: LOBBY, label: "Lobby" },
+                ...groups.map((g) => ({ value: g.id, label: g.name })),
+              ]}
+              onPick={applyBulk}
+              placeholder="Choose…"
+              disabled={busy}
+              ariaLabel="Assign selected students to group"
+            />
           </label>
           <button onClick={() => setSelected(new Set())} className="text-[11px] text-muted hover:text-ink ml-auto">
             Clear
