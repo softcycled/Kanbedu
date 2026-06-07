@@ -794,6 +794,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   const handlePanMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+    // Desktop-only: drag empty space to pan columns. Skip on touch devices —
+    // native scrolling already handles panning there, and synthetic mouse events
+    // from taps would otherwise jump the board to an edge.
+    if (typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches) return;
     if (activeTask || activeColumn) return;
     const target = e.target as HTMLElement;
     if (
