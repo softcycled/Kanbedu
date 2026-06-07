@@ -13,11 +13,16 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold tracking-tight mb-2">
-          <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
-        </h1>
-        <div className="rounded-2xl p-6 mt-6" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06)" }}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <h1 className="text-2xl font-bold tracking-tight">
+            <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#78716C" }}>
+            {success ? "Email verified" : "Verification failed"}
+          </p>
+        </div>
+        <div className="rounded-2xl p-6 text-center" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06)" }}>
           {success ? (
             <>
               <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#ECFDF5" }}>
@@ -27,8 +32,8 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
               </div>
               <p className="text-sm font-medium mb-1" style={{ color: "#1C1917" }}>Your email has been verified</p>
               <p className="text-xs mb-5" style={{ color: "#78716C" }}>Your Kanbedu account is now fully set up.</p>
-              <a href="/" className="inline-block px-4 py-2 text-sm font-medium rounded-xl text-white" style={{ backgroundColor: "#1C1917" }}>
-                Continue to app →
+              <a href="/" className="block w-full py-2.5 text-sm font-medium rounded-xl text-center" style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}>
+                Continue to app
               </a>
             </>
           ) : (
@@ -41,7 +46,7 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
               </div>
               <p className="text-sm font-medium mb-1" style={{ color: "#1C1917" }}>Verification failed</p>
               <p className="text-xs mb-5" style={{ color: "#78716C" }}>{errorMessage}</p>
-              <a href="/" className="inline-block px-4 py-2 text-sm font-medium rounded-xl text-white" style={{ backgroundColor: "#1C1917" }}>
+              <a href="/" className="block w-full py-2.5 text-sm font-medium rounded-xl text-center" style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}>
                 Back to app
               </a>
             </>

@@ -53,7 +53,7 @@ function CheckEmailContent() {
 
           <div className="pt-1 border-t border-[#E2DED8]">
             {sent ? (
-              <p className="text-xs" style={{ color: "#22C55E" }}>Email resent — check your inbox.</p>
+              <p className="text-xs" style={{ color: "#16A34A" }}>Email resent — check your inbox.</p>
             ) : error ? (
               <p className="text-xs" style={{ color: "#E8613A" }}>{error}</p>
             ) : (

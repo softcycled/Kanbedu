@@ -26,18 +26,21 @@ export default async function VerifyEmailRequired() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold tracking-tight mb-2">
-          <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
-        </h1>
-        <div className="rounded-2xl p-8 mt-6" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06)" }}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <h1 className="text-2xl font-bold tracking-tight">
+            <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#78716C" }}>Verify your email</p>
+        </div>
+        <div className="rounded-2xl p-6 text-center" style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06)" }}>
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: "#F0F0EB" }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="M2 7l10 7 10-7" />
             </svg>
           </div>
-          <p className="text-base font-semibold mb-1" style={{ color: "#1C1917" }}>Check your inbox</p>
+          <p className="text-sm font-semibold mb-1" style={{ color: "#1C1917" }}>Check your inbox</p>
           <p className="text-sm mb-1" style={{ color: "#78716C" }}>
             We sent a verification link to
           </p>
@@ -49,7 +52,7 @@ export default async function VerifyEmailRequired() {
           </p>
           <ResendButton />
         </div>
-        <div className="mt-4">
+        <div className="mt-4 text-center">
           <SignOutButton />
         </div>
       </div>

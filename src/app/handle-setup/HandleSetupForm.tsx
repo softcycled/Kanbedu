@@ -45,7 +45,7 @@ export default function HandleSetupForm() {
     }
   };
 
-  const statusColor = status === "available" ? "#22C55E" : status === "taken" || status === "invalid" ? "#E8613A" : "#78716C";
+  const statusColor = status === "available" ? "#16A34A" : status === "taken" || status === "invalid" ? "#E8613A" : "#78716C";
   const statusText = status === "available" ? `@${handle} is available`
     : status === "taken" ? "That username is already taken"
     : status === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
@@ -56,7 +56,7 @@ export default function HandleSetupForm() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>kanbedu</h1>
+          <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a></h1>
           <p className="text-sm mt-1" style={{ color: "#78716C" }}>Choose your username</p>
         </div>
 

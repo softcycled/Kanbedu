@@ -59,7 +59,7 @@ export default function ClassJoinPage() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>kanbedu</h1>
+          <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a></h1>
           <p className="text-sm mt-1" style={{ color: "#78716C" }}>Class invitation</p>
         </div>
 
@@ -86,12 +86,16 @@ export default function ClassJoinPage() {
 
           {status === "joining" && <p className="text-sm" style={{ color: "#78716C" }}>Joining…</p>}
 
-          {status === "done" && <p className="text-sm font-medium" style={{ color: "#4A7C59" }}>{message}</p>}
+          {status === "done" && <p className="text-sm font-medium" style={{ color: "#1C1917" }}>{message}</p>}
 
           {status === "error" && (
             <>
-              <p className="text-sm font-medium mb-4" style={{ color: "#E8613A" }}>{message}</p>
-              <button onClick={() => router.push(classId ? `/class/${classId}` : "/")} className="text-xs transition-colors" style={{ color: "#78716C" }}>
+              <p className="text-sm font-medium mb-5" style={{ color: "#E8613A" }}>{message}</p>
+              <button
+                onClick={() => router.push(classId ? `/class/${classId}` : "/")}
+                className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors"
+                style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}
+              >
                 Go to dashboard
               </button>
             </>
