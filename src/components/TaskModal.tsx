@@ -1426,7 +1426,7 @@ export default function TaskModal({
             {/* Hover tooltip surfacing the Esc shortcut */}
             <div className="pointer-events-none absolute top-full left-0 mt-2 z-50 opacity-0 group-hover/close:opacity-100 transition-opacity duration-150">
               <div className="flex items-center gap-1.5 bg-[#1C1917] border border-white/10 rounded-lg px-2.5 py-2 shadow-lg whitespace-nowrap">
-                <span className="text-xs text-white/90">Back</span>
+                <span className="text-xs text-white/90">Return To Board</span>
                 <kbd className="font-sans rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">Esc</kbd>
               </div>
             </div>
