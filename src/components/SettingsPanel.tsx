@@ -202,7 +202,7 @@ export default function SettingsPanel({
   return (
     <>
       <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
-        <div className="px-6 md:px-10 pt-6 pb-5 border-b border-border/60">
+        <div className="px-6 md:px-10 border-b border-border/60 flex items-center" style={{ paddingTop: 29, paddingBottom: 24.5 }}>
           <h2 className="text-lg font-bold tracking-tight text-ink pl-14 md:pl-0">Boards</h2>
         </div>
 

@@ -23,7 +23,7 @@ const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), {
 import SettingsPanel from "./SettingsPanel";
 import ClientErrorBoundary from "./ClientErrorBoundary";
 import ProfilePanel from "./ProfilePanel";
-import SupportModal from "./SupportModal";
+import HelpPanel from "./HelpPanel";
 import AdminPanel from "./AdminPanel";
 import { useRealtime } from "@/hooks/useRealtime";
 import { ColumnData } from "@/lib/types";
@@ -65,7 +65,6 @@ export default function BoardContainer({
   const [activePanel, setActivePanel] = useState<Panel>("board");
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
-  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
 
   // Classes are owned here (single source of truth) so the sidebar list and the
@@ -341,7 +340,6 @@ export default function BoardContainer({
     });
   }, []);
 
-  const handleSupportClick = useCallback(() => setIsSupportOpen(true), []);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -358,7 +356,6 @@ export default function BoardContainer({
         onCreateBoard={handleCreateBoard}
         onJoinBoard={handleJoinBoard}
         onReorder={handleReorderBoards}
-        onSupportClick={handleSupportClick}
         onBoardHover={prefetchBoard}
         isAdmin={isAdmin}
       />
@@ -405,12 +402,8 @@ export default function BoardContainer({
         )}
         {activePanel === "profile" && <ProfilePanel />}
         {activePanel === "admin" && <AdminPanel />}
+        {activePanel === "help" && <HelpPanel />}
       </div>
-
-      <SupportModal 
-        isOpen={isSupportOpen} 
-        onClose={() => setIsSupportOpen(false)} 
-      />
     </div>
   );
 }

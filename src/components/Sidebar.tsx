@@ -34,7 +34,7 @@ export interface ClassSummary {
   realtimeSecret?: string | null;
 }
 
-export type Panel = "board" | "analytics" | "settings" | "profile" | "admin";
+export type Panel = "board" | "analytics" | "settings" | "profile" | "admin" | "help";
 
 interface Props {
   boards: Board[];
@@ -49,7 +49,6 @@ interface Props {
   onCreateBoard: (name: string) => Promise<void>;
   onJoinBoard: (inviteInput: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
-  onSupportClick: () => void;
   onBoardHover?: (id: string) => void;
   isAdmin?: boolean;
 }
@@ -192,7 +191,6 @@ export default function Sidebar({
   onCreateBoard,
   onJoinBoard,
   onReorder,
-  onSupportClick,
   onBoardHover,
   isAdmin = false,
 }: Props) {
@@ -262,6 +260,7 @@ export default function Sidebar({
     { id: "settings", label: "Boards", icon: <IconLayers /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
+    { id: "help", label: "Help", icon: <IconHelp /> },
   ];
 
   const mobileNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
@@ -362,13 +361,6 @@ export default function Sidebar({
             {item.label}
           </button>
         ))}
-        <button
-          onClick={() => { onSupportClick(); setMobileOpen(false); }}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors"
-        >
-          <IconHelp />
-          Support
-        </button>
       </div>
     </>
   );

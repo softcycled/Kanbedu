@@ -326,18 +326,6 @@ export default function ProfilePanel() {
   const [handleError, setHandleError] = useState<string | null>(null);
   const handleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Boards state (localStorage-backed)
-  const [showCompleted, setShowCompleted] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("kanbedu-show-completed");
-    if (stored === "true") setShowCompleted(true);
-  }, []);
-
-  const handleShowCompletedToggle = (v: boolean) => {
-    setShowCompleted(v);
-    localStorage.setItem("kanbedu-show-completed", String(v));
-  };
 
   // Fetch profile
   useEffect(() => {
@@ -502,8 +490,8 @@ export default function ProfilePanel() {
                 onClick={() => setActiveTab(item.id)}
                 className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activeTab === item.id
-                    ? "bg-border text-ink font-medium"
-                    : "text-muted hover:text-ink hover:bg-border/50"
+                    ? "bg-ink/8 text-ink font-medium"
+                    : "text-ink/70 hover:bg-ink/5 hover:text-ink"
                 }`}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
