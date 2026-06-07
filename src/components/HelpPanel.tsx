@@ -33,6 +33,24 @@ function IconChangelog() {
   );
 }
 
+function IconDocument() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5z" />
+      <path d="M9 1.5V5.5h4" />
+      <path d="M5.5 9h5M5.5 11.5h3" />
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.5l5 2v3.5c0 3.5-2.5 5.6-5 6.5-2.5-.9-5-3-5-6.5V3.5z" />
+    </svg>
+  );
+}
+
 function SupportTab() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -195,12 +213,14 @@ export default function HelpPanel() {
             </li>
           ))}
         </ul>
-        {/* Legal links — moved here from the page footer, beneath the nav items */}
-        <div className="flex md:block items-center gap-1 md:mt-2 md:pt-2 md:border-t md:border-border/50">
-          <Link href="/terms" className="whitespace-nowrap block md:w-full px-3 py-2 md:py-1.5 rounded-lg text-xs text-ink/55 hover:bg-ink/5 hover:text-ink transition-colors">
+        {/* Legal links — styled to match the nav items, grouped below a divider */}
+        <div className="flex md:block items-center gap-1 md:space-y-0.5 md:mt-2 md:pt-2 md:border-t md:border-border/50">
+          <Link href="/terms" className="whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors">
+            <IconDocument />
             Terms of Service
           </Link>
-          <Link href="/privacy" className="whitespace-nowrap block md:w-full px-3 py-2 md:py-1.5 rounded-lg text-xs text-ink/55 hover:bg-ink/5 hover:text-ink transition-colors">
+          <Link href="/privacy" className="whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors">
+            <IconShield />
             Privacy Policy
           </Link>
         </div>
