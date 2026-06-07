@@ -48,11 +48,12 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
 
   const fetchBoardData = useCallback(async () => {
     const [tasksRes, columnsRes] = await Promise.all([
-      fetch(`/api/tasks?boardId=${boardId}`, { cache: "no-store" }),
+      fetch(`/api/tasks?boardId=${boardId}&take=0`, { cache: "no-store" }),
       fetch(`/api/columns?boardId=${boardId}`, { cache: "no-store" }),
     ]);
+    const tasksPayload = tasksRes.ok ? await tasksRes.json() : { tasks: [], total: 0 };
     return {
-      tasks: tasksRes.ok ? await tasksRes.json() : [],
+      tasks: (tasksPayload.tasks ?? []) as Task[],
       columns: columnsRes.ok ? await columnsRes.json() : [],
     };
   }, [boardId]);

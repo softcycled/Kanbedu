@@ -35,6 +35,7 @@ interface Props {
   initialColumns: import("@/lib/types").ColumnData[];
   currentUserId: string;
   isAdmin?: boolean;
+  initialTaskTotal?: number;
   // When a student deep-links to /?class=<id>, the group board is resolved
   // server-side and passed here so the class view paints without a flicker.
   initialClass?: ClassSummary | null;
@@ -44,6 +45,7 @@ interface BoardCache {
   tasks: Task[];
   columns: ColumnData[];
   fetchedAt: number;
+  total: number;
 }
 
 const CACHE_TTL_MS = 30_000; // 30 s — stale boards refresh silently in background
@@ -55,6 +57,7 @@ export default function BoardContainer({
   initialColumns,
   currentUserId,
   isAdmin = false,
+  initialTaskTotal,
   initialClass = null,
 }: Props) {
   const router = useRouter();
@@ -66,6 +69,7 @@ export default function BoardContainer({
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
+  const [taskTotal, setTaskTotal] = useState(initialTaskTotal ?? initialTasks.length);
 
   // Classes are owned here (single source of truth) so the sidebar list and the
   // lobby poll read the same data. A student's selected class renders in the
@@ -104,17 +108,17 @@ export default function BoardContainer({
     return () => clearInterval(interval);
   }, [activeClass, loadClasses]);
 
-  // Per-board cache: boardId maps to { tasks, columns, fetchedAt }
+  // Per-board cache: boardId maps to { tasks, columns, fetchedAt, total }
   const boardCache = useRef<Map<string, BoardCache>>(
     new Map([
-      [initialBoardId, { tasks: initialTasks, columns: initialColumns, fetchedAt: Date.now() }],
+      [initialBoardId, { tasks: initialTasks, columns: initialColumns, fetchedAt: Date.now(), total: initialTaskTotal ?? initialTasks.length }],
     ])
   );
 
   // Keep the cache entry for the active board in sync with live state
   useEffect(() => {
-    boardCache.current.set(activeBoardId, { tasks, columns, fetchedAt: Date.now() });
-  }, [tasks, columns, activeBoardId]);
+    boardCache.current.set(activeBoardId, { tasks, columns, fetchedAt: Date.now(), total: taskTotal });
+  }, [tasks, columns, activeBoardId, taskTotal]);
 
   // activeBoardId ref for use inside callbacks that would otherwise have stale closures
   const activeBoardIdRef = useRef(activeBoardId);
@@ -123,14 +127,19 @@ export default function BoardContainer({
   // Sync state with server props on initial hydration only
   useEffect(() => { setBoards(initialBoards); }, [initialBoards]);
 
-  const fetchBoardData = useCallback(async (boardId: string) => {
+  const fetchBoardData = useCallback(async (boardId: string, take?: number) => {
+    const takePart = take !== undefined ? `&take=${take}` : "";
     const [tasksRes, columnsRes] = await Promise.all([
-      fetch(`/api/tasks?boardId=${boardId}`, { cache: "no-store" }),
+      fetch(`/api/tasks?boardId=${boardId}${takePart}`, { cache: "no-store" }),
       fetch(`/api/columns?boardId=${boardId}`, { cache: "no-store" }),
     ]);
-    const newTasks = tasksRes.ok ? await tasksRes.json() : [];
+    const tasksPayload = tasksRes.ok ? await tasksRes.json() : { tasks: [], total: 0 };
     const newColumns = columnsRes.ok ? await columnsRes.json() : [];
-    return { tasks: newTasks, columns: newColumns };
+    return {
+      tasks: (tasksPayload.tasks ?? []) as Task[],
+      columns: newColumns as ColumnData[],
+      total: (tasksPayload.total ?? 0) as number,
+    };
   }, []);
 
   // Realtime refresh: surgically update only the active board
@@ -168,6 +177,7 @@ export default function BoardContainer({
     if (activeBoardIdRef.current === boardId) {
       setTasks(data.tasks);
       setColumns(data.columns);
+      setTaskTotal(data.total);
     }
   }, [fetchBoardData]);
 
@@ -234,6 +244,7 @@ export default function BoardContainer({
       setActiveBoardId(boardId);
       setTasks(cached.tasks);
       setColumns(cached.columns);
+      setTaskTotal(cached.total);
       setActivePanel("board");
     }
 
@@ -253,6 +264,7 @@ export default function BoardContainer({
       if (activeBoardIdRef.current === boardId) {
         setTasks(data.tasks);
         setColumns(data.columns);
+        setTaskTotal(data.total);
       }
       setIsLoadingBoard(false);
     }
@@ -263,6 +275,19 @@ export default function BoardContainer({
     if (boardCache.current.has(boardId)) return;
     const data = await fetchBoardData(boardId);
     boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
+  }, [fetchBoardData]);
+
+  // Load all tasks for the current board when the user exceeds the initial limit
+  const loadAllTasks = useCallback(async () => {
+    const boardId = activeBoardIdRef.current;
+    setIsLoadingBoard(true);
+    const data = await fetchBoardData(boardId, 0); // 0 = no limit
+    if (activeBoardIdRef.current === boardId) {
+      setTasks(data.tasks);
+      setTaskTotal(data.total);
+      boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
+    }
+    setIsLoadingBoard(false);
   }, [fetchBoardData]);
 
   const handleCreateBoard = useCallback(async (name: string) => {
@@ -382,6 +407,17 @@ export default function BoardContainer({
         )}
         {!activeClass && activePanel === "board" && (
           <>
+            {tasks.length < taskTotal && (
+              <div className="flex items-center justify-between px-5 py-1.5 text-xs text-muted bg-column-bg/60 border-b border-border/30 shrink-0">
+                <span>Showing {tasks.length} of {taskTotal} tasks</span>
+                <button
+                  onClick={loadAllTasks}
+                  className="text-primary hover:text-primary/70 font-medium transition-colors"
+                >
+                  Load all {taskTotal}
+                </button>
+              </div>
+            )}
             <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
               <BoardComp
                 key={activeBoardId}

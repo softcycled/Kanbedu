@@ -76,20 +76,23 @@ export default async function Home({
   const firstBoard = boards[0];
 
   // Run columns + tasks in parallel — tasks filter by relation instead of prefetching column IDs
-  const [boardColumns, tasks] = await Promise.all([
+  const taskWhere = { columnRel: { boardId: firstBoard.id } };
+  const [boardColumns, tasks, taskTotal] = await Promise.all([
     prisma.column.findMany({
       where: { boardId: firstBoard.id },
       orderBy: { order: "asc" },
     }),
     prisma.task.findMany({
-      where: { columnRel: { boardId: firstBoard.id } },
+      where: taskWhere,
       include: {
         _count: { select: { comments: true } },
         assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
         tags: true,
       },
       orderBy: [{ column: "asc" }, { order: "asc" }],
+      take: 100,
     }),
+    prisma.task.count({ where: taskWhere }),
   ]);
 
   const serializedTasks = tasks.map((t) => ({
@@ -148,6 +151,7 @@ export default async function Home({
       currentUserId={session.userId}
       isAdmin={resolvedIsAdmin}
       initialClass={initialClass}
+      initialTaskTotal={taskTotal}
     />
   );
 }

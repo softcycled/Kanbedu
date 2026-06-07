@@ -74,15 +74,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const tasks = await prisma.task.findMany({
-    where: { columnRel: { boardId } },
-    include: {
-      _count: { select: { comments: true } },
-      assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
-      tags: true,
-    },
-    orderBy: [{ column: "asc" }, { order: "asc" }],
-  });
+  const takeRaw = searchParams.get("take");
+  const skipRaw = searchParams.get("skip");
+  // take=0 means no limit; omitted defaults to 100
+  const take = takeRaw === "0" ? undefined : (takeRaw ? Math.max(1, parseInt(takeRaw, 10)) : 100);
+  const skip = skipRaw ? Math.max(0, parseInt(skipRaw, 10)) : 0;
+
+  const where = { columnRel: { boardId } };
+  const [tasks, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      include: {
+        _count: { select: { comments: true } },
+        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+        tags: true,
+      },
+      orderBy: [{ column: "asc" }, { order: "asc" }],
+      ...(take !== undefined ? { take, skip } : {}),
+    }),
+    prisma.task.count({ where }),
+  ]);
+
   // Return lean payload for board/list: do not include full comment bodies here.
   const mapped = tasks.map((t) => ({
     ...t,
@@ -92,7 +104,7 @@ export async function GET(request: NextRequest) {
     commentCount: (t as any)._count?.comments ?? 0,
   }));
 
-  return NextResponse.json(mapped);
+  return NextResponse.json({ tasks: mapped, total });
 }
 
 export async function POST(req: Request) {
