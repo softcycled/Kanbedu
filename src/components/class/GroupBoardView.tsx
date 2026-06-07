@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { Task, ColumnData } from "@/lib/types";
 import Board from "../Board";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -10,6 +10,10 @@ interface Props {
   boardName: string;
   currentUserId: string;
   realtimeSecret?: string | null;
+  // Forwarded to <Board> so the class shell can render a breadcrumb title and a
+  // "Leave class" action inside the single board header row.
+  headerTitle?: ReactNode;
+  headerTrailing?: ReactNode;
 }
 
 interface BoardCache {
@@ -24,7 +28,7 @@ const boardCache = new Map<string, BoardCache>();
 // Single-board wrapper used inside a class workspace. Mirrors the per-board
 // data plumbing of BoardContainer (load tasks/columns, surgical realtime
 // refresh) for exactly one group board, then renders the shared <Board>.
-export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret }: Props) {
+export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret, headerTitle, headerTrailing }: Props) {
   const initialCache = boardCache.get(boardId);
   const isFresh = !!initialCache && Date.now() - initialCache.fetchedAt <= CACHE_TTL_MS;
 
@@ -106,6 +110,8 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         onColumnsChange={setColumns}
         isLoading={isLoading}
         currentUserId={currentUserId}
+        headerTitle={headerTitle}
+        headerTrailing={headerTrailing}
       />
     </div>
   );

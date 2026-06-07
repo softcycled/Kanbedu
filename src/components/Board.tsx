@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect, type ReactNode } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -37,9 +37,14 @@ interface Props {
   onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
   currentUserId?: string;
   isLoading?: boolean;
+  // Optional header overrides used by class group boards: a breadcrumb that
+  // replaces the plain board-name title, and trailing content (e.g. a "Leave
+  // class" action) pinned to the far right of the header row.
+  headerTitle?: ReactNode;
+  headerTrailing?: ReactNode;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing }: Props) {
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -727,7 +732,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     <>
       {/* Header row: board name left, filters right */}
       <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
-        <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        {headerTitle ?? (
+          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        )}
         {/* When the task side panel is open, hide the filter bar and view toggle visually but
             keep them in the layout so the header height stays stable (no upward shift). */}
         <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
@@ -788,6 +795,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           </button>
         </div>
         </div>
+        {headerTrailing}
       </div>
 
       {viewMode === "list" ? (
