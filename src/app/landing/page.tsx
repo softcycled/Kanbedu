@@ -2,9 +2,9 @@ import { Metadata } from "next";
 import LandingPage from "@/components/LandingPage";
 
 export const metadata: Metadata = {
-  title: "Kanbedu - Track your group projects without the noise",
+  title: "Kanbedu - Project boards. Without the noise. ",
   description:
-    "The free, minimal Kanban board built for students and educators. Drag-and-drop task boards, team assignments, built-in analytics, class monitoring, and one-click invites.",
+    "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers",
 };
 
 export default function Page() {
