@@ -82,6 +82,7 @@ model Column {
   label   String
   order   Int     @default(0)
   isDone  Boolean @default(false)
+  color   String? // optional palette name (blue/amber/…); null = color by position
   boardId String  @default("cldefaultboard0000")
   board   Board   @relation(fields: [boardId], references: [id])
   tasks   Task[]  @relation("ColumnTasks")

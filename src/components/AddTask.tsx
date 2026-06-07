@@ -22,6 +22,9 @@ export default function AddTask({ column, onAdd }: Props) {
   };
 
   const handleSubmit = async () => {
+    // Guard against double-submit: rapid Enter presses while the first create is
+    // still in flight would otherwise each fire onAdd and create duplicates.
+    if (isSaving) return;
     const trimmed = value.trim();
     if (!trimmed) {
       setIsEmpty(true);

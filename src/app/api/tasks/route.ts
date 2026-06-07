@@ -138,6 +138,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Validate that the assignee (if any) is a member of this board and that any
+  // tags belong to it — prevents assigning to a non-member or attaching another
+  // board's tags.
+  if (data.assigneeId) {
+    const assigneeMember = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: data.assigneeId, boardId: destinationColumn.boardId } },
+      select: { id: true },
+    });
+    if (!assigneeMember) {
+      return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
+    }
+  }
+  if (data.tagIds?.length) {
+    const validTags = await prisma.tag.findMany({
+      where: { id: { in: data.tagIds }, boardId: destinationColumn.boardId },
+      select: { id: true },
+    });
+    if (validTags.length !== data.tagIds.length) {
+      return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
+    }
+  }
+
   const now = new Date();
   // Create the task but avoid heavy includes (comments/activities) — return minimal fields quickly
   const created = await prisma.task.create({

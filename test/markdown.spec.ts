@@ -99,3 +99,32 @@ describe("MarkdownText (Discord-flavored markdown)", () => {
     expect(h).toContain("<strong");
   });
 });
+
+// Regression guard: the renderer builds React elements (auto-escaped), never
+// raw HTML. These lock in that user content can never inject markup. If anyone
+// refactors MarkdownText to a string/dangerouslySetInnerHTML approach, these fail.
+describe("MarkdownText XSS safety", () => {
+  it("escapes raw <script> tags to inert text", () => {
+    const h = html("<script>alert('x')</script>");
+    expect(h).not.toContain("<script>");
+    expect(h).toContain("&lt;script&gt;");
+  });
+
+  it("does not emit an <img> element from raw HTML", () => {
+    const h = html("<img src=x onerror=alert(1)>");
+    expect(h).not.toContain("<img");
+  });
+
+  it("does not turn link syntax into an anchor (no link support)", () => {
+    const h = html("[click](javascript:alert(1))");
+    expect(h).not.toContain("<a");
+    expect(h).not.toContain("href");
+  });
+
+  it("escapes HTML even inside markdown markers", () => {
+    const h = html("**<b>hi</b>**");
+    expect(h).toContain("<strong");
+    expect(h).not.toContain("<b>");
+    expect(h).toContain("&lt;b&gt;");
+  });
+});

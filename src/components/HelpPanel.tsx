@@ -228,7 +228,7 @@ export default function HelpPanel() {
           </Link>
         </div>
       </nav>
-      <div className="flex-1 overflow-y-auto pl-14 pr-4 md:px-10 py-6 md:py-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
         {tab === "support" ? <SupportTab /> : <ChangelogTab />}
       </div>
     </div>

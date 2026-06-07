@@ -183,9 +183,27 @@ export async function PATCH(
   const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // If moving to a different column, ensure membership for destination column as well
-  if (req && typeof req === "object") {
-    // parse body early to check destination column
+  // Validate that any assignee/tags are scoped to this task's board — prevents
+  // assigning to a non-member or attaching another board's tags. Null assignee
+  // (unassign) and empty tagIds (clear) are intentionally allowed.
+  const boardId = taskAuth.columnRel.boardId;
+  if (body.assigneeId) {
+    const assigneeMember = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: body.assigneeId, boardId } },
+      select: { id: true },
+    });
+    if (!assigneeMember) {
+      return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
+    }
+  }
+  if (body.tagIds?.length) {
+    const validTags = await prisma.tag.findMany({
+      where: { id: { in: body.tagIds }, boardId },
+      select: { id: true },
+    });
+    if (validTags.length !== body.tagIds.length) {
+      return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
+    }
   }
 
   const totalStart = Date.now();

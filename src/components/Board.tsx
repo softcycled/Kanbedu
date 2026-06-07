@@ -6,7 +6,8 @@ import {
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -77,7 +78,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const toasts = useToasts();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Mouse: start dragging after a 5px move — snappy on desktop.
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Touch: require a 200ms press-and-hold before dragging, so a normal swipe
+    // scrolls the board/column instead of grabbing a card. Without this, every
+    // touch-move grabs a card and the board is unscrollable on mobile.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -199,6 +205,27 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       toasts.push({ title: "Could not update column", description: "Please try again." });
     }
   }, [columns, broadcastRefresh, toasts]);
+
+  const handleSetColumnColor = useCallback(async (columnId: string, color: string | null) => {
+    const prev = columns.find((c) => c.id === columnId);
+    // Optimistic: apply the color immediately, roll back on failure.
+    onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? { ...c, color } : c)));
+    try {
+      const res = await fetch(`/api/columns/${columnId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color }),
+      });
+      if (!res.ok) throw new Error("Color update failed");
+      const updated = await res.json();
+      onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? updated : c)));
+      broadcastRefresh();
+    } catch (error) {
+      console.error("Failed to set column color:", error);
+      if (prev) onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? prev : c)));
+      toasts.push({ title: "Could not update color", description: "Please try again." });
+    }
+  }, [columns, onColumnsChange, broadcastRefresh, toasts]);
 
   const handleDeleteColumnClick = useCallback((columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
@@ -788,6 +815,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   const handlePanMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+    // Desktop-only: drag empty space to pan columns. Skip on touch devices —
+    // native scrolling already handles panning there, and synthetic mouse events
+    // from taps would otherwise jump the board to an edge.
+    if (typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches) return;
     if (activeTask || activeColumn) return;
     const target = e.target as HTMLElement;
     if (
@@ -811,13 +842,13 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   return (
     <>
       {/* Header row: board name left, filters right */}
-      <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
+      <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 pl-[4.5rem] pr-4 md:px-10 pt-6 pb-5 border-b border-border/60">
         {headerTitle ?? (
-          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+          <h1 className="hidden sm:block text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
         )}
         {/* When the task side panel is open, hide the filter bar and view toggle visually but
             keep them in the layout so the header height stays stable (no upward shift). */}
-        <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
+        <div className={`flex items-center gap-2 sm:gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
             <FilterBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -929,6 +960,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                   onRenameColumn={handleRenameColumn}
                   onDeleteColumn={handleDeleteColumnClick}
                   onSetDoneColumn={handleSetDoneColumn}
+                  color={col.color}
+                  onSetColor={handleSetColumnColor}
                   isDynamic={columns.length > 1}
                   isBoardEmpty={tasks.length === 0}
                 />

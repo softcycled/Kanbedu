@@ -59,8 +59,10 @@ export const updateColumnSchema = z
   .object({
     label: z.string().trim().min(1, "Label must be non-empty.").optional(),
     isDone: z.boolean().optional(),
+    // A palette name selects an explicit color; null resets to color-by-position.
+    color: z.enum(["blue", "amber", "green", "purple", "pink", "cyan", "yellow", "rose"]).nullable().optional(),
   })
-  .refine((data) => data.label !== undefined || data.isDone !== undefined, {
+  .refine((data) => data.label !== undefined || data.isDone !== undefined || data.color !== undefined, {
     message: "No valid fields to update.",
   });
 
