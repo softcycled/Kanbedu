@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
@@ -322,7 +322,7 @@ interface RowProps {
   onClick: () => void;
 }
 
-function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
+const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
   const p = task.priority ?? "medium";
   const pCfg = PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
   const colColor = columnEntry
@@ -388,4 +388,16 @@ function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
       </span>
     </button>
   );
-}
+// Skip onClick in comparison — it's always a new inline arrow from the parent map.
+// Row only needs to re-render when the displayed data changes.
+}, (prev, next) =>
+  prev.task.id === next.task.id &&
+  prev.task.title === next.task.title &&
+  prev.task.priority === next.task.priority &&
+  prev.task.column === next.task.column &&
+  prev.task.assigneeId === next.task.assigneeId &&
+  String(prev.task.deadline) === String(next.task.deadline) &&
+  String(prev.task.completedAt) === String(next.task.completedAt) &&
+  prev.columnEntry?.id === next.columnEntry?.id &&
+  prev.member?.id === next.member?.id
+);

@@ -343,7 +343,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   // ── Drag handlers ──────────────────────────────────────────────
 
-  const handleDragStart = ({ active }: DragStartEvent) => {
+  const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const task = tasks.find((t) => t.id === active.id);
     if (task) {
       setActiveTask(task);
@@ -354,9 +354,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     if (column) {
       setActiveColumn(column);
     }
-  };
+  }, [tasks, columns]);
 
-  const handleDragOver = ({ active, over }: DragOverEvent) => {
+  const handleDragOver = useCallback(({ active, over }: DragOverEvent) => {
     if (!over) return;
 
     const activeId = active.id as string;
@@ -389,9 +389,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
       return updated;
     });
-  };
+  }, [tasks, columns, onTasksChange]);
 
-  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+  const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
     setActiveTask(null);
     setActiveColumn(null);
 
@@ -517,7 +517,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
     }
 
-  };
+  }, [tasks, columns, currentUserId, onTasksChange, onColumnsChange, broadcastRefresh]);
 
   // ── Task actions ───────────────────────────────────────────────
 

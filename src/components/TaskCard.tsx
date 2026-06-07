@@ -31,7 +31,9 @@ function TaskCard({ task, onClick }: Props) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition ?? "transform var(--motion-default) var(--motion-ease), box-shadow var(--motion-default) var(--motion-ease), border-color calc(var(--motion-default) - 40ms) ease",
-    willChange: "transform",
+    // Only promote to a compositor layer while the card is actively moving.
+    // Keeping willChange: "transform" on every card at rest wastes GPU memory.
+    willChange: (isDragging || !!transform) ? "transform" : "auto",
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,
   } as React.CSSProperties;
