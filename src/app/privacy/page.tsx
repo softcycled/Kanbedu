@@ -22,7 +22,7 @@ export default async function PrivacyPage() {
             Kanbedu
           </Link>
           <Link href="/terms" className="text-sm text-muted hover:text-ink transition-colors">
-            Terms of Service →
+            Terms of Service
           </Link>
         </div>
       </header>
@@ -236,10 +236,10 @@ export default async function PrivacyPage() {
         {/* Footer nav */}
         <div className="mt-16 pt-8 border-t border-border flex items-center justify-between">
           <Link href={backHref} className="text-sm text-muted hover:text-ink transition-colors">
-            ← {backLabel}
+            {backLabel}
           </Link>
           <Link href="/terms" className="text-sm text-muted hover:text-ink transition-colors">
-            Terms of Service →
+            Terms of Service
           </Link>
         </div>
       </main>

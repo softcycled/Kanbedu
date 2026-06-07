@@ -22,7 +22,7 @@ export default async function TermsPage() {
             Kanbedu
           </Link>
           <Link href="/privacy" className="text-sm text-muted hover:text-ink transition-colors">
-            Privacy Policy →
+            Privacy Policy
           </Link>
         </div>
       </header>
@@ -204,10 +204,10 @@ export default async function TermsPage() {
         {/* Footer nav */}
         <div className="mt-16 pt-8 border-t border-border flex items-center justify-between">
           <Link href={backHref} className="text-sm text-muted hover:text-ink transition-colors">
-            ← {backLabel}
+            {backLabel}
           </Link>
           <Link href="/privacy" className="text-sm text-muted hover:text-ink transition-colors">
-            Privacy Policy →
+            Privacy Policy
           </Link>
         </div>
       </main>

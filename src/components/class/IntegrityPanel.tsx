@@ -171,9 +171,9 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
                   </div>
                   <button
                     onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
-                    className="text-xs text-muted hover:text-ink transition-colors flex-shrink-0"
+                    className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0"
                   >
-                    Open board →
+                    Open board
                   </button>
                 </div>
                 <ul className="divide-y divide-border/50">

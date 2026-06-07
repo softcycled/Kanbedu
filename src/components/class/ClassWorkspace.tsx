@@ -49,8 +49,7 @@ type Tab = "monitor" | "integrity" | "roster" | "preset" | "settings";
 function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
   return (
     <div className="flex-shrink-0 flex items-center gap-3 px-6 md:px-10 py-3 border-b border-border/60">
-      <button onClick={onBack} className="text-sm text-muted hover:text-ink transition-colors flex items-center gap-1">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+      <button onClick={onBack} className="text-sm text-muted hover:text-ink transition-colors">
         Back
       </button>
       <span className="text-sm font-medium text-ink truncate">{title}</span>
@@ -105,7 +104,7 @@ export default function ClassWorkspace(props: Props) {
         </div>
         {archived && <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink/10 text-muted">Archived</span>}
       </div>
-      <Link href="/" className="text-xs text-muted hover:text-ink transition-colors">← Back</Link>
+      <Link href="/" className="text-sm text-muted hover:text-ink transition-colors">Back</Link>
     </header>
   );
 
