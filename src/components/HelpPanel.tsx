@@ -8,6 +8,11 @@ type Tab = "support" | "changelog";
 // Add entries here when ready for launch
 const CHANGELOG: { date: string; title: string; description: string }[] = [
   {
+    date: "Jun 8, 2026",
+    title: "Mobile Support",
+    description: "Navigation and settings panels are now fully usable on mobile. The sidebar hamburger, settings layout, and danger zone all behave correctly on small screens.",
+  },
+  {
     date: "Jun 1, 2026",
     title: "Educator Tools",
     description: "Classes, groups, monitor, and integrity panel are now live. Educators can create classes, assign students to groups, and track progress in real time.",
@@ -228,7 +233,7 @@ export default function HelpPanel() {
           </Link>
         </div>
       </nav>
-      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pl-14 pr-4 md:px-10 py-6 md:py-8 no-scrollbar">
         {tab === "support" ? <SupportTab /> : <ChangelogTab />}
       </div>
     </div>
