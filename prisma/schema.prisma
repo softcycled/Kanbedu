@@ -111,7 +111,10 @@ model Task {
   descriptionVersions TaskDescriptionVersion[]
   tags                Tag[]                    @relation("TagToTask")
 
-  @@index([column])
+  // Compound (column, order): serves the board load (orderBy column, order),
+  // the "last order in column" lookup on task create, and any column-only/FK
+  // filter via the column prefix — so it replaces the standalone column index.
+  @@index([column, order])
   @@index([assigneeId])
   @@index([completedAt])
   @@index([createdAt])

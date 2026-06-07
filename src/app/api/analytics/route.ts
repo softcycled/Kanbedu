@@ -50,6 +50,27 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const columnMap = new Map(columns.map((c) => [c.id, c]));
 
+  // Pre-bucket once so phase stats are O(tasks × history) instead of
+  // O(columns × tasks × history). One pass groups current tasks by column and
+  // collects each column's closed-history durations + distinct task ids.
+  const currentTasksByColumn = new Map<string, typeof tasks>();
+  const closedTimesByColumn = new Map<string, number[]>();
+  const throughputIdsByColumn = new Map<string, Set<string>>();
+  for (const t of tasks) {
+    const bucket = currentTasksByColumn.get(t.column) ?? [];
+    bucket.push(t);
+    currentTasksByColumn.set(t.column, bucket);
+    for (const h of t.columnHistory) {
+      if (h.exitedAt === null) continue;
+      const times = closedTimesByColumn.get(h.columnId) ?? [];
+      times.push(h.exitedAt.getTime() - h.enteredAt.getTime());
+      closedTimesByColumn.set(h.columnId, times);
+      const ids = throughputIdsByColumn.get(h.columnId) ?? new Set<string>();
+      ids.add(t.id);
+      throughputIdsByColumn.set(h.columnId, ids);
+    }
+  }
+
   // Helper: find when a task entered its CURRENT column (open history entry).
   // Falls back to columnUpdatedAt, then createdAt.
   const getEnteredCurrentColumn = (t: (typeof tasks)[number]): Date => {
@@ -61,18 +82,13 @@ export async function GET(request: NextRequest) {
 
   // ── Phase stats ───────────────────────────────────────────────
   const phaseStats = columns.map((col) => {
-    const currentTasks = tasks.filter((t) => t.column === col.id);
+    const currentTasks = currentTasksByColumn.get(col.id) ?? [];
 
     // Avg time in phase:
     // - Non-done columns: closed history entries only (exitedAt - enteredAt)
     // - Done column: open entries (now - enteredAt) + closed entries
     //   Fallback: completedAt - createdAt for tasks without any history
-    const closedEntries = tasks.flatMap((t) =>
-      t.columnHistory.filter((h) => h.columnId === col.id && h.exitedAt !== null)
-    );
-    const closedTimes = closedEntries.map(
-      (h) => h.exitedAt!.getTime() - h.enteredAt.getTime()
-    );
+    const closedTimes = closedTimesByColumn.get(col.id) ?? [];
 
     let avgPhaseTimeMs: number | null = null;
 
@@ -116,11 +132,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Throughput: tasks that have fully exited this column (closed history entries)
-    const throughput = new Set(
-      tasks
-        .flatMap((t) => t.columnHistory.filter((h) => h.columnId === col.id && h.exitedAt !== null))
-        .map((h) => h.taskId)
-    ).size;
+    const throughput = (throughputIdsByColumn.get(col.id) ?? new Set<string>()).size;
 
     return {
       id: col.id,
