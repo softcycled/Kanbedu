@@ -1,18 +1,24 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Kanbedu",
   description: "Kanbedu Privacy Policy",
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  // Logged-in visitors (reaching this via the in-app Help panel) go back to the
+  // board; logged-out visitors (from the landing footer) go back to the landing page.
+  const session = await getSession();
+  const backHref = session ? "/" : "/landing";
+  const backLabel = session ? "Back to board" : "Back to Kanbedu";
   return (
     <div className="min-h-screen bg-paper text-ink" style={{ fontFamily: "var(--font-geist-sans)" }}>
       {/* Nav */}
       <header className="border-b border-border">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/landing" className="text-sm font-semibold text-ink hover:text-accent transition-colors">
+          <Link href={backHref} className="text-sm font-semibold text-ink hover:text-accent transition-colors">
             Kanbedu
           </Link>
           <Link href="/terms" className="text-sm text-muted hover:text-ink transition-colors">
@@ -229,8 +235,8 @@ export default function PrivacyPage() {
 
         {/* Footer nav */}
         <div className="mt-16 pt-8 border-t border-border flex items-center justify-between">
-          <Link href="/landing" className="text-sm text-muted hover:text-ink transition-colors">
-            ← Back to Kanbedu
+          <Link href={backHref} className="text-sm text-muted hover:text-ink transition-colors">
+            ← {backLabel}
           </Link>
           <Link href="/terms" className="text-sm text-muted hover:text-ink transition-colors">
             Terms of Service →

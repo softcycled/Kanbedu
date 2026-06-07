@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Tab = "support" | "changelog";
 
@@ -195,8 +196,15 @@ export default function HelpPanel() {
           ))}
         </ul>
       </nav>
-      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar">
-        {tab === "support" ? <SupportTab /> : <ChangelogTab />}
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 no-scrollbar flex flex-col min-h-0">
+        <div className="flex-1 min-h-0">
+          {tab === "support" ? <SupportTab /> : <ChangelogTab />}
+        </div>
+        <div className="mt-12 pt-5 border-t border-border/60 flex items-center gap-3 text-xs text-muted flex-shrink-0">
+          <Link href="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
+          <span className="text-muted/40">·</span>
+          <Link href="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
+        </div>
       </div>
     </div>
   );
