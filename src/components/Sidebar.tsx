@@ -445,13 +445,6 @@ export default function Sidebar({
               <p className="text-xs text-muted truncate">{account.handle ? `@${account.handle}` : account.email}</p>
             </div>
             <button
-              onClick={() => { onPanelChange("profile"); setAccountOpen(false); setMobileOpen(false); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:bg-ink/5 transition-colors"
-            >
-              <IconSettings />
-              Settings
-            </button>
-            <button
               onClick={handleSignOut}
               disabled={signingOut}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors disabled:opacity-50"
