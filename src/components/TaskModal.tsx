@@ -1411,28 +1411,24 @@ export default function TaskModal({
           </div>
         )}
 
-        {/* ── Header — delete left, close right ── */}
-        <div className="flex-shrink-0 flex items-center justify-between gap-1 px-4 py-2 border-b border-border/30">
-          <button
-            onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
-            className="p-2 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-            title="Delete task"
-            aria-label="Delete task"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4"/>
-            </svg>
-          </button>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
-            title="Close"
-            aria-label="Close"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M1 1l12 12M13 1L1 13"/>
-            </svg>
-          </button>
+        {/* ── Header — Back to board (Esc); delete lives at the bottom of the modal ── */}
+        <div className="flex-shrink-0 flex items-center justify-start gap-1 px-4 py-2 border-b border-border/30">
+          <div className="relative group/close">
+            <button
+              onClick={handleClose}
+              className="flex items-center px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+              aria-label="Back"
+            >
+              Back
+            </button>
+            {/* Hover tooltip surfacing the Esc shortcut */}
+            <div className="pointer-events-none absolute top-full left-0 mt-2 z-50 opacity-0 group-hover/close:opacity-100 transition-opacity duration-150">
+              <div className="flex items-center gap-1.5 bg-[#1C1917] border border-white/10 rounded-lg px-2.5 py-2 shadow-lg whitespace-nowrap">
+                <span className="text-xs text-white/90">Back</span>
+                <kbd className="font-sans rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">Esc</kbd>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Body: single column on mobile, 2-column (main | properties sidebar) on desktop ── */}
@@ -1454,7 +1450,7 @@ export default function TaskModal({
                 />
                 {draftTitle.length > 0 && (
                   <p className={`text-xs mt-1 px-1 ${draftTitle.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
-                    {draftTitle.length > TITLE_CHAR_LIMIT ? `${draftTitle.length}/${TITLE_CHAR_LIMIT} characters — too long` : `${draftTitle.length}/${TITLE_CHAR_LIMIT}`}
+                    {draftTitle.length > TITLE_CHAR_LIMIT ? `${draftTitle.length}/${TITLE_CHAR_LIMIT} characters, too long` : `${draftTitle.length}/${TITLE_CHAR_LIMIT}`}
                   </p>
                 )}
                 </>
@@ -1904,6 +1900,20 @@ export default function TaskModal({
               {renderMetaPanels("mobile")}
             </div>
             )}
+
+            {/* Delete task — quiet action at the bottom, away from the Back button */}
+            <div className="px-8 md:px-10 py-6 border-t border-border/30">
+              <button
+                onClick={() => { setTagToDelete(null); setConfirmDelete(true); }}
+                className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-red-600 transition-colors"
+                aria-label="Delete task"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                </svg>
+                Delete task
+              </button>
+            </div>
           </div>
 
           {/* Comment input — pinned to bottom of left column */}

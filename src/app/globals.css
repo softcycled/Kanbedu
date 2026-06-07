@@ -113,12 +113,24 @@ body {
   background: rgb(var(--c-muted) / 0.5);
 }
 
-/* Date input color-scheme adapts to theme */
+/* Date input and select color-scheme adapt to theme */
 input[type="date"] {
   color-scheme: light;
 }
-.dark input[type="date"] {
+.dark input[type="date"],
+.dark select {
   color-scheme: dark;
+}
+
+/* Theme the native <select> dropdown options to the app palette so the popup
+   matches the page instead of falling back to the neutral system dark. Chrome
+   and Edge (the Windows targets) honor option background/color. */
+select option {
+  background-color: rgb(var(--c-card-bg));
+  color: rgb(var(--c-ink));
+}
+select option:checked {
+  background-color: rgb(var(--c-column-bg));
 }
 
 /* Smooth column height */

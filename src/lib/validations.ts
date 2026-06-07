@@ -85,6 +85,11 @@ export const deleteColumnSchema = z
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1, "Title is required."),
   column: z.string().min(1, "Column ID is required."),
+  description: z.string().optional(),
+  assigneeId: z.string().nullable().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  deadline: z.string().nullable().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -111,6 +116,91 @@ export const createCommentSchema = z.object({
 
 export const createInviteSchema = z.object({
   boardId: z.string().min(1, "Board ID is required."),
+});
+
+// -- Classes (educator features) --
+
+export const createClassSchema = z.object({
+  name: z.string().trim().min(1, "Class name is required.").max(80, "Class name is too long."),
+  term: z.string().trim().max(40, "Term is too long.").optional(),
+});
+
+export const updateClassSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name must be non-empty.").max(80).optional(),
+    term: z.string().trim().max(40).nullable().optional(),
+    archived: z.boolean().optional(),
+  })
+  .refine((d) => d.name !== undefined || d.term !== undefined || d.archived !== undefined, {
+    message: "No valid fields to update.",
+  });
+
+export const createGroupSchema = z.object({
+  name: z.string().trim().min(1, "Group name is required.").max(60, "Group name is too long."),
+});
+
+export const updateGroupSchema = z
+  .object({
+    name: z.string().trim().min(1).max(60).optional(),
+    order: z.number().int().min(0).optional(),
+  })
+  .refine((d) => d.name !== undefined || d.order !== undefined, {
+    message: "No valid fields to update.",
+  });
+
+// Assign / move / remove / promote a class member.
+export const updateMemberSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+  // groupId: a string assigns to that group; null returns the student to the lobby.
+  groupId: z.string().nullable().optional(),
+  // role: optionally promote/demote (educator may set "ta" or "student").
+  role: z.enum(["student", "ta"]).optional(),
+  // remove: when true, the member is removed from the class entirely.
+  remove: z.boolean().optional(),
+});
+
+// Batch assignment: move several students to groups at once. Powers
+// multi-select assign and "auto-distribute the lobby" in the roster.
+export const assignMembersSchema = z.object({
+  assignments: z
+    .array(
+      z.object({
+        userId: z.string().min(1),
+        // null = send to the lobby; a string = assign to that group.
+        groupId: z.string().nullable(),
+      })
+    )
+    .min(1, "No assignments provided.")
+    .max(500, "Too many assignments at once."),
+});
+
+export const savePresetSchema = z.object({
+  columns: z
+    .array(
+      z.object({
+        label: z.string().trim().min(1, "Column label is required.").max(40),
+        isDone: z.boolean().default(false),
+      })
+    )
+    .min(1, "At least one column is required.")
+    .max(12, "Too many columns."),
+  tasks: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1, "Task title is required.").max(200),
+        description: z.string().max(5000).default(""),
+        columnIndex: z.number().int().min(0),
+        priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+      })
+    )
+    .max(200, "Too many seed tasks.")
+    .default([]),
+});
+
+export const cloneClassSchema = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(80).optional(),
+  term: z.string().trim().max(40).optional(),
+  copyRoster: z.boolean().default(false),
 });
 
 // -- Tags --

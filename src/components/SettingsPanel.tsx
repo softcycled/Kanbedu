@@ -202,14 +202,10 @@ export default function SettingsPanel({
   return (
     <>
       <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
-        <div className="px-6 md:px-10 pt-6 pb-5 border-b border-border/60">
-          <h2 className="text-lg font-bold tracking-tight text-ink pl-14 md:pl-0">Boards</h2>
-        </div>
-
         <div className="flex flex-col md:flex-row min-h-0">
           {/* Board list sidebar */}
-          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-3 px-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted px-2 mb-2">Your Boards</p>
+          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-4 md:py-7 px-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Your Boards</p>
             {boards.map((b) => (
               <button
                 key={b.id}
@@ -232,7 +228,7 @@ export default function SettingsPanel({
           </div>
 
           {/* Board detail */}
-          <div className="flex-1 px-6 md:px-8 py-6 max-w-xl space-y-8">
+          <div className="flex-1 px-6 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
             {/* Identity */}
             <section>
               <div className="flex items-start gap-4">
@@ -312,7 +308,7 @@ export default function SettingsPanel({
             {/* Members */}
             <section>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
-                Members — {members.length}
+                Members ({members.length})
               </h4>
               <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
                 {loadingMembers ? (

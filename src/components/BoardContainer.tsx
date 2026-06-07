@@ -1,15 +1,29 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Task, Board } from "@/lib/types";
 import BoardComp from "./Board";
-import Sidebar, { Panel } from "./Sidebar";
+import Sidebar, { Panel, ClassSummary } from "./Sidebar";
+import StudentClassView from "./class/StudentClassView";
 import dynamic from "next/dynamic";
-const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), { ssr: false, loading: () => <div /> });
+const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 space-y-4" aria-hidden>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+        ))}
+      </div>
+      <div className="h-48 rounded-xl bg-border/30 dark:bg-border/20 motion-safe:animate-pulse" />
+    </div>
+  ),
+});
 import SettingsPanel from "./SettingsPanel";
 import ClientErrorBoundary from "./ClientErrorBoundary";
 import ProfilePanel from "./ProfilePanel";
-import SupportModal from "./SupportModal";
+import HelpPanel from "./HelpPanel";
 import AdminPanel from "./AdminPanel";
 import { useRealtime } from "@/hooks/useRealtime";
 import { ColumnData } from "@/lib/types";
@@ -21,6 +35,9 @@ interface Props {
   initialColumns: import("@/lib/types").ColumnData[];
   currentUserId: string;
   isAdmin?: boolean;
+  // When a student deep-links to /?class=<id>, the group board is resolved
+  // server-side and passed here so the class view paints without a flicker.
+  initialClass?: ClassSummary | null;
 }
 
 interface BoardCache {
@@ -38,7 +55,9 @@ export default function BoardContainer({
   initialColumns,
   currentUserId,
   isAdmin = false,
+  initialClass = null,
 }: Props) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [columns, setColumns] = useState<ColumnData[]>(initialColumns);
   const [boards, setBoards] = useState<Board[]>(initialBoards);
@@ -46,10 +65,46 @@ export default function BoardContainer({
   const [activePanel, setActivePanel] = useState<Panel>("board");
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
-  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
 
-  // Per-board cache: boardId → { tasks, columns, fetchedAt }
+  // Classes are owned here (single source of truth) so the sidebar list and the
+  // lobby poll read the same data. A student's selected class renders in the
+  // main content area; educators/TAs are routed to the dedicated workspace.
+  const [classes, setClasses] = useState<ClassSummary[]>(initialClass ? [initialClass] : []);
+  const [activeClass, setActiveClass] = useState<ClassSummary | null>(initialClass);
+
+  const loadClasses = useCallback(async () => {
+    try {
+      const res = await fetch("/api/classes", { cache: "no-store" });
+      if (res.ok) {
+        const data: ClassSummary[] = await res.json();
+        setClasses(data);
+        return data;
+      }
+    } catch {
+      /* ignore — Classes section just stays as-is */
+    }
+    return null;
+  }, []);
+
+  // Load the user's classes once on mount for the sidebar Classes section.
+  useEffect(() => { loadClasses(); }, [loadClasses]);
+
+  // Lobby poll: while a student is viewing a class but hasn't been placed into a
+  // group yet, re-check every ~10s. The moment their row gains a boardId, swap
+  // activeClass so the group board appears on its own — no manual reload.
+  useEffect(() => {
+    if (!activeClass || activeClass.boardId) return;
+    const interval = setInterval(async () => {
+      const data = await loadClasses();
+      if (!data) return;
+      const updated = data.find((c) => c.id === activeClass.id);
+      if (updated?.boardId) setActiveClass(updated);
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, [activeClass, loadClasses]);
+
+  // Per-board cache: boardId maps to { tasks, columns, fetchedAt }
   const boardCache = useRef<Map<string, BoardCache>>(
     new Map([
       [initialBoardId, { tasks: initialTasks, columns: initialColumns, fetchedAt: Date.now() }],
@@ -87,23 +142,29 @@ export default function BoardContainer({
 
   const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
-    // If other clients broadcasted a patch with the changed task, apply it surgically
-    if (payload && payload.task) {
+
+    if (payload?.task) {
       const t = payload.task;
       setTasks((prev) => {
         const exists = prev.some((p) => p.id === t.id);
-        // If task exists, patch it; otherwise append only if its column belongs to this board
         if (exists) return prev.map((p) => (p.id === t.id ? { ...p, ...t } : p));
         const hasColumn = columnsRef.current.some((c) => c.id === t.column);
         if (!hasColumn) return prev;
-        return [...prev, t];
+        return [...prev, t].sort((a, b) => {
+          if (a.column !== b.column) return a.column < b.column ? -1 : 1;
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
       });
       return;
     }
 
-    // Fallback: full board fetch
+    if (payload?.taskId) {
+      setTasks((prev) => prev.filter((t) => t.id !== payload.taskId));
+      return;
+    }
+
+    // Fallback: full board fetch (column changes, etc.)
     const data = await fetchBoardData(boardId);
-    // Only apply if still on the same board
     if (activeBoardIdRef.current === boardId) {
       setTasks(data.tasks);
       setColumns(data.columns);
@@ -112,15 +173,57 @@ export default function BoardContainer({
 
   useRealtime(activeBoard?.realtimeSecret ?? null, handleRefresh);
 
+  // Escape closes any open panel and returns to the board view.
+  // Skips when the user is typing so form inputs can catch it first.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (activePanel === "board") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
+      setActivePanel("board");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activePanel]);
+
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
       analyticsKey.current += 1;
       setAnalyticsRenderKey(analyticsKey.current);
     }
+    setActiveClass(null); // leaving the class view for a personal panel
     setActivePanel(panel);
   }, []);
 
+  // Selecting a class: educators/TAs go to the dedicated workspace; students
+  // open their group board inside this shell.
+  const handleClassSelect = useCallback((c: ClassSummary) => {
+    if (c.role === "educator" || c.role === "ta") {
+      router.push(`/class/${c.id}`);
+      return;
+    }
+    setActivePanel("board");
+    setActiveClass(c);
+  }, [router]);
+
+  // Student leaves a class from within the shell: remove it server-side, then
+  // drop it from the list and fall back to the personal board.
+  const handleLeaveClass = useCallback(async (classId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/classes/${classId}/members`, { method: "DELETE" });
+      if (!res.ok) return false;
+    } catch {
+      return false;
+    }
+    setClasses((prev) => prev.filter((c) => c.id !== classId));
+    setActiveClass(null);
+    setActivePanel("board");
+    return true;
+  }, []);
+
   const handleBoardSwitch = useCallback(async (boardId: string) => {
+    setActiveClass(null); // switching to a personal board leaves the class view
     if (boardId === activeBoardIdRef.current) return;
 
     const cached = boardCache.current.get(boardId);
@@ -251,7 +354,6 @@ export default function BoardContainer({
     });
   }, []);
 
-  const handleSupportClick = useCallback(() => setIsSupportOpen(true), []);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -259,18 +361,26 @@ export default function BoardContainer({
         boards={boards}
         activeBoardId={activeBoardId}
         activePanel={activePanel}
+        classes={classes}
+        activeClassId={activeClass?.id ?? null}
+        onClassSelect={handleClassSelect}
+        onClassesReload={loadClasses}
         onPanelChange={handlePanelChange}
         onBoardSwitch={handleBoardSwitch}
         onCreateBoard={handleCreateBoard}
         onJoinBoard={handleJoinBoard}
         onReorder={handleReorderBoards}
-        onSupportClick={handleSupportClick}
         onBoardHover={prefetchBoard}
         isAdmin={isAdmin}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {activePanel === "board" && (
+        {activeClass && (
+          <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
+            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} />
+          </main>
+        )}
+        {!activeClass && activePanel === "board" && (
           <>
             <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
               <BoardComp
@@ -306,12 +416,8 @@ export default function BoardContainer({
         )}
         {activePanel === "profile" && <ProfilePanel />}
         {activePanel === "admin" && <AdminPanel />}
+        {activePanel === "help" && <HelpPanel />}
       </div>
-
-      <SupportModal 
-        isOpen={isSupportOpen} 
-        onClose={() => setIsSupportOpen(false)} 
-      />
     </div>
   );
 }

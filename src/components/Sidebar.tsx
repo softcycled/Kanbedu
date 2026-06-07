@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -18,19 +19,37 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
+import CreateJoinClassModal from "./CreateJoinClassModal";
 
-export type Panel = "board" | "analytics" | "settings" | "profile" | "admin";
+export interface ClassSummary {
+  id: string;
+  name: string;
+  term: string | null;
+  archived: boolean;
+  role: string;
+  // The caller's own group board reference (students only). Lets a student
+  // open their group board inside the app shell instead of a separate page.
+  myGroupId?: string | null;
+  groupName?: string | null;
+  boardId?: string | null;
+  realtimeSecret?: string | null;
+}
+
+export type Panel = "board" | "analytics" | "settings" | "profile" | "admin" | "help";
 
 interface Props {
   boards: Board[];
   activeBoardId: string;
   activePanel: Panel;
+  classes: ClassSummary[];
+  activeClassId?: string | null;
+  onClassSelect: (c: ClassSummary) => void;
+  onClassesReload: () => void;
   onPanelChange: (panel: Panel) => void;
   onBoardSwitch: (id: string) => void;
   onCreateBoard: (name: string) => Promise<void>;
   onJoinBoard: (inviteInput: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
-  onSupportClick: () => void;
   onBoardHover?: (id: string) => void;
   isAdmin?: boolean;
 }
@@ -54,11 +73,12 @@ function IconSettings() {
   );
 }
 
-function IconUser() {
+function IconLayers() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="5" r="3" />
-      <path d="M1.5 14.5c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" />
+      <path d="M8 1.5 1.5 5 8 8.5 14.5 5 8 1.5z" />
+      <path d="M1.5 8 8 11.5 14.5 8" />
+      <path d="M1.5 11 8 14.5 14.5 11" />
     </svg>
   );
 }
@@ -68,6 +88,16 @@ function IconPlus() {
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
       <line x1="6.5" y1="1" x2="6.5" y2="12" />
       <line x1="1" y1="6.5" x2="12" y2="6.5" />
+    </svg>
+  );
+}
+
+function IconBoard() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="4" height="12" rx="1" />
+      <rect x="6.5" y="2" width="4" height="8" rx="1" />
+      <rect x="12" y="2" width="3" height="5" rx="1" />
     </svg>
   );
 }
@@ -88,6 +118,29 @@ function IconShield() {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
+}
+
+function IconSignOut() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+// Account-row avatar helpers (mirrors ProfilePanel's avatar rendering).
+function getInitials(name: string) {
+  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+}
+
+function getTextColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.57 ? "#1C1917" : "#FAFAF9";
 }
 
 function GripDots() {
@@ -153,19 +206,95 @@ export default function Sidebar({
   boards,
   activeBoardId,
   activePanel,
+  classes,
+  activeClassId,
+  onClassSelect,
+  onClassesReload,
   onPanelChange,
   onBoardSwitch,
   onCreateBoard,
   onJoinBoard,
   onReorder,
-  onSupportClick,
   onBoardHover,
   isAdmin = false,
 }: Props) {
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const router = useRouter();
+  const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d) {
+          setAccount({ name: d.name ?? "", email: d.email ?? "", handle: d.handle ?? null, color: d.color ?? "#4A90A4" });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAccountOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [accountOpen]);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
+  };
+
+  const activeClasses = classes.filter((c) => !c.archived);
+  const archivedClasses = classes.filter((c) => c.archived);
+
+  const renderClassItem = (c: ClassSummary, archived = false) => {
+    const isActive = activeClassId === c.id;
+    return (
+      <button
+        key={c.id}
+        onClick={() => { onClassSelect(c); setMobileOpen(false); }}
+        className={`w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
+          isActive
+            ? "bg-ink/8 text-ink font-medium"
+            : archived
+            ? "text-ink/40 hover:bg-ink/5 hover:text-ink/60"
+            : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+        }`}
+      >
+        <span className="truncate">{c.name}</span>
+        {archived ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
+        ) : (c.role === "educator" || c.role === "ta") ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+        ) : null}
+      </button>
+    );
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -195,20 +324,28 @@ export default function Sidebar({
 
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    { id: "settings", label: "Boards", icon: <IconSettings /> },
-    { id: "profile", label: "Settings", icon: <IconUser /> },
+    // "Boards" opens the board settings panel; "Settings" opens the profile/account panel.
+    { id: "settings", label: "Boards", icon: <IconLayers /> },
+    { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
+    { id: "help", label: "Help", icon: <IconHelp /> },
   ];
 
   const mobileNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
-    { id: "board", label: "Board", icon: <IconSettings /> },
+    { id: "board", label: "Board", icon: <IconBoard /> },
     ...desktopNavItems,
   ];
 
   const sidebarContent = (
     <>
       <div className="px-4 border-b border-border/60 flex items-center justify-between" style={{ paddingTop: 29, paddingBottom: 24.75 }}>
-        <span className="text-lg font-bold tracking-tight text-ink">kanbedu</span>
+        <button
+          onClick={() => { onPanelChange("board"); setMobileOpen(false); }}
+          aria-label="Go to board"
+          className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity"
+        >
+          kanbedu
+        </button>
         <button
           onClick={() => setMobileOpen(false)}
           className="md:hidden p-1 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors"
@@ -234,7 +371,7 @@ export default function Sidebar({
                 <SortableBoardItem
                   key={board.id}
                   board={board}
-                  isActive={activeBoardId === board.id && activePanel === "board"}
+                  isActive={activeBoardId === board.id && activePanel === "board" && !activeClassId}
                   onClick={() => {
                     onBoardSwitch(board.id);
                     onPanelChange("board");
@@ -246,7 +383,40 @@ export default function Sidebar({
             </SortableContext>
           </DndContext>
 
-          
+
+        </div>
+
+        <div className="px-3 mt-4">
+          <div className="flex items-center justify-between px-1 mb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Classes</span>
+            <button onClick={() => setIsClassModalOpen(true)} className="text-muted hover:text-ink transition-colors" title="New or join class">
+              <IconPlus />
+            </button>
+          </div>
+
+          {activeClasses.length === 0 && archivedClasses.length === 0 ? (
+            <button
+              onClick={() => setIsClassModalOpen(true)}
+              className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
+            >
+              + Create or join a class
+            </button>
+          ) : (
+            <>
+              {activeClasses.map((c) => renderClassItem(c))}
+              {archivedClasses.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowArchived((v) => !v)}
+                    className="w-full text-left px-2 py-1 mt-0.5 rounded-lg text-[11px] text-muted/70 hover:text-ink transition-colors"
+                  >
+                    {showArchived ? "Hide archived" : `Show archived (${archivedClasses.length})`}
+                  </button>
+                  {showArchived && archivedClasses.map((c) => renderClassItem(c, true))}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -256,7 +426,7 @@ export default function Sidebar({
             key={item.id}
             onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}
             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
-              activePanel === item.id
+              activePanel === item.id && !activeClassId
                 ? "bg-ink/8 text-ink font-medium"
                 : "text-ink/70 hover:bg-ink/5 hover:text-ink"
             }`}
@@ -265,12 +435,51 @@ export default function Sidebar({
             {item.label}
           </button>
         ))}
+      </div>
+
+      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3">
+        {accountOpen && account && (
+          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20">
+            <div className="px-3 py-2 border-b border-border/60">
+              <p className="text-sm font-medium text-ink truncate">{account.name || "Your account"}</p>
+              <p className="text-xs text-muted truncate">{account.handle ? `@${account.handle}` : account.email}</p>
+            </div>
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors disabled:opacity-50"
+            >
+              <IconSignOut />
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </div>
+        )}
+
         <button
-          onClick={() => { onSupportClick(); setMobileOpen(false); }}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors"
+          onClick={() => setAccountOpen((v) => !v)}
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+          aria-label="Account menu"
         >
-          <IconHelp />
-          Support
+          {account ? (
+            <span
+              className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold"
+              style={{ backgroundColor: account.color, color: getTextColor(account.color) }}
+            >
+              {getInitials(account.name) || "?"}
+            </span>
+          ) : (
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-ink/10 motion-safe:animate-pulse" />
+          )}
+          <span className="flex-1 min-w-0 text-sm font-medium text-ink truncate">
+            {account ? account.name || "Account" : ""}
+          </span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className={`flex-shrink-0 text-muted transition-transform ${accountOpen ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </button>
       </div>
     </>
@@ -310,7 +519,7 @@ export default function Sidebar({
               key={item.id}
               onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                activePanel === item.id ? "text-ink" : "text-muted"
+                activePanel === item.id && !activeClassId ? "text-ink" : "text-muted"
               }`}
             >
               {item.icon}
@@ -334,6 +543,11 @@ export default function Sidebar({
           setIsCreateJoinOpen(false);
           setMobileOpen(false);
         }}
+      />
+      <CreateJoinClassModal
+        isOpen={isClassModalOpen}
+        onClose={() => setIsClassModalOpen(false)}
+        onCreated={onClassesReload}
       />
     </>
   );

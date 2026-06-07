@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Credits — Kanbedu",
+  title: "Credits | Kanbedu",
   description: "Kanbedu acknowledgements and credits.",
 };
 
@@ -104,7 +104,7 @@ export default function CreditsPage() {
         </div>
 
         <div className="mt-24 pt-8 border-t border-border flex items-center justify-between">
-          <Link href="/landing" className="text-sm text-muted hover:text-ink transition-colors">← Back to Kanbedu</Link>
+          <Link href="/landing" className="text-sm text-muted hover:text-ink transition-colors">Back to Kanbedu</Link>
         </div>
       </main>
     </div>

@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
           {done ? (
             <div className="text-center space-y-4">
               <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: "#ECFDF5" }}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 10l4 4 8-8" />
                 </svg>
               </div>

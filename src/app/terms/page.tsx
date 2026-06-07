@@ -1,22 +1,28 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Kanbedu",
+  title: "Terms of Service | Kanbedu",
   description: "Kanbedu Terms of Service",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  // Logged-in visitors (reaching this via the in-app Help panel) go back to the
+  // board; logged-out visitors (from the landing footer) go back to the landing page.
+  const session = await getSession();
+  const backHref = session ? "/" : "/landing";
+  const backLabel = session ? "Back to board" : "Back to Kanbedu";
   return (
     <div className="min-h-screen bg-paper text-ink" style={{ fontFamily: "var(--font-geist-sans)" }}>
       {/* Nav */}
       <header className="border-b border-border">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/landing" className="text-sm font-semibold text-ink hover:text-accent transition-colors">
+          <Link href={backHref} className="text-sm font-semibold text-ink hover:text-accent transition-colors">
             Kanbedu
           </Link>
           <Link href="/privacy" className="text-sm text-muted hover:text-ink transition-colors">
-            Privacy Policy →
+            Privacy Policy
           </Link>
         </div>
       </header>
@@ -26,7 +32,7 @@ export default function TermsPage() {
         <div className="mb-12">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Legal</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Terms of Service</h1>
-          <p className="text-sm text-muted">Last updated: 31st May 2026</p>
+          <p className="text-sm text-muted">Last updated: 7th June 2026</p>
         </div>
 
         <div>
@@ -53,7 +59,7 @@ export default function TermsPage() {
               <li>You are responsible for keeping your login credentials secure. We are not liable for any loss or damage arising from unauthorised access to your account.</li>
               <li>Don&rsquo;t share your account with others or create accounts on behalf of other people without their permission.</li>
               <li>You are responsible for all activity that occurs under your account.</li>
-              <li>Notify us immediately at <Placeholder text="support@kanbedu.com" /> if you suspect your account has been compromised.</li>
+              <li>Notify us immediately if you suspect your account has been compromised.</li>
               <li>Where Kanbedu is used in an institutional or educational setting, the institution is responsible for ensuring appropriate consents are in place for all users, including minors. Institutional administrators who invite or onboard users accept these Terms on behalf of their institution.</li>
             </ul>
           </Section>
@@ -121,7 +127,7 @@ export default function TermsPage() {
               <li>Any damages arising from your reliance on content or information on the platform.</li>
             </ul>
             <p>
-              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) SGD 150 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at SGD 150.
+              Our total liability for any claim related to your use of Kanbedu won&rsquo;t exceed the greater of (a) what you paid us in the 12 months before the claim, or (b) MYR 500 (or the equivalent in your local currency). If you&rsquo;re on the free plan, our liability is capped at MYR 500.
             </p>
             <p>
               Some jurisdictions don&rsquo;t allow certain liability exclusions. In those cases, our liability is limited to the fullest extent the law allows.
@@ -142,7 +148,7 @@ export default function TermsPage() {
 
           <Section title="9. Termination">
             <p>
-              You can stop using Kanbedu and request deletion of your account at any time by contacting us at <Placeholder text="support@kanbedu.com" />.
+              You can stop using Kanbedu and request deletion of your account at any time by contacting us through the Help panel in the app.
             </p>
             <p>
               We may suspend or terminate your access if you violate these Terms, if required by law, or if we decide to shut down the service. Where possible, we&rsquo;ll give you advance notice and a reasonable opportunity to export your data.
@@ -154,10 +160,10 @@ export default function TermsPage() {
 
           <Section title="10. Governing Law and Disputes">
             <p>
-              These Terms are governed by the laws of Singapore. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Singapore.
+              These Terms are governed by and construed in accordance with the laws of Malaysia, without regard to its conflict of law provisions. Any disputes relating to these Terms or your use of Kanbedu will be subject to the exclusive jurisdiction of the courts of Malaysia.
             </p>
             <p>
-              Before starting any formal legal proceedings, please contact us at <Placeholder text="legal@kanbedu.com" /> first and give us 30 days to try to sort it out informally.
+              Before starting any formal legal proceedings, please contact us first and give us 30 days to try to sort it out informally.
             </p>
           </Section>
 
@@ -190,18 +196,18 @@ export default function TermsPage() {
 
           <Section title="13. Contact">
             <p>
-              Questions about these Terms? Reach us at <Placeholder text="legal@kanbedu.com" />. General support is at <Placeholder text="support@kanbedu.com" />.
+              Questions about these Terms? Use the Help &amp; Support panel within the app.
             </p>
           </Section>
         </div>
 
         {/* Footer nav */}
         <div className="mt-16 pt-8 border-t border-border flex items-center justify-between">
-          <Link href="/landing" className="text-sm text-muted hover:text-ink transition-colors">
-            ← Back to Kanbedu
+          <Link href={backHref} className="text-sm text-muted hover:text-ink transition-colors">
+            {backLabel}
           </Link>
           <Link href="/privacy" className="text-sm text-muted hover:text-ink transition-colors">
-            Privacy Policy →
+            Privacy Policy
           </Link>
         </div>
       </main>
@@ -222,8 +228,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Placeholder({ text }: { text: string }) {
-  return (
-    <span className="font-medium text-accent">{text}</span>
-  );
-}

@@ -135,7 +135,13 @@ export async function POST(req: Request) {
       order: (lastTask?.order ?? 0) + 1,
       columnUpdatedAt: now,
       completedAt: destinationColumn?.isDone ? now : null,
+      ...(data.description ? { description: data.description } : {}),
+      ...(data.assigneeId ? { assigneeId: data.assigneeId } : {}),
+      ...(data.priority ? { priority: data.priority } : {}),
+      ...(data.deadline ? { deadline: new Date(data.deadline) } : {}),
+      ...(data.tagIds?.length ? { tags: { connect: data.tagIds.map((id) => ({ id })) } } : {}),
     },
+    include: { tags: true },
   });
 
   // Fire-and-forget non-critical work: history and activity logging
@@ -171,7 +177,7 @@ export async function POST(req: Request) {
     priority: created.priority,
     movedByNonAssignee: created.movedByNonAssignee ?? false,
     comments: [],
-    tags: [],
+    tags: created.tags ?? [],
     activities: [],
   };
 

@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
+import Skeleton from "./Skeleton";
 
 interface Props {
   boardName: string;
@@ -83,6 +75,7 @@ interface AnalyticsData {
     commentDensity: number;
     deadlineAdherence: { onTime: number; total: number } | null;
     suspiciousTasks: SuspiciousTask[];
+    historyTruncated: boolean;
   };
 }
 
@@ -124,68 +117,6 @@ const PRIORITY_LABEL: Record<string, string> = {
   urgent: "Urgent", high: "High", medium: "Med", low: "Low",
 };
 
-// ── Component ─────────────────────────────────────────────────
-
-// ── Heatmap helpers ───────────────────────────────────────────
-
-function toDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function getWeekStart(date: Date): number {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return Math.floor(d.getTime() / 1000);
-}
-
-function formatWeekLabel(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function heatColorBoard(count: number): string {
-  if (count === 0) return "var(--color-column-bg, #EFEDE8)";
-  if (count <= 1) return "#DBEafe";
-  if (count <= 3) return "#93C5FD";
-  if (count <= 6) return "#3B82F6";
-  return "#1E40AF";
-}
-
-function buildHeatmapGrid(data: { date: string; value: number }[]) {
-  const dayCounts: Record<string, number> = {};
-  data.forEach((d) => (dayCounts[d.date] = (dayCounts[d.date] || 0) + d.value));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(today);
-  start.setDate(start.getDate() - 52 * 7);
-  start.setDate(start.getDate() - start.getDay());
-  const weeks: { date: string; count: number }[][] = [];
-  const monthLabels: { label: string; colIndex: number }[] = [];
-  let lastMonth = -1;
-  const cursor = new Date(start);
-  while (cursor <= today) {
-    const week: { date: string; count: number }[] = [];
-    for (let d = 0; d < 7; d++) {
-      const key = toDateKey(cursor);
-      if (cursor.getMonth() !== lastMonth && cursor.getDate() <= 7) {
-        monthLabels.push({ label: cursor.toLocaleDateString("en-US", { month: "short" }), colIndex: weeks.length });
-        lastMonth = cursor.getMonth();
-      }
-      week.push({ date: key, count: dayCounts[key] || 0 });
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    weeks.push(week);
-  }
-  return { weeks, monthLabels };
-}
 export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   // activity-stats / leaderboard removed to reduce load; keep only core analytics
@@ -221,11 +152,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
     let list = [...data.tasks];
     if (filter === "active") list = list.filter((t) => !t.columnIsDone);
     if (filter === "overdue") list = list.filter((t) => t.deadline && new Date(t.deadline).getTime() < now && !t.columnIsDone);
-    if (filter === "unassigned") list = list.filter((t) => !t.assignee);
+    if (filter === "unassigned") list = list.filter((t) => t.assignee === "(unassigned)");
     list.sort((a, b) => {
-      // Completed tasks always float to the top
-      const doneA = a.columnIsDone ? 0 : 1;
-      const doneB = b.columnIsDone ? 0 : 1;
+      // Completed tasks sink to the bottom; active tasks float up
+      const doneA = a.columnIsDone ? 1 : 0;
+      const doneB = b.columnIsDone ? 1 : 0;
       if (doneA !== doneB) return doneA - doneB;
       // Within each group, apply the active sort key
       let diff = 0;
@@ -241,10 +172,20 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
     return list;
   }, [data, filter, sortKey, sortDir]);
 
-  const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee) ?? false, [data]);
+  const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee && t.assignee !== "(unassigned)") ?? false, [data]);
 
   if (loading && !data) {
-    return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading analytics…</div>;
+    return (
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+    );
   }
   if (!data) {
     return (
@@ -270,20 +211,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           <h2 className="text-xl font-bold text-ink">Analytics</h2>
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {lastFetched && (
-            <span className="text-xs text-muted">
-              Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-            </span>
-          )}
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="text-xs px-3 py-1.5 rounded-lg bg-card-bg border border-border text-ink hover:bg-border transition-colors disabled:opacity-50"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
+        {lastFetched && (
+          <span className="text-xs text-muted">
+            Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </span>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -332,6 +264,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
 
       {/* Phase Health */}
       <Section title="Workflow Overview">
+        {summary.historyTruncated && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-700 dark:text-yellow-400">
+            Some tasks predate the 90-day history window. Phase times for those tasks are estimated from their last-moved date.
+          </div>
+        )}
         {(() => {
           const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
           const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
@@ -456,7 +393,7 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           <HealthMetric
             label="3+ days in phase"
             value={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""}`}
-            sub={`${Math.round(summary.stagnantRate * 100)}% of active — in phase 3+ days`}
+            sub={`${Math.round(summary.stagnantRate * 100)}% of active, in phase 3+ days`}
             color={summary.stagnantRate > 0.3 ? "text-red-500" : summary.stagnantRate > 0.1 ? "text-yellow-600" : "text-green-600"}
           />
           <HealthMetric
@@ -474,92 +411,25 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
         </div>
       </Section>
 
-      {/* Integrity Check */}
-      <Section title="Integrity Check">
-        {summary.suspiciousTasks.length === 0 ? (
-          <div className="bg-card-bg rounded-xl border border-border px-5 py-4 flex items-center gap-3">
-            <span className="text-green-500 dark:text-green-400 text-lg">✓</span>
-            <span className="text-sm text-muted">No suspicious activity detected across completed tasks.</span>
-          </div>
-        ) : (
-          <>
-            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-3 flex items-start gap-3">
-              <span className="text-red-500 dark:text-red-400 mt-0.5">⚠</span>
-              <div>
-                <p className="text-sm font-medium text-red-700 dark:text-red-300">
-                  {summary.suspiciousTasks.length} completed task{summary.suspiciousTasks.length !== 1 ? "s" : ""} flagged for review
-                </p>
-                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
-                  Flags indicate tasks completed suspiciously fast, that bypassed intermediate columns, or moved by someone other than the assignee.
-                </p>
-              </div>
-            </div>
-            <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[600px]">
-                <thead>
-                  <tr className="border-b border-border">
-                    <Th align="left">Task</Th>
-                    <Th align="left">Assignee</Th>
-                    <Th align="right">Cycle time</Th>
-                    <Th align="right">Columns visited</Th>
-                    <Th align="left">Flags</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {summary.suspiciousTasks.map((t) => (
-                    <tr key={t.id} className="hover:bg-border/30 transition-colors">
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <span className="truncate block font-medium text-ink" title={t.title}>{t.title}</span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted">{t.assignee || <span className="italic">none</span>}</td>
-                      <td className="px-4 py-3 text-right text-xs font-mono text-red-500 font-semibold">
-                        {formatDuration(t.cycleTimeMs)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs text-muted">
-                        {t.visitedColumnCount}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {t.isSpeedRun && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400">
-                              Speed-run
-                            </span>
-                          )}
-                          {t.isColumnSkip && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
-                              Skipped column
-                            </span>
-                          )}
-                          {t.isMovedByOther && (
-                            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
-                              Moved by non-assignee
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-        )}
-      </Section>
-
       {/* Tasks table */}
       <Section title="All Tasks">
         <div className="flex items-center gap-2 mb-3">
-          {(["all", "active", "overdue", "unassigned"] as FilterKey[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${filter === f ? "bg-ink text-paper border-ink" : "bg-card-bg border-border text-muted hover:text-ink"}`}
-            >
-              {f === "all" ? `All (${data.tasks.length})` : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          {(["all", "active", "overdue", "unassigned"] as FilterKey[]).map((f) => {
+            const unassignedCount = data.tasks.filter((t) => t.assignee === "(unassigned)").length;
+            const label =
+              f === "all" ? `All (${data.tasks.length})` :
+              f === "unassigned" ? `Unassigned (${unassignedCount})` :
+              f.charAt(0).toUpperCase() + f.slice(1);
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${filter === f ? "bg-ink text-paper border-ink" : "bg-card-bg border-border text-muted hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            );
+          })}
           <span className="ml-auto text-xs text-muted">{filteredTasks.length} shown</span>
         </div>
         <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
@@ -716,66 +586,4 @@ function SortTh({ label, k, sortKey, dir, onSort, align }: { label: string; k: S
   );
 }
 
-function ContributionHeatmap({ data }: { data: { date: string; value: number }[] }) {
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
-  const { weeks, monthLabels } = buildHeatmapGrid(data);
-  const CELL = 11;
-  const GAP = 2;
-  const STEP = CELL + GAP;
-
-  return (
-    <div className="bg-card-bg rounded-xl border border-border p-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Task Completion Velocity</h4>
-          <p className="text-[11px] text-muted">Daily completions — last 52 weeks</p>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted">
-          <span>Less</span>
-          {[0, 1, 3, 6, 10].map((v) => (
-            <div key={v} style={{ width: CELL, height: CELL, borderRadius: 3, backgroundColor: heatColorBoard(v) }} />
-          ))}
-          <span>More</span>
-        </div>
-      </div>
-      <div className="overflow-x-auto no-scrollbar">
-        <div style={{ position: "relative", paddingTop: 18, paddingLeft: 26, width: weeks.length * STEP + 28 }}>
-          {monthLabels.map((m) => (
-            <span key={m.label + m.colIndex} style={{ position: "absolute", top: 0, left: 26 + m.colIndex * STEP, fontSize: 10, color: "var(--color-muted, #78716C)", whiteSpace: "nowrap" }}>
-              {m.label}
-            </span>
-          ))}
-          {["Mon", "Wed", "Fri"].map((label, i) => (
-            <span key={label} style={{ position: "absolute", left: 0, top: 18 + (i === 0 ? STEP : i === 1 ? STEP * 3 : STEP * 5), fontSize: 10, color: "var(--color-muted, #78716C)", lineHeight: 1 }}>
-              {label}
-            </span>
-          ))}
-          <div style={{ display: "flex", gap: GAP }}>
-            {weeks.map((week, wi) => (
-              <div key={wi} style={{ display: "flex", flexDirection: "column", gap: GAP }}>
-                {week.map((day) => (
-                  <div
-                    key={day.date}
-                    style={{ width: CELL, height: CELL, borderRadius: 3, backgroundColor: heatColorBoard(day.count), cursor: day.count > 0 ? "pointer" : "default" }}
-                    onMouseEnter={(e) => {
-                      const unit = day.count === 1 ? "task completed" : "tasks completed";
-                      setTooltip({ text: `${day.count} ${unit} on ${day.date}`, x: e.clientX, y: e.clientY });
-                    }}
-                    onMouseMove={(e) => setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
-                    onMouseLeave={() => setTooltip(null)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-          {tooltip && (
-            <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y - 12, transform: "translateX(-50%) translateY(-100%)", backgroundColor: "#1C1917", color: "#FDFCFA", padding: "4px 10px", borderRadius: 8, fontSize: 11, whiteSpace: "nowrap", pointerEvents: "none", border: "1px solid #2D2A27", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", zIndex: 9999 }}>
-              {tooltip.text}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 

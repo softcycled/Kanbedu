@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
+
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -34,10 +36,10 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const [theme, setThemeState] = useState<Theme>("dark");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const stored = (localStorage.getItem(STORAGE_KEY) as Theme) || "dark";
     setThemeState(stored);
-    const resolved = stored === "system" ? getSystemTheme() : stored;
+    const resolved = stored === "system" ? getSystemTheme() : (stored as ResolvedTheme);
     setResolvedTheme(resolved);
     applyTheme(resolved);
   }, []);

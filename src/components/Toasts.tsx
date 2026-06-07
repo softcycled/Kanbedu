@@ -80,7 +80,7 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     <div
       role="status"
       aria-live="polite"
-      className={`pointer-events-auto max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-card px-4 py-3 text-ink flex items-start gap-3`}
+      className={`pointer-events-auto max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-card px-4 py-3 text-ink flex items-center gap-3`}
       style={{
         transform: mounted ? "translateY(0)" : "translateY(8px)",
         opacity: mounted ? 1 : 0,
@@ -101,12 +101,12 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
               onClose();
             }
           }}
-          className="text-sm font-semibold text-primary hover:underline px-3 py-1 rounded-md focus:outline-none focus-ring"
+          className="flex-shrink-0 text-xs font-semibold text-ink bg-column-bg hover:bg-border/40 border border-border px-2.5 py-1.5 rounded-md transition-colors focus:outline-none focus-ring"
         >
           {toast.actionLabel}
         </button>
       )}
-      <button onClick={onClose} className="ml-2 p-1.5 rounded-md text-muted hover:bg-column-bg transition-colors" aria-label="Dismiss">
+      <button onClick={onClose} className="flex-shrink-0 p-1.5 rounded-md text-muted hover:bg-column-bg transition-colors" aria-label="Dismiss">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />

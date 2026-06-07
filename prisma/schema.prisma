@@ -26,6 +26,8 @@ model User {
   descriptionVersions TaskDescriptionVersion[]
   emailVerifications  EmailVerification[]
   passwordResetTokens PasswordResetToken[]
+  ownedClasses        Class[]                  @relation("ClassOwner")
+  classMemberships    ClassMember[]
 }
 
 model EmailVerification {
@@ -49,6 +51,7 @@ model Board {
   members        BoardMember[]
   columns        Column[]
   tags           Tag[]
+  group          Group?
 }
 
 model BoardMember {
@@ -108,9 +111,13 @@ model Task {
   descriptionVersions TaskDescriptionVersion[]
   tags                Tag[]                    @relation("TagToTask")
 
-  @@index([column])
+  // Compound (column, order): serves the board load (orderBy column, order),
+  // the "last order in column" lookup on task create, and any column-only/FK
+  // filter via the column prefix — so it replaces the standalone column index.
+  @@index([column, order])
   @@index([assigneeId])
   @@index([completedAt])
+  @@index([createdAt])
 }
 
 model Tag {
@@ -134,6 +141,7 @@ model TaskColumnHistory {
 
   @@index([taskId])
   @@index([columnId])
+  @@index([taskId, enteredAt])
 }
 
 model Comment {
@@ -208,4 +216,59 @@ model RateLimit {
 
   @@unique([identifier, route])
   @@index([expiresAt])
+}
+
+// ---- Educator features: Classes, Groups, Presets ----
+
+model Class {
+  id        String        @id @default(cuid())
+  name      String
+  term      String? // e.g. "Fall 2026" — used by reuse-next-semester
+  ownerId   String // educator who created it
+  joinCode  String        @unique @default(cuid()) // persistent class code (reused all term)
+  archived  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  owner     User          @relation("ClassOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   ClassMember[]
+  groups    Group[]
+  preset    ClassPreset?
+
+  @@index([ownerId])
+}
+
+model ClassMember {
+  id      String  @id @default(cuid())
+  userId  String
+  classId String
+  role    String  @default("student") // "educator" | "ta" | "student"
+  groupId String? // null = lobby (not yet sorted)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, classId])
+  @@index([classId])
+  @@index([groupId])
+}
+
+model Group {
+  id      String        @id @default(cuid())
+  classId String
+  name    String
+  order   Int           @default(0)
+  boardId String        @unique // each group → exactly one Board (reuses all board infra)
+  class   Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  board   Board         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  members ClassMember[]
+
+  @@index([classId])
+}
+
+// Snapshot of column layout + seed tasks; materialized into each group board, and cloned on reuse
+model ClassPreset {
+  id      String @id @default(cuid())
+  classId String @unique
+  columns Json // [{ label, order, isDone }]
+  tasks   Json // [{ title, description, columnIndex, priority }]
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 }

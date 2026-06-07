@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
@@ -125,10 +125,8 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
     else { setSortKey(key); setSortDir("desc"); }
   };
 
-  // Sort tasks based on active sort key and direction
-  const sorted = [...tasks].sort((a, b) => {
+  const sorted = useMemo(() => [...tasks].sort((a, b) => {
     let diff = 0;
-    
     if (sortKey === "title") {
       diff = a.title.localeCompare(b.title);
     } else if (sortKey === "phase") {
@@ -138,21 +136,17 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
     } else if (sortKey === "priority") {
       diff = (PRIORITY_ORDER[a.priority ?? "medium"] ?? 9) - (PRIORITY_ORDER[b.priority ?? "medium"] ?? 9);
     } else if (sortKey === "deadline") {
-      // Smart deadline prioritization: overdue > due-soon > future > no-deadline
       const priorityA = getDeadlineSortPriority(a.deadline, a.completedAt);
       const priorityB = getDeadlineSortPriority(b.deadline, b.completedAt);
-      
       if (priorityA.priority !== priorityB.priority) {
         diff = priorityA.priority - priorityB.priority;
       } else {
-        // Within same priority level, sort by timestamp
         diff = priorityA.timestamp - priorityB.timestamp;
       }
     }
-    
-    if (diff === 0) diff = a.title.localeCompare(b.title); // stable tie-break
+    if (diff === 0) diff = a.title.localeCompare(b.title);
     return sortDir === "asc" ? diff : -diff;
-  });
+  }), [tasks, sortKey, sortDir, columnMap]);
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0 pl-[4.5rem] pr-6 md:px-10 py-6">
@@ -299,14 +293,8 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
 
       {/* Task rows */}
       {sorted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-sm text-muted">No tasks yet.</p>
-          <button
-            onClick={handleOpenAdd}
-            className="text-xs font-semibold text-accent hover:underline"
-          >
-            + Add your first task
-          </button>
         </div>
       ) : (
         <div className="divide-y divide-border/20">
@@ -334,7 +322,7 @@ interface RowProps {
   onClick: () => void;
 }
 
-function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
+const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
   const p = task.priority ?? "medium";
   const pCfg = PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
   const colColor = columnEntry
@@ -400,4 +388,16 @@ function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
       </span>
     </button>
   );
-}
+// Skip onClick in comparison — it's always a new inline arrow from the parent map.
+// Row only needs to re-render when the displayed data changes.
+}, (prev, next) =>
+  prev.task.id === next.task.id &&
+  prev.task.title === next.task.title &&
+  prev.task.priority === next.task.priority &&
+  prev.task.column === next.task.column &&
+  prev.task.assigneeId === next.task.assigneeId &&
+  String(prev.task.deadline) === String(next.task.deadline) &&
+  String(prev.task.completedAt) === String(next.task.completedAt) &&
+  prev.columnEntry?.id === next.columnEntry?.id &&
+  prev.member?.id === next.member?.id
+);

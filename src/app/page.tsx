@@ -5,18 +5,26 @@ import BoardContainer from "@/components/BoardContainer";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ class?: string | string[] }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/landing");
+
+  const sp = await searchParams;
+  const classIdParam = typeof sp.class === "string" ? sp.class : undefined;
 
   // Run user lookup + board memberships in parallel
   let [user, memberships] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { isAdmin: true, handle: true },
+      select: { isAdmin: true, handle: true, emailVerified: true },
     }),
     prisma.boardMember.findMany({
-      where: { userId: session.userId },
+      // Exclude class group boards — those live under Classes, not personal Boards.
+      where: { userId: session.userId, board: { group: { is: null } } },
       include: { board: true },
       orderBy: { board: { order: "asc" } },
     }),
@@ -26,6 +34,9 @@ export default async function Home() {
 
   // Existing users without a handle must set one up first
   if (user && !user.handle) redirect("/handle-setup");
+
+  // Hard gate: email must be verified before accessing the app
+  if (user && user.emailVerified === false) redirect("/verify-email-required");
 
   // First-time user: create a default board
   if (boards.length === 0) {
@@ -42,7 +53,7 @@ export default async function Home() {
           update: {},
         });
         // Refresh `user` value (only need isAdmin for later checks).
-        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true, handle: true } });
+        user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true, handle: true, emailVerified: true } });
       }
     }
 
@@ -101,6 +112,33 @@ export default async function Home() {
 
   const resolvedIsAdmin = !!user?.isAdmin;
 
+  // Deep-link into a student's class (/?class=<id>): resolve their own group
+  // board reference server-side so the class view paints without a flicker.
+  // Only ever exposes the caller's own group secret.
+  let initialClass = null;
+  if (classIdParam) {
+    const membership = await prisma.classMember.findUnique({
+      where: { userId_classId: { userId: session.userId, classId: classIdParam } },
+      include: {
+        class: { select: { id: true, name: true, term: true, archived: true } },
+        group: { select: { name: true, boardId: true, board: { select: { realtimeSecret: true } } } },
+      },
+    });
+    if (membership && membership.role === "student") {
+      initialClass = {
+        id: membership.class.id,
+        name: membership.class.name,
+        term: membership.class.term,
+        archived: membership.class.archived,
+        role: membership.role,
+        myGroupId: membership.groupId,
+        groupName: membership.group?.name ?? null,
+        boardId: membership.group?.boardId ?? null,
+        realtimeSecret: membership.group?.board?.realtimeSecret ?? null,
+      };
+    }
+  }
+
   return (
     <BoardContainer
       initialTasks={serializedTasks}
@@ -109,6 +147,7 @@ export default async function Home() {
       initialColumns={boardColumns}
       currentUserId={session.userId}
       isAdmin={resolvedIsAdmin}
+      initialClass={initialClass}
     />
   );
 }

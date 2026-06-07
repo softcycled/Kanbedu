@@ -57,8 +57,8 @@ export default function InvitePage() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1C1917" }}>
-            kanbedu
+          <h1 className="text-2xl font-bold tracking-tight">
+            <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
           </h1>
           <p className="text-sm mt-1" style={{ color: "#78716C" }}>
             Board invitation
@@ -102,18 +102,16 @@ export default function InvitePage() {
           )}
 
           {status === "done" && (
-            <p className="text-sm font-medium" style={{ color: "#4A7C59" }}>{message}</p>
+            <p className="text-sm font-medium" style={{ color: "#1C1917" }}>{message}</p>
           )}
 
           {status === "error" && (
             <>
-              <p className="text-sm font-medium mb-4" style={{ color: "#E8613A" }}>{message}</p>
+              <p className="text-sm font-medium mb-5" style={{ color: "#E8613A" }}>{message}</p>
               <button
                 onClick={() => router.push("/")}
-                className="text-xs transition-colors"
-                style={{ color: "#78716C" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
+                className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors"
+                style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}
               >
                 Go to dashboard
               </button>

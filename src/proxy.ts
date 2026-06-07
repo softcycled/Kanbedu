@@ -9,7 +9,7 @@ if (!SECRET_RAW) {
 const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 // Routes that don't require authentication
-const PUBLIC_PATHS = ["/login", "/landing", "/terms", "/privacy", "/credits", "/api/auth/", "/invite/", "/api/invites/", "/verify-email/", "/forgot-password", "/reset-password/"];
+const PUBLIC_PATHS = ["/login", "/landing", "/terms", "/privacy", "/credits", "/api/auth/", "/invite/", "/api/invites/", "/verify-email/", "/forgot-password", "/reset-password/", "/check-email"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
@@ -26,10 +26,19 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Redirect to /login, remembering where the user was headed so they land back
+  // there after authenticating (e.g. a shared class invite link).
+  const loginRedirect = () => {
+    const url = new URL("/login", req.url);
+    const dest = pathname + (req.nextUrl.search || "");
+    if (dest && dest !== "/") url.searchParams.set("next", dest);
+    return NextResponse.redirect(url);
+  };
+
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.redirect(new URL("/login", req.url));
+    return loginRedirect();
   }
 
   try {
@@ -37,7 +46,7 @@ export async function proxy(req: NextRequest) {
   } catch {
     // Invalid or expired token
     if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.redirect(new URL("/login", req.url));
+    return loginRedirect();
   }
 
   // CSRF Protection for API Mutations

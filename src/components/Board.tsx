@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect, type ReactNode } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -37,9 +37,14 @@ interface Props {
   onColumnsChange: (update: ColumnData[] | ((prev: ColumnData[]) => ColumnData[])) => void;
   currentUserId?: string;
   isLoading?: boolean;
+  // Optional header overrides used by class group boards: a breadcrumb that
+  // replaces the plain board-name title, and trailing content (e.g. a "Leave
+  // class" action) pinned to the far right of the header row.
+  headerTitle?: ReactNode;
+  headerTrailing?: ReactNode;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing }: Props) {
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -208,11 +213,19 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     async (moveToColumnId?: string) => {
       if (!columnToDelete) return;
 
+      // Capture everything needed for a full undo before any state mutation:
+      // the column, its tasks (in order), and where the tasks went.
+      const deleted = columnToDelete;
+      const movedTo = moveToColumnId || null;
+      const deletedTasks = tasksRef.current
+        .filter((t) => t.column === deleted.id)
+        .sort((a, b) => a.order - b.order);
+
       try {
-        const res = await fetch(`/api/columns/${columnToDelete.id}`, {
+        const res = await fetch(`/api/columns/${deleted.id}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ moveToColumnId: moveToColumnId || null }),
+          body: JSON.stringify({ moveToColumnId: movedTo }),
         });
 
         if (!res.ok) {
@@ -222,41 +235,113 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           return;
         }
 
-        onColumnsChange((prev) => prev.filter((col) => col.id !== columnToDelete.id));
-        if (moveToColumnId) {
+        onColumnsChange((prev) => prev.filter((col) => col.id !== deleted.id));
+        if (movedTo) {
           onTasksChange((prev) =>
             prev.map((t) =>
-              t.column === columnToDelete.id ? { ...t, column: moveToColumnId } : t
+              t.column === deleted.id ? { ...t, column: movedTo } : t
             )
           );
         } else {
-          onTasksChange((prev) => prev.filter((t) => t.column !== columnToDelete.id));
+          onTasksChange((prev) => prev.filter((t) => t.column !== deleted.id));
         }
         setDeleteError(null);
         setDeleteModalOpen(false);
-        // capture label for undo toast before clearing state
-        const deletedLabel = columnToDelete.label;
         setColumnToDelete(null);
         broadcastRefresh();
 
-        // Show undo for best-effort recreation
+        // Full undo: recreate the column and bring its tasks back. Tasks that were
+        // moved elsewhere are moved back; tasks that were deleted are recreated
+        // (with new ids — their comments/history can't be recovered).
         toasts.push({
           title: "Column deleted",
-          description: deletedLabel,
+          description: deleted.label,
           actionLabel: "Undo",
           onAction: async () => {
             try {
               const r = await fetch("/api/columns", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ label: deletedLabel, boardId }),
+                body: JSON.stringify({ label: deleted.label, boardId }),
               });
               if (!r.ok) throw new Error("Restore failed");
               const created = await r.json();
               onColumnsChange((prev) => [...prev, created]);
+
+              if (deletedTasks.length > 0) {
+                if (movedTo) {
+                  // Move the original tasks back into the recreated column.
+                  const ids = new Set(deletedTasks.map((t) => t.id));
+                  await Promise.all(
+                    deletedTasks.map((t) =>
+                      fetch(`/api/tasks/${t.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ column: created.id, order: t.order }),
+                      }).catch((err) => console.error("Undo: move task back failed", err))
+                    )
+                  );
+                  onTasksChange((prev) =>
+                    prev.map((t) =>
+                      ids.has(t.id) ? { ...t, column: created.id } : t
+                    )
+                  );
+                } else {
+                  // Recreate the deleted tasks (sequentially to preserve order).
+                  const restored: Task[] = [];
+                  for (const t of deletedTasks) {
+                    try {
+                      const tr = await fetch("/api/tasks", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: t.title,
+                          column: created.id,
+                          description: t.description || undefined,
+                          assigneeId: t.assigneeId || undefined,
+                          priority: t.priority !== "medium" ? t.priority : undefined,
+                          deadline: t.deadline ? String(t.deadline) : undefined,
+                          tagIds: t.tags?.map((tg) => tg.id),
+                        }),
+                      });
+                      if (tr.ok) {
+                        const nt: Task = await tr.json();
+                        restored.push({ ...nt, assigneeUser: t.assigneeUser ?? null });
+                      }
+                    } catch (err) {
+                      console.error("Undo: recreate task failed", err);
+                    }
+                  }
+                  if (restored.length > 0) {
+                    onTasksChange((prev) => [...prev, ...restored]);
+                  }
+                }
+              }
+
+              // Restore the done flag last so its server-side completion sweep
+              // applies to the tasks now back in the column.
+              if (deleted.isDone) {
+                try {
+                  const dr = await fetch(`/api/columns/${created.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isDone: true }),
+                  });
+                  if (dr.ok) {
+                    const doneCol = await dr.json();
+                    onColumnsChange((prev) =>
+                      prev.map((c) => (c.id === created.id ? doneCol : c))
+                    );
+                  }
+                } catch (err) {
+                  console.error("Undo: restore done flag failed", err);
+                }
+              }
+
               broadcastRefresh();
             } catch (err) {
               console.error("Undo restore column failed", err);
+              toasts.push({ title: "Couldn't undo", description: "Please try again." });
             }
           },
         });
@@ -343,7 +428,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   // ── Drag handlers ──────────────────────────────────────────────
 
-  const handleDragStart = ({ active }: DragStartEvent) => {
+  const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const task = tasks.find((t) => t.id === active.id);
     if (task) {
       setActiveTask(task);
@@ -354,9 +439,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     if (column) {
       setActiveColumn(column);
     }
-  };
+  }, [tasks, columns]);
 
-  const handleDragOver = ({ active, over }: DragOverEvent) => {
+  const handleDragOver = useCallback(({ active, over }: DragOverEvent) => {
     if (!over) return;
 
     const activeId = active.id as string;
@@ -389,9 +474,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
       return updated;
     });
-  };
+  }, [tasks, columns, onTasksChange]);
 
-  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+  const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
     setActiveTask(null);
     setActiveColumn(null);
 
@@ -498,19 +583,26 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         prev.map((t) => (t.id === activeId ? updatedTask : t))
       );
       broadcastRefresh({ type: "task:update", task: updatedTask });
+
+      // Update sibling orders only if the primary move succeeded
+      const siblings = reordered.filter((t) => t.id !== activeId);
+      if (siblings.length > 0) {
+        fetch("/api/tasks", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
+        }).catch((err) => console.error("Failed to bulk update task order:", err));
+      }
+    } else {
+      // Revert optimistic move — restore original column and order
+      onTasksChange((prev) =>
+        prev.map((t) =>
+          t.id === activeId ? { ...t, column: task.column, order: task.order } : t
+        )
+      );
     }
 
-    // Update sibling orders in a single bulk request — fire-and-forget
-    const siblings = reordered.filter((t) => t.id !== activeId);
-    if (siblings.length > 0) {
-      fetch("/api/tasks", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(siblings.map((t) => ({ id: t.id, order: orderMap[t.id] }))),
-      }).catch((err) => console.error("Failed to bulk update task order:", err));
-    }
-
-  };
+  }, [tasks, columns, currentUserId, onTasksChange, onColumnsChange, broadcastRefresh]);
 
   // ── Task actions ───────────────────────────────────────────────
 
@@ -532,7 +624,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       columnUpdatedAt: now,
       assigneeId: null,
       order: maxOrder + 1,
-      priority: "normal",
+      priority: "medium",
       movedByNonAssignee: false,
       comments: [],
       tags: [],
@@ -609,12 +701,22 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             const r = await fetch("/api/tasks", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: prevTask.title, column: prevTask.column }),
+              body: JSON.stringify({
+                title: prevTask.title,
+                column: prevTask.column,
+                description: prevTask.description || undefined,
+                assigneeId: prevTask.assigneeId || undefined,
+                priority: prevTask.priority !== "medium" ? prevTask.priority : undefined,
+                deadline: prevTask.deadline ? String(prevTask.deadline) : undefined,
+                tagIds: prevTask.tags?.map((t) => t.id),
+              }),
             });
             if (!r.ok) throw new Error("Restore failed");
             const restored = await r.json();
-            onTasksChange((prev) => [...prev, restored]);
-            broadcastRefresh({ type: "task:create", task: restored });
+            // Merge display-only fields the API doesn't return (assigneeUser name/color)
+            const withDisplay = { ...restored, assigneeUser: prevTask.assigneeUser ?? null };
+            onTasksChange((prev) => [...prev, withDisplay]);
+            broadcastRefresh({ type: "task:create", task: withDisplay });
           } catch (err) {
             console.error("Undo restore failed", err);
           }
@@ -710,7 +812,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     <>
       {/* Header row: board name left, filters right */}
       <div className="flex-shrink-0 flex items-center gap-4 pl-[4.5rem] pr-6 md:px-10 pt-6 pb-5 border-b border-border/60">
-        <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        {headerTitle ?? (
+          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        )}
         {/* When the task side panel is open, hide the filter bar and view toggle visually but
             keep them in the layout so the header height stays stable (no upward shift). */}
         <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
@@ -771,6 +875,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           </button>
         </div>
         </div>
+        {headerTrailing}
       </div>
 
       {viewMode === "list" ? (

@@ -233,6 +233,16 @@ export async function PATCH(
   const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
+  // Integrity signals (movedByNonAssignee) only make sense for class group boards.
+  // Never record them on personal/standalone boards.
+  if (updateData.movedByNonAssignee) {
+    const isGroupBoard = await prisma.group.findUnique({
+      where: { boardId: taskAuth.columnRel.boardId },
+      select: { id: true },
+    });
+    if (!isGroupBoard) delete updateData.movedByNonAssignee;
+  }
+
   let columnActuallyChanged = false;
 
   if (body.column !== undefined) {

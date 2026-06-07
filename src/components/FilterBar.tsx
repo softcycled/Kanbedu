@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { BoardMemberData, Tag } from "@/lib/types";
 import { getTextColorForBg } from "@/lib/labelPalette";
 
@@ -19,7 +19,7 @@ interface Props {
   filteredTasksCount: number;
 }
 
-export default function FilterBar({
+function FilterBar({
   searchQuery,
   setSearchQuery,
   selectedAssignees,
@@ -35,6 +35,9 @@ export default function FilterBar({
 }: Props) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Local state for the input so typing feels instant; debounced propagation avoids
+  // re-filtering the full task list on every keystroke.
+  const [inputValue, setInputValue] = useState(searchQuery);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -57,6 +60,12 @@ export default function FilterBar({
     return () => document.removeEventListener("keydown", keyHandler);
   }, [openDropdown]);
 
+  // Propagate search to parent after 150 ms of inactivity
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(inputValue), 150);
+    return () => clearTimeout(timer);
+  }, [inputValue, setSearchQuery]);
+
   const toggleSelection = (list: string[], item: string, setter: (val: string[]) => void) => {
     if (list.includes(item)) {
       setter(list.filter((i) => i !== item));
@@ -68,6 +77,7 @@ export default function FilterBar({
   const hasFilters = searchQuery || selectedAssignees.length > 0 || selectedTags.length > 0 || selectedPriorities.length > 0;
 
   const clearAll = () => {
+    setInputValue("");
     setSearchQuery("");
     setSelectedAssignees([]);
     setSelectedTags([]);
@@ -85,8 +95,8 @@ export default function FilterBar({
         </div>
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
           placeholder="Search tasks…"
           className="w-48 bg-column-bg/50 border border-border/50 rounded-xl pl-9 pr-4 py-1 text-sm text-ink outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
         />
@@ -261,6 +271,8 @@ export default function FilterBar({
     </div>
   );
 }
+
+export default memo(FilterBar);
 
 function CheckIcon() {
   return (

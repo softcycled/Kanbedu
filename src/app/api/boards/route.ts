@@ -12,7 +12,8 @@ export async function GET() {
     }
 
     const memberships = await prisma.boardMember.findMany({
-      where: { userId: session.userId },
+      // Exclude class group boards — those live under Classes, not personal Boards.
+      where: { userId: session.userId, board: { group: { is: null } } },
       include: { board: true },
       orderBy: { board: { order: "asc" } },
     });
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     const memberCount = await prisma.boardMember.count({
-      where: { userId: session.userId },
+      where: { userId: session.userId, board: { group: { is: null } } },
     });
 
     const board = await prisma.$transaction(async (tx) => {
