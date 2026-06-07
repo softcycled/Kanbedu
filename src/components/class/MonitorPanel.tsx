@@ -138,13 +138,10 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
         <p className="text-xs text-muted">
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
-          <button onClick={() => load()} className="text-xs text-muted hover:text-ink transition-colors">Refresh</button>
-        </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

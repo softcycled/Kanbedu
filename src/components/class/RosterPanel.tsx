@@ -532,18 +532,10 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             {students.length} student{students.length === 1 ? "" : "s"} · {lobby.length} in lobby
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="flex items-center gap-1.5 text-[11px] text-muted" title="The roster auto-updates as students join">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
-          <button
-            onClick={() => load()}
-            className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-border text-muted hover:text-ink hover:bg-column-bg transition-colors"
-          >
-            Refresh
-          </button>
-        </div>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0" title="The roster auto-updates as students join">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
       </div>
 
       {/* Bulk action bar */}

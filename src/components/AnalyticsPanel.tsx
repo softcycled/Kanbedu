@@ -211,20 +211,11 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           <h2 className="text-xl font-bold text-ink">Analytics</h2>
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {lastFetched && (
-            <span className="text-xs text-muted">
-              Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-            </span>
-          )}
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="text-xs px-3 py-1.5 rounded-lg bg-card-bg border border-border text-ink hover:bg-border transition-colors disabled:opacity-50"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
+        {lastFetched && (
+          <span className="text-xs text-muted">
+            Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </span>
+        )}
       </div>
 
       {/* Summary cards */}

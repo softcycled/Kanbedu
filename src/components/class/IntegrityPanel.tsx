@@ -30,9 +30,13 @@ interface IntegrityData {
   speedRunMinutes: number;
 }
 
+type FlagFilter = "all" | "speedRun" | "columnSkip" | "movedByOther";
+type SortOrder = "flagCount" | "alpha";
+
 interface Props {
   classId: string;
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
+  onFlagCount?: (n: number) => void;
 }
 
 const MS_DAY = 86_400_000;
@@ -58,10 +62,12 @@ function FlagChip({ kind }: { kind: "speedRun" | "columnSkip" | "movedByOther" }
 // Educator integrity overview across every group board in the class. One screen,
 // grouped by team — surfaces tasks that look completed dishonestly so a teacher
 // can check students are using the board properly. Not a ranking, not full stats.
-export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
+export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Props) {
   const [data, setData] = useState<IntegrityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flagFilter, setFlagFilter] = useState<FlagFilter>("all");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("flagCount");
 
   // silent = background refresh from live realtime events; keeps the rendered
   // list in place instead of flashing the loading/error states.
@@ -71,7 +77,9 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
     try {
       const res = await fetch(`/api/classes/${classId}/integrity`, { cache: "no-store" });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "Failed to load integrity.");
-      setData(await res.json());
+      const d = await res.json();
+      setData(d);
+      onFlagCount?.(d.totalFlagged);
     } catch (e: any) {
       if (!silent) setError(e?.message || "Failed to load integrity.");
     } finally {
@@ -132,13 +140,10 @@ export default function IntegrityPanel({ classId, onOpenBoard }: Props) {
           (under {data.speedRunMinutes}m), moved straight to done without passing through
           earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
         </p>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
-          <button onClick={() => load()} className="text-xs text-muted hover:text-ink transition-colors">Refresh</button>
-        </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
       </div>
 
       {data.totalFlagged === 0 ? (
