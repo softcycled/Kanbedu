@@ -55,4 +55,47 @@ describe("MarkdownText (Discord-flavored markdown)", () => {
     expect(h).not.toContain("<em");
     expect(h).toContain("* b");
   });
+
+  it("renders `code` as <code>", () => {
+    const h = html("`hello`");
+    expect(h).toContain("<code");
+    expect(h).toContain("hello");
+  });
+
+  it("does not parse markdown inside inline code", () => {
+    const h = html("`**not bold**`");
+    expect(h).not.toContain("<strong");
+    expect(h).toContain("**not bold**");
+  });
+
+  it("renders code fence as <pre>", () => {
+    const h = html("```\nconst x = 1;\n```");
+    expect(h).toContain("<pre");
+    expect(h).toContain("const x = 1;");
+  });
+
+  it("renders blockquote with left border class", () => {
+    const h = html("> quoted text");
+    expect(h).toContain("border-l");
+    expect(h).toContain("quoted text");
+  });
+
+  it("renders unordered list items as <li>", () => {
+    const h = html("- first\n- second");
+    expect(h).toContain("<li");
+    expect(h).toContain("first");
+    expect(h).toContain("second");
+  });
+
+  it("renders * list items same as - list items", () => {
+    const h = html("* item");
+    expect(h).toContain("<li");
+    expect(h).toContain("item");
+  });
+
+  it("supports inline markdown inside list items", () => {
+    const h = html("- **bold item**");
+    expect(h).toContain("<li");
+    expect(h).toContain("<strong");
+  });
 });

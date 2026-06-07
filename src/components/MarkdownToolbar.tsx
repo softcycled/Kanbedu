@@ -132,6 +132,7 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }: Props)
     { marker: "*", label: "Italic", node: <span className="italic font-serif">I</span> },
     { marker: "__", label: "Underline", node: <span className="underline">U</span> },
     { marker: "~~", label: "Strikethrough", node: <span className="line-through">S</span> },
+    { marker: "`", label: "Code", node: <span className="font-mono text-[13px]">{"<>"}</span> },
   ];
 
   return (
