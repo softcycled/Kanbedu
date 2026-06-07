@@ -150,6 +150,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         // Deleting boards cascades columns, tasks, board members, and the Group rows.
         await tx.board.deleteMany({ where: { id: { in: boardIds } } });
       }
+      // Must delete explicitly — not covered by Class cascade in all Postgres versions.
+      await tx.classRosterEntry.deleteMany({ where: { classId: id } });
       // Cascades ClassMember and ClassPreset.
       await tx.class.delete({ where: { id } });
     });
