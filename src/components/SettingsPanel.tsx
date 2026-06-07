@@ -228,7 +228,7 @@ export default function SettingsPanel({
           </div>
 
           {/* Board detail */}
-          <div className="flex-1 pl-14 pr-6 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
+          <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
             {/* Identity */}
             <section>
               <div className="flex items-start gap-4">

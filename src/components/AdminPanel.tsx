@@ -101,15 +101,15 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-32 md:py-8 no-scrollbar">
-      <div className="flex items-start justify-between mb-8">
-        <div className="pl-14 md:pl-0">
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-16 pb-32 md:py-8 no-scrollbar">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
+        <div>
           <h2 className="text-xl font-bold text-ink">Admin Dashboard</h2>
           <p className="text-sm text-muted mt-0.5">Manage user bug reports and feedback</p>
         </div>
 
-        <div className="flex flex-col items-end gap-3">
-          <div className="flex bg-column-bg/50 p-1 rounded-xl border border-border/50">
+        <div className="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
+          <div className="flex bg-column-bg/50 p-1 rounded-xl border border-border/50 overflow-x-auto max-w-full no-scrollbar">
             {["all", "open", "in-progress", "resolved"].map((s) => (
               <button
                 key={s}
