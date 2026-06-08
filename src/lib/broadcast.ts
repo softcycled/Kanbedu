@@ -9,9 +9,11 @@ let client: ReturnType<typeof createClient> | null = null;
 function getRealtimeClient(): ReturnType<typeof createClient> | null {
   if (client) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return null;
-  client = createClient(url, anonKey, {
+  // Prefer the service role key for server-side broadcasts so it isn't subject
+  // to RLS or anon-tier rate limits. Falls back to the anon key if unset.
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  client = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return client;

@@ -95,18 +95,26 @@ export default function BoardContainer({
   useEffect(() => { loadClasses(); }, [loadClasses]);
 
   // Lobby poll: while a student is viewing a class but hasn't been placed into a
-  // group yet, re-check every ~10s. The moment their row gains a boardId, swap
-  // activeClass so the group board appears on its own — no manual reload.
+  // group yet, re-check every ~10s. Pauses when the tab is hidden and resumes
+  // immediately when the user returns, so no unnecessary requests fire in the bg.
   useEffect(() => {
     if (!activeClass || activeClass.boardId) return;
-    const interval = setInterval(async () => {
-      if (document.hidden) return;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const tick = async () => {
       const data = await loadClasses();
       if (!data) return;
       const updated = data.find((c) => c.id === activeClass.id);
       if (updated?.boardId) setActiveClass(updated);
-    }, 10_000);
-    return () => clearInterval(interval);
+    };
+
+    const start = () => { if (!interval) interval = setInterval(tick, 10_000); };
+    const stop = () => { if (interval) { clearInterval(interval); interval = null; } };
+    const onVisibility = () => { document.hidden ? stop() : start(); };
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
   }, [activeClass, loadClasses]);
 
   // Per-board cache: boardId maps to { tasks, columns, fetchedAt, total }
@@ -148,6 +156,13 @@ export default function BoardContainer({
   const columnsRef = useRef(columns);
   useEffect(() => { columnsRef.current = columns; }, [columns]);
 
+  // Refs so handleRefresh can decide how many tasks to re-fetch without
+  // needing tasks/taskTotal in its dependency array (which would re-subscribe realtime).
+  const loadedCountRef = useRef(initialTasks.length);
+  const taskTotalRef = useRef(initialTaskTotal ?? initialTasks.length);
+  useEffect(() => { loadedCountRef.current = tasks.length; }, [tasks]);
+  useEffect(() => { taskTotalRef.current = taskTotal; }, [taskTotal]);
+
   const activeBoard = boards.find((b) => b.id === activeBoardId);
 
   const handleRefresh = useCallback(async (payload?: any) => {
@@ -174,7 +189,11 @@ export default function BoardContainer({
     }
 
     // Fallback: full board fetch (column changes, etc.)
-    const data = await fetchBoardData(boardId);
+    // Preserve however many tasks are currently visible so the list doesn't shrink.
+    const loaded = loadedCountRef.current;
+    const total = taskTotalRef.current;
+    const take = loaded >= total ? 0 : Math.max(loaded, 100);
+    const data = await fetchBoardData(boardId, take);
     if (activeBoardIdRef.current === boardId) {
       setTasks(data.tasks);
       setColumns(data.columns);
@@ -278,18 +297,28 @@ export default function BoardContainer({
     boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
   }, [fetchBoardData]);
 
-  // Load all tasks for the current board when the user exceeds the initial limit
-  const loadAllTasks = useCallback(async () => {
+  // Load the next 100 tasks and append them to the current list
+  const loadMoreTasks = useCallback(async () => {
     const boardId = activeBoardIdRef.current;
     setIsLoadingBoard(true);
-    const data = await fetchBoardData(boardId, 0); // 0 = no limit
+    // Read current task count synchronously via functional setter to avoid stale closure
+    let skip = 0;
+    setTasks((prev) => { skip = prev.length; return prev; });
+    const res = await fetch(`/api/tasks?boardId=${boardId}&skip=${skip}&take=100`, { cache: "no-store" });
+    const payload = res.ok ? await res.json() : { tasks: [], total: 0 };
+    const incoming = (payload.tasks ?? []) as Task[];
+    const total = (payload.total ?? 0) as number;
     if (activeBoardIdRef.current === boardId) {
-      setTasks(data.tasks);
-      setTaskTotal(data.total);
-      boardCache.current.set(boardId, { ...data, fetchedAt: Date.now() });
+      setTasks((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const merged = [...prev, ...incoming.filter((t) => !existingIds.has(t.id))];
+        boardCache.current.set(boardId, { tasks: merged, columns: columnsRef.current, fetchedAt: Date.now(), total });
+        return merged;
+      });
+      setTaskTotal(total);
     }
     setIsLoadingBoard(false);
-  }, [fetchBoardData]);
+  }, []);
 
   const handleCreateBoard = useCallback(async (name: string) => {
     const res = await fetch("/api/boards", {
@@ -412,10 +441,11 @@ export default function BoardContainer({
               <div className="flex items-center justify-between px-5 py-1.5 text-xs text-muted bg-column-bg/60 border-b border-border/30 shrink-0">
                 <span>Showing {tasks.length} of {taskTotal} tasks</span>
                 <button
-                  onClick={loadAllTasks}
-                  className="text-primary hover:text-primary/70 font-medium transition-colors"
+                  onClick={loadMoreTasks}
+                  disabled={isLoadingBoard}
+                  className="text-primary hover:text-primary/70 font-medium transition-colors disabled:opacity-50"
                 >
-                  Load all {taskTotal}
+                  Load {Math.min(100, taskTotal - tasks.length)} more
                 </button>
               </div>
             )}
