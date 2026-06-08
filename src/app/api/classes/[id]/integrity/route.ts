@@ -32,13 +32,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     // knows its column id) can be bucketed back to its group board.
     const columnInfo = new Map<string, { boardId: string; isDone: boolean; label: string }>();
     const nonDoneCountByBoard = new Map<string, number>();
+    // Ordered list of non-done columns per board — used to compute which
+    // specific columns a task skipped.
+    const orderedNonDoneByBoard = new Map<string, Array<{ id: string; label: string }>>();
+
     for (const g of groups) {
       let nonDone = 0;
+      const nonDoneCols: Array<{ id: string; label: string }> = [];
       for (const c of g.board.columns) {
         columnInfo.set(c.id, { boardId: g.boardId, isDone: c.isDone, label: c.label });
-        if (!c.isDone) nonDone++;
+        if (!c.isDone) {
+          nonDone++;
+          nonDoneCols.push({ id: c.id, label: c.label });
+        }
       }
       nonDoneCountByBoard.set(g.boardId, nonDone);
+      orderedNonDoneByBoard.set(g.boardId, nonDoneCols);
     }
 
     const historyCutoff = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
@@ -58,6 +67,27 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             },
           });
 
+    // For tasks flagged as movedByNonAssignee, look up who actually moved them
+    // by finding the most recent MOVE activity where the actor isn't the assignee.
+    const movedByTaskIds = tasks.filter((t) => t.movedByNonAssignee).map((t) => t.id);
+    const taskAssigneeMap = new Map(tasks.map((t) => [t.id, t.assigneeId ?? null]));
+    const movedByMap = new Map<string, string>(); // taskId -> display name
+
+    if (movedByTaskIds.length > 0) {
+      const moveActivities = await prisma.taskActivity.findMany({
+        where: { taskId: { in: movedByTaskIds }, type: "MOVE" },
+        include: { user: { select: { name: true, handle: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+      for (const act of moveActivities) {
+        if (movedByMap.has(act.taskId)) continue; // keep most recent
+        const assigneeId = taskAssigneeMap.get(act.taskId);
+        if (act.userId !== assigneeId) {
+          movedByMap.set(act.taskId, act.user.handle ? `@${act.user.handle}` : act.user.name);
+        }
+      }
+    }
+
     interface Flagged {
       id: string;
       title: string;
@@ -68,6 +98,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       isSpeedRun: boolean;
       isColumnSkip: boolean;
       isMovedByOther: boolean;
+      movedBy: string;
+      skippedColumns: string[];
     }
     const flaggedByBoard = new Map<string, Flagged[]>();
 
@@ -77,13 +109,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       const isDone = info.isDone;
       const cycleTimeMs = t.completedAt ? t.completedAt.getTime() - t.createdAt.getTime() : null;
 
-      // Distinct non-done columns this task has passed through.
-      const visitedColumnCount = new Set(
+      // Compute visited non-done columns as a Set so we can reuse it for
+      // both the count check and the skipped-column label lookup.
+      const visitedNonDoneSet = new Set(
         t.columnHistory.map((h) => h.columnId).filter((cid) => {
           const ci = columnInfo.get(cid);
           return ci && !ci.isDone;
         })
-      ).size;
+      );
+      const visitedColumnCount = visitedNonDoneSet.size;
 
       const totalNonDone = nonDoneCountByBoard.get(info.boardId) ?? 0;
       const isSpeedRun = isDone && cycleTimeMs !== null && cycleTimeMs < SPEED_RUN_MS;
@@ -96,6 +130,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         ? `@${t.assigneeUser.handle}`
         : t.assigneeUser?.name || "(unassigned)";
 
+      const skippedColumns = isColumnSkip
+        ? (orderedNonDoneByBoard.get(info.boardId) ?? [])
+            .filter((c) => !visitedNonDoneSet.has(c.id))
+            .map((c) => c.label)
+        : [];
+
       const bucket = flaggedByBoard.get(info.boardId) ?? [];
       bucket.push({
         id: t.id,
@@ -107,6 +147,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         isSpeedRun,
         isColumnSkip,
         isMovedByOther,
+        movedBy: movedByMap.get(t.id) ?? "",
+        skippedColumns,
       });
       flaggedByBoard.set(info.boardId, bucket);
     }

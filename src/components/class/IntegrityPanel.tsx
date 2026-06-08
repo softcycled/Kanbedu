@@ -14,6 +14,8 @@ interface FlaggedTask {
   isSpeedRun: boolean;
   isColumnSkip: boolean;
   isMovedByOther: boolean;
+  movedBy: string;
+  skippedColumns: string[];
 }
 interface IntegrityGroup {
   groupId: string;
@@ -50,13 +52,38 @@ function formatDuration(ms: number): string {
   return `${Math.round(days)}d`;
 }
 
-function FlagChip({ kind }: { kind: "speedRun" | "columnSkip" | "movedByOther" }) {
+function FlagChip({
+  kind,
+  tooltip,
+}: {
+  kind: "speedRun" | "columnSkip" | "movedByOther";
+  tooltip?: string;
+}) {
   const map = {
     speedRun: { label: "Speed-run", cls: "bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400" },
     columnSkip: { label: "Skipped column", cls: "bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400" },
     movedByOther: { label: "Moved by non-assignee", cls: "bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400" },
   }[kind];
-  return <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${map.cls}`}>{map.label}</span>;
+
+  if (!tooltip) {
+    return (
+      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${map.cls}`}>
+        {map.label}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`relative group/chip inline-flex text-[11px] px-2 py-0.5 rounded-full font-medium cursor-default ${map.cls}`}>
+      {map.label}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 hidden group-hover/chip:flex flex-col items-center">
+        <span className="whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-[10px] leading-snug text-paper shadow-lg">
+          {tooltip}
+        </span>
+        <span className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-ink" />
+      </span>
+    </span>
+  );
 }
 
 // Educator integrity overview across every group board in the class. One screen,
@@ -224,7 +251,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
           ) : (
           <div className="space-y-5">
             {displayGroups.map((g) => (
-              <section key={g.groupId} className="rounded-2xl border border-border/70 bg-card-bg overflow-hidden">
+              <section key={g.groupId} className="rounded-2xl border border-border/70 bg-card-bg">
                 <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-border/60">
                   <div className="flex items-center gap-2 min-w-0">
                     <h3 className="text-sm font-semibold text-ink truncate">{g.name}</h3>
@@ -251,8 +278,18 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
                       </div>
                       <div className="flex flex-wrap gap-1.5 flex-shrink-0">
                         {t.isSpeedRun && <FlagChip kind="speedRun" />}
-                        {t.isColumnSkip && <FlagChip kind="columnSkip" />}
-                        {t.isMovedByOther && <FlagChip kind="movedByOther" />}
+                        {t.isColumnSkip && (
+                          <FlagChip
+                            kind="columnSkip"
+                            tooltip={t.skippedColumns.length > 0 ? `Skipped: ${t.skippedColumns.join(", ")}` : undefined}
+                          />
+                        )}
+                        {t.isMovedByOther && (
+                          <FlagChip
+                            kind="movedByOther"
+                            tooltip={t.movedBy ? `Moved by ${t.movedBy}` : undefined}
+                          />
+                        )}
                       </div>
                     </li>
                   ))}
