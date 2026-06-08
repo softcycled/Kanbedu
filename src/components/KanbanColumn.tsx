@@ -50,7 +50,7 @@ function KanbanColumn({
     listeners,
     isDragging,
     transform,
-  } = useSortable({ id: columnId });
+  } = useSortable({ id: columnId, disabled: isDone });
 
   const style = {
     transform: CSS.Transform.toString(transform),

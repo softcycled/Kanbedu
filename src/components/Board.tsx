@@ -479,7 +479,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
 
     const column = columns.find((c) => c.id === active.id);
-    if (column) {
+    if (column && !column.isDone) {
       setActiveColumn(column);
     }
   }, [tasks, columns]);
@@ -517,7 +517,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
       return updated;
     });
-  }, [tasks, columns, onTasksChange]);
+  }, [tasks, columns, sortedColumns, onTasksChange]);
 
   const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
     setActiveTask(null);
