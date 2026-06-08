@@ -37,10 +37,18 @@ export function useRealtime(channelSecret: string | null, onRefresh?: (payload?:
 
     setup();
 
+    // When returning to a hidden tab, fire a full refresh to catch any events
+    // missed while the WebSocket was idle or the tab was backgrounded.
+    const onVisibility = () => {
+      if (!document.hidden) onRefreshRef.current?.();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       destroyed = true;
       if (retryTimer !== null) clearTimeout(retryTimer);
       if (channel) supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [channelSecret]);
 }

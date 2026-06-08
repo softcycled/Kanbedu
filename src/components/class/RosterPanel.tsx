@@ -315,12 +315,21 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
     idleRef.current = { activeId, selectedSize: selected.size, busy };
   }, [activeId, selected.size, busy]);
   useEffect(() => {
-    const iv = setInterval(() => {
+    let iv: ReturnType<typeof setInterval> | null = null;
+
+    const tick = () => {
       const s = idleRef.current;
-      if (document.hidden || s.activeId || s.selectedSize > 0 || s.busy || inflightRef.current > 0) return;
+      if (s.activeId || s.selectedSize > 0 || s.busy || inflightRef.current > 0) return;
       load(true);
-    }, POLL_MS);
-    return () => clearInterval(iv);
+    };
+
+    const start = () => { if (!iv) iv = setInterval(tick, POLL_MS); };
+    const stop = () => { if (iv) { clearInterval(iv); iv = null; } };
+    const onVisibility = () => { document.hidden ? stop() : start(); };
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
   }, [load]);
 
   const students = members.filter((m) => m.role === "student");
