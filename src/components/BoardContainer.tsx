@@ -305,10 +305,10 @@ export default function BoardContainer({
     let skip = 0;
     setTasks((prev) => { skip = prev.length; return prev; });
     const res = await fetch(`/api/tasks?boardId=${boardId}&skip=${skip}&take=100`, { cache: "no-store" });
-    const payload = res.ok ? await res.json() : { tasks: [], total: 0 };
-    const incoming = (payload.tasks ?? []) as Task[];
-    const total = (payload.total ?? 0) as number;
-    if (activeBoardIdRef.current === boardId) {
+    if (res.ok && activeBoardIdRef.current === boardId) {
+      const payload = await res.json();
+      const incoming = (payload.tasks ?? []) as Task[];
+      const total = (payload.total ?? 0) as number;
       setTasks((prev) => {
         const existingIds = new Set(prev.map((t) => t.id));
         const merged = [...prev, ...incoming.filter((t) => !existingIds.has(t.id))];
