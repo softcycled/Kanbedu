@@ -59,8 +59,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
-  // View mode state
+  // View mode state — default to list on mobile after hydration
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 768px)").matches) setViewMode("list");
+  }, []);
 
   // Toggle slider refs/state for animated highlight
   const toggleRef = useRef<HTMLDivElement | null>(null);
@@ -875,6 +878,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             ref={boardBtnRef}
             onClick={() => setViewMode("board")}
             title="Board view"
+            aria-label="Board view"
             className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "board"
                 ? "text-ink/90"
@@ -892,6 +896,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             ref={listBtnRef}
             onClick={() => setViewMode("list")}
             title="List view"
+            aria-label="List view"
             className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
               viewMode === "list"
                 ? "text-ink/90"
