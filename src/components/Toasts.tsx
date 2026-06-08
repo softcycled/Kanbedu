@@ -72,15 +72,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // mount animation
     requestAnimationFrame(() => setMounted(true));
   }, []);
+
+  const hasAction = !!(toast.actionLabel && toast.onAction);
+  const dismissBtn = (
+    <button onClick={onClose} className="flex-shrink-0 p-1 rounded-md text-muted hover:bg-column-bg transition-colors" aria-label="Dismiss">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
+  );
 
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`pointer-events-auto max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-card px-4 py-3 text-ink flex items-center gap-3`}
+      className="pointer-events-auto max-w-sm w-full bg-card-bg border border-border rounded-lg shadow-card px-4 py-4 text-ink"
       style={{
         transform: mounted ? "translateY(0)" : "translateY(8px)",
         opacity: mounted ? 1 : 0,
@@ -88,30 +97,36 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
         willChange: "transform, opacity",
       }}
     >
-      <div className="flex-1 min-w-0">
-        {toast.title && <div className="text-sm font-medium truncate">{toast.title}</div>}
-        {toast.description && <div className="text-xs text-muted truncate mt-0.5">{toast.description}</div>}
-      </div>
-      {toast.actionLabel && (
-        <button
-          onClick={() => {
-            try {
-              toast.onAction && toast.onAction();
-            } finally {
-              onClose();
-            }
-          }}
-          className="flex-shrink-0 text-xs font-semibold text-ink bg-column-bg hover:bg-border/40 border border-border px-2.5 py-1.5 rounded-md transition-colors focus:outline-none focus-ring"
-        >
-          {toast.actionLabel}
-        </button>
+      {hasAction ? (
+        <>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm leading-snug">
+              <span className="text-muted">{toast.title}: </span>
+              <span className="font-semibold text-ink">{toast.description}</span>
+            </p>
+            {dismissBtn}
+          </div>
+          <p className="text-xs text-muted mt-1.5 leading-relaxed">
+            Deleted items are gone for good once this closes. Undo now to restore it.
+          </p>
+          <div className="mt-3">
+            <button
+              onClick={() => { try { toast.onAction?.(); } finally { onClose(); } }}
+              className="text-sm font-semibold text-ink hover:text-ink/60 transition-colors"
+            >
+              {toast.actionLabel}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            {toast.title && <div className="text-sm font-medium truncate">{toast.title}</div>}
+            {toast.description && <div className="text-xs text-muted truncate mt-0.5">{toast.description}</div>}
+          </div>
+          {dismissBtn}
+        </div>
       )}
-      <button onClick={onClose} className="flex-shrink-0 p-1.5 rounded-md text-muted hover:bg-column-bg transition-colors" aria-label="Dismiss">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
     </div>
   );
 }
