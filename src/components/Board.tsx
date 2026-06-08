@@ -152,6 +152,13 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     return () => window.removeEventListener("resize", update);
   }, [viewMode]);
 
+  // Done column is always pinned to the rightmost position.
+  const sortedColumns = useMemo(() => {
+    const nonDone = columns.filter((c) => !c.isDone);
+    const done = columns.filter((c) => c.isDone);
+    return [...nonDone, ...done];
+  }, [columns]);
+
   // ── Column actions ─────────────────────────────────────────────
 
   const handleRenameColumn = useCallback(async (columnId: string, newLabel: string) => {
@@ -190,15 +197,21 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       });
       if (res.ok) {
         // Server enforces single-done: clear all then set this one.
-        onColumnsChange((prev) =>
-          prev.map((c) =>
-            c.id === columnId
-              ? { ...c, isDone: newIsDone }
-              : newIsDone
-              ? { ...c, isDone: false }
-              : c
-          )
+        const updated = columns.map((c) =>
+          c.id === columnId ? { ...c, isDone: newIsDone } : newIsDone ? { ...c, isDone: false } : c
         );
+        // Marking as done: move that column to the rightmost position and persist the new order.
+        const finalColumns = newIsDone
+          ? [...updated.filter((c) => c.id !== columnId), updated.find((c) => c.id === columnId)!]
+          : updated;
+        if (newIsDone) {
+          fetch("/api/columns", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ columns: finalColumns.map((c, i) => ({ id: c.id, order: i })) }),
+          }).catch((err) => console.error("Failed to persist done-column order:", err));
+        }
+        onColumnsChange(finalColumns);
         broadcastRefresh();
       } else {
         toasts.push({ title: "Could not update column", description: "Please try again." });
@@ -516,34 +529,33 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     const overId = over.id as string;
 
     // Check if dragging a column
-    const draggedColumn = columns.find((c) => c.id === activeId);
+    const draggedColumn = sortedColumns.find((c) => c.id === activeId);
     if (draggedColumn) {
+      // Done column is pinned to the end — never draggable.
+      if (draggedColumn.isDone) return;
+
       const overTask = tasks.find((t) => t.id === overId);
       const overColumnId = overTask ? overTask.column : overId;
-      const overColumn = columns.find((c) => c.id === overColumnId);
-      if (!overColumn) return;
+      if (!sortedColumns.find((c) => c.id === overColumnId)) return;
 
-      const oldIndex = columns.findIndex((c) => c.id === activeId);
-      const newIndex = columns.findIndex((c) => c.id === overColumnId);
+      const oldIndex = sortedColumns.findIndex((c) => c.id === activeId);
+      // Clamp target so non-done columns can't land after the done column.
+      const doneIndex = sortedColumns.findIndex((c) => c.isDone);
+      let newIndex = sortedColumns.findIndex((c) => c.id === overColumnId);
+      if (doneIndex !== -1 && newIndex >= doneIndex) newIndex = doneIndex - 1;
 
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-      const reordered = arrayMove(columns, oldIndex, newIndex);
+      const reordered = arrayMove(sortedColumns, oldIndex, newIndex);
 
       // Update local state immediately
       onColumnsChange(reordered);
-
-      // Persist order to server
-      const updates = reordered.map((col, idx) => ({
-        id: col.id,
-        order: idx,
-      }));
 
       // Persist order to server — fire-and-forget, UI already updated
       fetch("/api/columns", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns: updates }),
+        body: JSON.stringify({ columns: reordered.map((col, idx) => ({ id: col.id, order: idx })) }),
       }).catch((error) => console.error("Failed to persist column order:", error));
 
       broadcastRefresh();
@@ -937,7 +949,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+            <SortableContext items={sortedColumns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
               <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
             {isLoading ? (
               // Render simple skeleton columns while loading
@@ -952,7 +964,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                 </div>
               ))
             ) : (
-              columns.map((col, index) => (
+              sortedColumns.map((col, index) => (
                 <KanbanColumn
                   key={col.id}
                   columnId={col.id}
