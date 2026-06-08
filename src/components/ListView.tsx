@@ -260,7 +260,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
         </button>
         <button
           onClick={() => handleSort("phase")}
-          className={`w-24 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-left cursor-pointer transition-colors hover:text-ink ${
+          className={`hidden md:block w-24 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-left cursor-pointer transition-colors hover:text-ink ${
             sortKey === "phase" ? "text-ink" : "text-muted/70"
           }`}
         >
@@ -269,7 +269,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
         </button>
         <button
           onClick={() => handleSort("priority")}
-          className={`w-16 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-left cursor-pointer transition-colors hover:text-ink ${
+          className={`hidden md:block w-16 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-left cursor-pointer transition-colors hover:text-ink ${
             sortKey === "priority" ? "text-ink" : "text-muted/70"
           }`}
         >
@@ -279,7 +279,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
         <span className="w-7 flex-shrink-0" aria-label="Assignee" />
         <button
           onClick={() => handleSort("deadline")}
-          className={`w-20 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-right cursor-pointer transition-colors hover:text-ink ${
+          className={`hidden md:block w-20 flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-right cursor-pointer transition-colors hover:text-ink ${
             sortKey === "deadline" ? "text-ink" : "text-muted/70"
           }`}
         >
@@ -323,6 +323,24 @@ interface RowProps {
 }
 
 const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const avatarRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!tooltipOpen) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setTooltipOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, [tooltipOpen]);
+
   const p = task.priority ?? "medium";
   const pCfg = PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
   const colColor = columnEntry
@@ -341,39 +359,58 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: Ro
     <button
       type="button"
       onClick={onClick}
-      className="
-        w-full flex items-center gap-3 px-3 py-2.5
-        text-left rounded-lg
-        hover:bg-column-bg/60 active:bg-column-bg
-        transition-colors duration-100 group
-      "
+      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-column-bg/60 active:bg-column-bg transition-colors duration-100 group"
     >
       {/* Title */}
       <span className="flex-1 min-w-0 text-sm font-medium text-ink leading-snug truncate group-hover:text-ink/90">
         {task.title}
       </span>
 
-      {/* Phase / column pill */}
-      <span className={`w-24 flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${colColor.pill} truncate`}>
+      {/* Phase / column pill — desktop only */}
+      <span className={`hidden md:inline-flex w-24 flex-shrink-0 items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${colColor.pill} truncate`}>
         <span className={`w-1.5 h-1.5 flex-shrink-0 rounded-full ${colColor.dot}`} />
         <span className="truncate">{columnEntry?.label ?? "—"}</span>
       </span>
 
-      {/* Priority badge */}
-      <span className={`w-16 flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${pCfg.badge} ${pCfg.text}`}>
+      {/* Priority badge — desktop only */}
+      <span className={`hidden md:inline-flex w-16 flex-shrink-0 items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${pCfg.badge} ${pCfg.text}`}>
         <span className={`w-1.5 h-1.5 flex-shrink-0 rounded-full ${pCfg.dot}`} />
         {pCfg.label}
       </span>
 
-      {/* Assignee avatar */}
-      <span className="w-7 flex-shrink-0 flex items-center justify-center">
+      {/* Assignee avatar — always visible, tap to show name tooltip */}
+      <span ref={avatarRef} className="w-7 flex-shrink-0 flex items-center justify-center">
         {member ? (
           <span
-            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-            style={{ backgroundColor: member.color || nameToColor(member.name) }}
-            title={member.name}
+            className="relative"
+            onClick={(e) => { e.stopPropagation(); setTooltipOpen((v) => !v); }}
+            onMouseEnter={() => setTooltipOpen(true)}
+            onMouseLeave={() => setTooltipOpen(false)}
           >
-            {member.name.charAt(0).toUpperCase()}
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 cursor-pointer"
+              style={{ backgroundColor: member.color || nameToColor(member.name) }}
+            >
+              {member.name.charAt(0).toUpperCase()}
+            </span>
+            {tooltipOpen && (
+              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50">
+                <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+                  <span
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                    style={{ backgroundColor: member.color || nameToColor(member.name) }}
+                  >
+                    {member.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-semibold text-white leading-tight">{member.name}</span>
+                    {member.handle && (
+                      <span className="text-[11px] text-white/50 leading-tight">@{member.handle}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </span>
         ) : (
           <span className="w-6 h-6 rounded-full border border-border/60 flex items-center justify-center">
@@ -382,8 +419,8 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: Ro
         )}
       </span>
 
-      {/* Deadline */}
-      <span className={`w-20 flex-shrink-0 text-[11px] font-medium text-right tabular-nums ${deadlineInfo.severity === "none" ? "text-muted/50" : deadlineColor}`}>
+      {/* Deadline — desktop only */}
+      <span className={`hidden md:block w-20 flex-shrink-0 text-[11px] font-medium text-right tabular-nums ${deadlineInfo.severity === "none" ? "text-muted/50" : deadlineColor}`}>
         {deadlineInfo.severity === "none" ? "—" : deadlineInfo.label}
       </span>
     </button>
