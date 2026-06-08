@@ -137,6 +137,7 @@ export default function TaskModal({
   const pendingRequestsRef = useRef<{ comments?: Promise<any> | null; activities?: Promise<any> | null; versions?: Promise<any> | null }>({ comments: null, activities: null, versions: null });
   const activityIdleTimerRef = useRef<number | null>(null);
   const descriptionOriginalRef = useRef<string>("");
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const savedIndicatorTimeoutRef = useRef<number | null>(null);
   const [justSaved, setJustSaved] = useState(false);
@@ -167,6 +168,7 @@ export default function TaskModal({
     if (task.id !== prevTask.current) {
       prevTask.current = task.id;
       userHasEdited.current = false;
+      previousFocusRef.current = document.activeElement as HTMLElement;
       // Cancel any in-flight fetches for the previous task so they don't block this task's fetches
       pendingRequestsRef.current.comments = null;
       pendingRequestsRef.current.activities = null;
@@ -615,7 +617,11 @@ export default function TaskModal({
     flushUpdates();
     setClosing(true);
     // Let the slide-out animation play before unmounting via parent
-    setTimeout(() => onClose(), 200);
+    setTimeout(() => {
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
+      onClose();
+    }, 200);
   }, [flushUpdates, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -649,7 +655,7 @@ export default function TaskModal({
     const firstFocusable = modal.querySelector<HTMLElement>(FOCUSABLE);
     firstFocusable?.focus();
     return () => modal.removeEventListener("keydown", handler);
-  }, []);
+  }, [task?.id]);
 
   const handleAddComment = async () => {
     const trimmed = commentInput.trim();
@@ -1364,7 +1370,7 @@ export default function TaskModal({
     >
       <div
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-label={task?.title ?? "Task"}
         className={`pointer-events-auto relative bg-card-bg shadow-modal border-l border-border/60 w-full h-full flex flex-col overflow-hidden ${closing ? "" : "motion-safe:animate-slide-in-right"}`}
         style={
