@@ -400,11 +400,11 @@ export default function BoardContainer({
         isAdmin={isAdmin}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activeClass && (
-          <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
+          <div className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
             <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} />
-          </main>
+          </div>
         )}
         {!activeClass && activePanel === "board" && (
           <>
@@ -419,7 +419,7 @@ export default function BoardContainer({
                 </button>
               </div>
             )}
-            <main className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
+            <div className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
               <BoardComp
                 key={activeBoardId}
                 boardId={activeBoardId}
@@ -431,7 +431,7 @@ export default function BoardContainer({
                 isLoading={isLoadingBoard}
                 currentUserId={currentUserId}
               />
-            </main>
+            </div>
           </>
         )}
         {activePanel === "analytics" && (
@@ -454,7 +454,7 @@ export default function BoardContainer({
         {activePanel === "profile" && <ProfilePanel />}
         {activePanel === "admin" && <AdminPanel />}
         {activePanel === "help" && <HelpPanel />}
-      </div>
+      </main>
     </div>
   );
 }
