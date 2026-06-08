@@ -76,11 +76,10 @@ function FlagChip({
   return (
     <span className={`relative group/chip inline-flex text-[11px] px-2 py-0.5 rounded-full font-medium cursor-default ${map.cls}`}>
       {map.label}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 hidden group-hover/chip:flex flex-col items-center">
-        <span className="whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-[10px] leading-snug text-paper shadow-lg">
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/chip:opacity-100 transition-opacity duration-150">
+        <span className="block whitespace-nowrap rounded-xl bg-[#1C1917] border border-white/10 px-3 py-2 text-xs text-white shadow-lg">
           {tooltip}
         </span>
-        <span className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-ink" />
       </span>
     </span>
   );
