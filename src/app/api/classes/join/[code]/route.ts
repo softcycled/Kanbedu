@@ -63,12 +63,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
       : null;
 
     let groupId: string | null = null;
+    let groupBoardId: string | null = null;
     if (rosterEntry?.groupName) {
       const group = await prisma.group.findFirst({
         where: { classId: cls.id, name: rosterEntry.groupName },
-        select: { id: true },
+        select: { id: true, boardId: true },
       });
       groupId = group?.id ?? null;
+      groupBoardId = group?.boardId ?? null;
     }
 
     await prisma.classMember.create({
@@ -80,6 +82,15 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
         ...(groupId ? { groupId } : {}),
       },
     });
+
+    // Grant board access so the student can load their group's board immediately.
+    if (groupBoardId) {
+      await prisma.boardMember.upsert({
+        where: { userId_boardId: { userId: session.userId, boardId: groupBoardId } },
+        update: {},
+        create: { userId: session.userId, boardId: groupBoardId, role: "member" },
+      });
+    }
 
     // Mark the roster entry as claimed
     if (rosterEntry) {
