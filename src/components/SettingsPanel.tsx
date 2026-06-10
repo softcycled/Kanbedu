@@ -320,23 +320,29 @@ export default function SettingsPanel({
                   ) : classBoardMembers.length === 0 ? (
                     <div className="px-4 py-6 text-center text-xs text-muted">No members found.</div>
                   ) : (
-                    classBoardMembers.map((member, i) => (
-                      <div
-                        key={member.id}
-                        className={`flex items-center gap-3 px-4 py-3 ${i < classBoardMembers.length - 1 ? "border-b border-border/60" : ""}`}
-                      >
+                    classBoardMembers.map((member, i) => {
+                      const roleInfo = ROLE_LABELS[member.role ?? "member"] ?? ROLE_LABELS.member;
+                      return (
                         <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm"
-                          style={{ backgroundColor: member.color }}
+                          key={member.id}
+                          className={`flex items-center gap-3 px-4 py-3 ${i < classBoardMembers.length - 1 ? "border-b border-border/60" : ""}`}
                         >
-                          {member.name.charAt(0).toUpperCase()}
+                          <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-ink truncate">{member.name}</p>
+                            <p className="text-xs text-muted truncate">{member.handle ? `@${member.handle}` : member.email}</p>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleInfo.color}`}>
+                            {roleInfo.label}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-ink truncate">{member.name}</p>
-                          <p className="text-xs text-muted truncate">{member.handle ? `@${member.handle}` : member.email}</p>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </section>
