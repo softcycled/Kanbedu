@@ -879,7 +879,7 @@ export default function TaskModal({
           </button>
           {assigneeDropdownOpen && (
             <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((m) => {
+              {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta")].map((m) => {
                 const isSelected = m.id === assigneeId;
                 return (
                   <button
@@ -1597,7 +1597,7 @@ export default function TaskModal({
                       </button>
                       {openMetaProp === "assignee" && (
                         <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers].map((bm) => {
+                          {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta")].map((bm) => {
                             const isSelected = bm.id === assigneeId;
                             return (
                               <button

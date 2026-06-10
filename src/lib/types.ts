@@ -81,4 +81,5 @@ export interface BoardMemberData {
   email: string;
   handle?: string | null;
   role?: string;
+  classRole?: string | null;
 }

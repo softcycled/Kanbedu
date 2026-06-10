@@ -30,7 +30,23 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized access to board members." }, { status: 403 });
     }
 
-    const formattedMembers = members.map((m) => ({ ...m.user, role: m.role }));
+    // If this board belongs to a class group, include each member's class role
+    // so the UI can filter educators/TAs out of the assignee dropdown.
+    const group = await prisma.group.findUnique({ where: { boardId: id }, select: { classId: true } });
+    let classRoleMap = new Map<string, string>();
+    if (group) {
+      const classMembers = await prisma.classMember.findMany({
+        where: { classId: group.classId, userId: { in: members.map((m) => m.userId) } },
+        select: { userId: true, role: true },
+      });
+      classRoleMap = new Map(classMembers.map((cm) => [cm.userId, cm.role]));
+    }
+
+    const formattedMembers = members.map((m) => ({
+      ...m.user,
+      role: m.role,
+      classRole: classRoleMap.get(m.userId) ?? null,
+    }));
 
     return NextResponse.json(formattedMembers);
   } catch (error) {
