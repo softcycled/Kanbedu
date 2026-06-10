@@ -10,6 +10,7 @@ import ConfirmModal from "./ConfirmModal";
 interface Member {
   id: string;
   name: string;
+  handle?: string | null;
   email: string;
   color: string;
   role: string;
@@ -51,6 +52,21 @@ export default function SettingsPanel({
 }: Props) {
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
+
+  const [selectedClassBoardId, setSelectedClassBoardId] = useState<string | null>(null);
+  const selectedClassBoard = classBoards.find((c) => c.boardId === selectedClassBoardId) ?? null;
+  const [classBoardMembers, setClassBoardMembers] = useState<Member[]>([]);
+  const [loadingClassMembers, setLoadingClassMembers] = useState(false);
+
+  useEffect(() => {
+    if (!selectedClassBoardId) { setClassBoardMembers([]); return; }
+    setLoadingClassMembers(true);
+    fetch(`/api/boards/${selectedClassBoardId}/members`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setClassBoardMembers(Array.isArray(data) ? data : []))
+      .catch(() => setClassBoardMembers([]))
+      .finally(() => setLoadingClassMembers(false));
+  }, [selectedClassBoardId]);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(board?.name ?? "");
@@ -220,7 +236,7 @@ export default function SettingsPanel({
             {boards.map((b) => (
               <button
                 key={b.id}
-                onClick={() => setSelectedBoardId(b.id)}
+                onClick={() => { setSelectedBoardId(b.id); setSelectedClassBoardId(null); }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
                   selectedBoardId === b.id
                     ? "bg-ink/8 text-ink font-medium"
@@ -243,8 +259,12 @@ export default function SettingsPanel({
                 {classBoards.map((c) => (
                   <button
                     key={c.classId}
-                    onClick={() => onSwitchToBoard?.(c.boardId)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 text-ink/70 hover:bg-ink/5 hover:text-ink"
+                    onClick={() => { setSelectedClassBoardId(c.boardId); setSelectedBoardId(""); }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                      selectedClassBoardId === c.boardId
+                        ? "bg-ink/8 text-ink font-medium"
+                        : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+                    }`}
                   >
                     <div
                       className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
@@ -259,8 +279,72 @@ export default function SettingsPanel({
             )}
           </div>
 
-          {/* Board detail */}
-          <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
+          {/* Class board detail — read-only view when a class board is selected */}
+          {selectedClassBoard && (
+            <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
+              <section>
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
+                    style={{ backgroundColor: "#6B7A8D" }}
+                  >
+                    {(selectedClassBoard.groupName || selectedClassBoard.className).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-ink truncate">
+                      {selectedClassBoard.groupName || selectedClassBoard.className}
+                    </h3>
+                    {selectedClassBoard.groupName && (
+                      <p className="text-xs text-muted mt-0.5">{selectedClassBoard.className}</p>
+                    )}
+                    <p className="text-xs text-muted mt-0.5">{classBoardMembers.length} member{classBoardMembers.length !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                {onSwitchToBoard && (
+                  <button
+                    onClick={() => onSwitchToBoard(selectedClassBoard.boardId)}
+                    className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Open board
+                  </button>
+                )}
+              </section>
+
+              <section>
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+                  Members ({classBoardMembers.length})
+                </h4>
+                <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+                  {loadingClassMembers ? (
+                    <div className="px-4 py-6 text-center text-xs text-muted">Loading…</div>
+                  ) : classBoardMembers.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-xs text-muted">No members found.</div>
+                  ) : (
+                    classBoardMembers.map((member, i) => (
+                      <div
+                        key={member.id}
+                        className={`flex items-center gap-3 px-4 py-3 ${i < classBoardMembers.length - 1 ? "border-b border-border/60" : ""}`}
+                      >
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink truncate">{member.name}</p>
+                          <p className="text-xs text-muted truncate">{member.handle ? `@${member.handle}` : member.email}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* Personal board detail */}
+          <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8" style={{ display: selectedClassBoard ? "none" : undefined }}>
             {/* Identity */}
             <section>
               <div className="flex items-start gap-4">
