@@ -230,26 +230,31 @@ function MonitorVisual() {
         {MONITOR_GROUPS.map((g) => (
           <div
             key={g.name}
-            className={`text-left rounded-2xl border bg-card-bg p-4 ${
-              g.attention ? "border-orange-800" : "border-border/70"
+            className={`text-left rounded-2xl border p-5 ${
+              g.attention
+                ? "border-orange-800 bg-orange-950/20"
+                : "border-border/70 bg-card-bg"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-ink">{g.name}</h3>
-              <span className="text-xs text-muted">{g.pct}%</span>
+              <h3 className="text-sm font-semibold text-ink truncate">{g.name}</h3>
+              <span className="text-xs text-muted flex-shrink-0">{g.pct}%</span>
             </div>
-            <div className="mt-2 h-1.5 rounded-full bg-ink/8 overflow-hidden">
-              <div className="h-full rounded-full bg-ink/60" style={{ width: `${g.pct}%` }} />
+            <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
+              <div
+                className={`h-full rounded-full ${g.attention ? "bg-orange-400" : "bg-blue-400"}`}
+                style={{ width: `${g.pct}%` }}
+              />
             </div>
-            <p className="mt-1.5 text-xs text-muted">{g.done} of {g.total} tasks done</p>
-            <div className="mt-2.5 flex flex-wrap gap-1">
+            <p className="mt-2 text-xs text-muted">{g.done} of {g.total} tasks done</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {g.cols.map((c) => (
                 <span key={c.l} className="text-[10px] px-1.5 py-0.5 rounded bg-ink/5 text-ink/70">
                   {c.l} {c.n}
                 </span>
               ))}
             </div>
-            <div className="mt-3 flex -space-x-1.5">
+            <div className="mt-4 flex -space-x-1.5">
               {g.colors.map((color, i) => (
                 <span
                   key={i}
