@@ -40,6 +40,10 @@ export async function PATCH(
     }
     const data = result.data;
 
+    if (data.isDone !== undefined && membership.role !== "owner") {
+      return NextResponse.json({ error: "Only board owners can change the done column." }, { status: 403 });
+    }
+
     const updateData: { label?: string; isDone?: boolean; color?: string | null } = {};
     if (data.label !== undefined) updateData.label = data.label;
     if (data.isDone !== undefined) updateData.isDone = data.isDone;
@@ -138,6 +142,9 @@ export async function DELETE(
     });
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (membership.role !== "owner") {
+      return NextResponse.json({ error: "Only board owners can delete columns." }, { status: 403 });
     }
 
     // Parse request body, handle empty body

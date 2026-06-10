@@ -35,6 +35,7 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
   const [tasks, setTasks] = useState<Task[]>(initialCache?.tasks ?? []);
   const [columns, setColumns] = useState<ColumnData[]>(initialCache?.columns ?? []);
   const [isLoading, setIsLoading] = useState(!isFresh);
+  const [fetchError, setFetchError] = useState(false);
 
   const columnsRef = useRef(columns);
   useEffect(() => { columnsRef.current = columns; }, [columns]);
@@ -71,7 +72,12 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         setColumns(data.columns);
         setIsLoading(false);
       })
-      .catch(() => { if (!cancelled) setIsLoading(false); });
+      .catch(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+          setFetchError(true);
+        }
+      });
     return () => { cancelled = true; };
   }, [fetchBoardData, boardId]);
 
@@ -98,6 +104,17 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
   }, [fetchBoardData, boardId]);
 
   useRealtime(realtimeSecret ?? null, handleRefresh);
+
+  if (fetchError && !isLoading && tasks.length === 0 && columns.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-center p-8">
+        <div>
+          <p className="text-sm font-medium text-foreground">Could not load the board</p>
+          <p className="text-xs text-muted mt-1">Check your connection and refresh the page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">

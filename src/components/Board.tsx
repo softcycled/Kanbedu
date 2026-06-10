@@ -721,10 +721,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       broadcastRefresh({ type: "task:update", task: updatedTask });
     } catch (error) {
       console.error("Failed to update task:", error);
-      // rollback optimistic update
       if (prevTask) onTasksChange((prev) => prev.map((t) => (t.id === id ? prevTask : t)));
+      toasts.push({ title: "Could not save changes", description: "Please try again." });
     }
-  }, [broadcastRefresh]);
+  }, [broadcastRefresh, onTasksChange, toasts]);
 
   const handleDeleteTask = useCallback(async (id: string) => {
     const prevTask = tasksRef.current.find((t) => t.id === id);

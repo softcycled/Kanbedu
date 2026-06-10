@@ -20,6 +20,7 @@ import MarkdownText from "./MarkdownText";
 import MarkdownToolbar from "./MarkdownToolbar";
 import { getColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
+import { useToasts } from "@/components/Toasts";
 
 const getColumnDot = (index: number) =>
   index < 0 ? "bg-muted" : getColumnPalette(index).dot;
@@ -56,6 +57,7 @@ export default function TaskModal({
   boardId,
   onBroadcast
 }: Props) {
+  const toasts = useToasts();
   const [, setTick] = useState(0);
   const [description, setDescription] = useState("");
   const [optimisticTitle, setOptimisticTitle] = useState<string | null>(null);
@@ -128,6 +130,8 @@ export default function TaskModal({
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const saveErrorTimeoutRef = useRef<number | null>(null);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -531,20 +535,25 @@ export default function TaskModal({
     if (!task) return;
     if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     setSaving(true);
+    setSaveError(false);
+    if (saveErrorTimeoutRef.current) window.clearTimeout(saveErrorTimeoutRef.current);
     try {
       await onUpdate(id, data);
       if (!isMounted.current) return;
-      // show a subtle "Saved" badge briefly
       setJustSaved(true);
       if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
       savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);
     } catch (err) {
       console.error("Update failed", err);
+      if (!isMounted.current) return;
+      setSaveError(true);
+      saveErrorTimeoutRef.current = window.setTimeout(() => setSaveError(false), 5000);
+      toasts.push({ title: "Could not save changes", description: "Please try again." });
     } finally {
       if (!isMounted.current) return;
       savingTimeoutRef.current = setTimeout(() => setSaving(false), 400);
     }
-  }, [onUpdate, task]);
+  }, [onUpdate, task, toasts]);
 
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
@@ -2002,6 +2011,11 @@ export default function TaskModal({
               <>
                 <div className="w-1.5 h-1.5 bg-sky-300 rounded-full motion-safe:animate-pulse" />
                 <p className="text-xs text-muted">Saving...</p>
+              </>
+            ) : saveError ? (
+              <>
+                <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                <p className="text-xs text-red-500">Could not save — please try again</p>
               </>
             ) : (
               <>

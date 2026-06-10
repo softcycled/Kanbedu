@@ -266,6 +266,9 @@ export async function PATCH(
       try {
         const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true } });
         if (!destCol) return NextResponse.json({ error: "Destination column not found" }, { status: 400 });
+        if (destCol.boardId !== taskAuth.columnRel.boardId) {
+          return NextResponse.json({ error: "Destination column must belong to the same board." }, { status: 400 });
+        }
         const destAllowed = await isMemberOfBoard(session.userId, destCol.boardId);
         if (!destAllowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       } catch (err) {

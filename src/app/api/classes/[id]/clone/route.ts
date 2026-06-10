@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const role = await getClassRole(session.userId, id);
-    if (role !== "educator" && role !== "ta") {
+    if (role !== "educator") {
       return NextResponse.json({ error: "Only educators can clone a class." }, { status: 403 });
     }
 

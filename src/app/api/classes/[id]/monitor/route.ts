@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         ? []
         : await prisma.task.findMany({
             where: { column: { in: allColumnIds } },
-            select: { column: true, deadline: true, completedAt: true, columnUpdatedAt: true },
+            select: { column: true, deadline: true, completedAt: true, columnUpdatedAt: true, createdAt: true },
           });
     const tasksByColumn = new Map<string, typeof allTasks>();
     for (const t of allTasks) {
@@ -69,7 +69,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         }
         // Not in a done column: candidate for help signals.
         if (t.deadline && t.deadline.getTime() < now) overdue++;
-        if (now - t.columnUpdatedAt.getTime() > stallMs) stalled++;
+        const neverMoved = t.columnUpdatedAt.getTime() === t.createdAt.getTime();
+        if (!neverMoved && now - t.columnUpdatedAt.getTime() > stallMs) stalled++;
       }
 
       const perColumn = columns.map((c) => ({
