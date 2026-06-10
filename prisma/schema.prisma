@@ -16,6 +16,7 @@ model User {
   name                String                   @default("")
   color               String                   @default("#4A90A4")
   createdAt           DateTime                 @default(now())
+  passwordChangedAt   DateTime?
   isAdmin             Boolean                  @default(false)
   emailVerified       Boolean                  @default(false)
   invites             BoardInvite[]

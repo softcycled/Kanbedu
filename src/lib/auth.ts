@@ -43,10 +43,22 @@ export async function getSession(): Promise<{ userId: string } | null> {
 
   try {
     const { payload } = await jwtVerify(cookie.value, SECRET);
-    if (typeof payload.userId === "string") {
-      return { userId: payload.userId };
+    if (typeof payload.userId !== "string") return null;
+
+    // Reject sessions issued before the most recent password change so that
+    // changing a password immediately invalidates all existing sessions.
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { passwordChangedAt: true } as any,
+    }) as { passwordChangedAt: Date | null } | null;
+
+    if (!user) return null;
+    if (user.passwordChangedAt && typeof payload.iat === "number") {
+      // JWT iat is in seconds; passwordChangedAt is a JS Date (milliseconds)
+      if (payload.iat * 1000 < user.passwordChangedAt.getTime()) return null;
     }
-    return null;
+
+    return { userId: payload.userId };
   } catch {
     return null;
   }
