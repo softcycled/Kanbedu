@@ -178,8 +178,8 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
 
       <div className="flex items-start justify-between gap-4 mb-5">
         <p className="text-xs text-muted max-w-xl">
-          Tasks that may have been completed dishonestly, finished suspiciously fast
-          (under {data.speedRunMinutes}m), moved straight to done without passing through
+          Tasks that may have been completed dishonestly, finished suspiciously fast,
+          moved straight to done without passing through
           earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
         </p>
         <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
