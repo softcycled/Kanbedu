@@ -21,6 +21,13 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   member: { label: "Member", color: "text-muted bg-ink/5 border-border" },
 };
 
+interface ClassBoardSummary {
+  classId: string;
+  className: string;
+  groupName: string | null;
+  boardId: string;
+}
+
 interface Props {
   boards: Board[];
   activeBoardId: string;
@@ -28,6 +35,8 @@ interface Props {
   onDelete: (boardId: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
   currentUserId: string;
+  classBoards?: ClassBoardSummary[];
+  onSwitchToBoard?: (boardId: string) => void;
 }
 
 export default function SettingsPanel({
@@ -37,6 +46,8 @@ export default function SettingsPanel({
   onDelete,
   onReorder,
   currentUserId,
+  classBoards = [],
+  onSwitchToBoard,
 }: Props) {
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
@@ -225,6 +236,27 @@ export default function SettingsPanel({
                 <span className="truncate">{b.name}</span>
               </button>
             ))}
+
+            {classBoards.length > 0 && (
+              <>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mt-5 mb-3">Class Boards</p>
+                {classBoards.map((c) => (
+                  <button
+                    key={c.classId}
+                    onClick={() => onSwitchToBoard?.(c.boardId)}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 text-ink/70 hover:bg-ink/5 hover:text-ink"
+                  >
+                    <div
+                      className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
+                      style={{ backgroundColor: "#6B7A8D" }}
+                    >
+                      {(c.groupName || c.className).charAt(0).toUpperCase()}
+                    </div>
+                    <span className="truncate">{c.groupName || c.className}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Board detail */}
