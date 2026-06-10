@@ -725,11 +725,15 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               <DropZone key={g.id} id={g.id} disabled={!interactive} className="rounded-2xl border border-border/70 bg-card-bg p-4 min-h-[120px]">
                 <div className="flex items-center justify-between mb-3 gap-2">
                   {interactive ? (
-                    <input
-                      defaultValue={g.name}
-                      onBlur={(e) => { if (e.target.value.trim() !== g.name) renameGroup(g.id, e.target.value); }}
-                      className="text-sm font-semibold text-ink bg-transparent outline-none focus:bg-column-bg rounded px-1 -ml-1 min-w-0 flex-1"
-                    />
+                    <label className="group/rename flex items-center gap-1 min-w-0 flex-1">
+                      <input
+                        defaultValue={g.name}
+                        onBlur={(e) => { if (e.target.value.trim() !== g.name) renameGroup(g.id, e.target.value); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        className="text-sm font-semibold text-ink bg-transparent outline-none focus:bg-column-bg rounded px-1 -ml-1 min-w-0 flex-1"
+                      />
+                      <svg className="flex-shrink-0 text-muted opacity-0 group-hover/rename:opacity-100 transition-opacity" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </label>
                   ) : (
                     <span className="text-sm font-semibold text-ink truncate min-w-0 flex-1">{g.name}</span>
                   )}

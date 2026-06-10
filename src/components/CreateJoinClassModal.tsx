@@ -7,12 +7,13 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  defaultMode?: "options" | "create" | "join";
 }
 
 // Create a new class (you become its educator) or join one with a code/link.
-export default function CreateJoinClassModal({ isOpen, onClose, onCreated }: Props) {
+export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defaultMode = "options" }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<"options" | "create" | "join">("options");
+  const [mode, setMode] = useState<"options" | "create" | "join">(defaultMode);
   const [name, setName] = useState("");
   const [term, setTerm] = useState("");
   const [code, setCode] = useState("");
@@ -22,14 +23,14 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated }: Pro
 
   useEffect(() => {
     if (isOpen) {
-      setMode("options");
+      setMode(defaultMode);
       setName("");
       setTerm("");
       setCode("");
       setError(null);
       setLoading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultMode]);
 
   useEffect(() => {
     if (mode !== "options") setTimeout(() => inputRef.current?.focus(), 0);

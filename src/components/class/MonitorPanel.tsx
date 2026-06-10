@@ -175,8 +175,8 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
               <span className="text-xs text-muted flex-shrink-0">{g.percent}%</span>
             </div>
 
-            <div className="mt-2 h-1.5 rounded-full bg-ink/8 overflow-hidden">
-              <div className="h-full rounded-full bg-ink/60" style={{ width: `${g.percent}%` }} />
+            <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
+              <div className="h-full rounded-full bg-green-500 dark:bg-green-500" style={{ width: `${g.percent}%` }} />
             </div>
 
             <p className="mt-2 text-xs text-muted">{g.done} of {g.total} tasks done</p>

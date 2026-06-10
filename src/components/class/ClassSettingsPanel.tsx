@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 
@@ -21,6 +22,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
   const [isArchived, setIsArchived] = useState(archived);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [copyMsg, setCopyMsg] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Clone dialog state
@@ -100,13 +102,22 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       {/* Invite */}
       <section className="mb-8">
         <h3 className="text-sm font-semibold text-ink mb-2">Class Invite</h3>
-        <p className="text-xs text-muted mb-2">Share this link. Students join the lobby, then you sort them into groups.</p>
-        <div className="flex items-center gap-2">
+        <p className="text-xs text-muted mb-2">Share this link or QR code. Students join the lobby, then you sort them into groups.</p>
+        <div className="flex items-center gap-2 mb-3">
           <input readOnly value={joinUrl} className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-border bg-column-bg text-ink/80 outline-none" />
           <button onClick={copyInvite} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity">
             {copyMsg ? "Copied" : "Copy"}
           </button>
+          <button onClick={() => setShowQR((v) => !v)} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-card-bg text-ink hover:bg-column-bg transition-colors">
+            {showQR ? "Hide QR" : "QR Code"}
+          </button>
         </div>
+        {showQR && (
+          <div className="inline-flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-white">
+            <QRCodeSVG value={joinUrl} size={200} />
+            <p className="text-[11px] text-stone-500">Scan to join · {joinCode}</p>
+          </div>
+        )}
       </section>
 
       {/* Details */}

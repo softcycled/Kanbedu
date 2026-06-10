@@ -222,6 +222,7 @@ export default function Sidebar({
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [classModalMode, setClassModalMode] = useState<"options" | "create" | "join">("options");
   const [showArchived, setShowArchived] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -269,8 +270,15 @@ export default function Sidebar({
     }
   };
 
-  const activeClasses = classes.filter((c) => !c.archived);
+  const isEducatorOf = (c: ClassSummary) => c.role === "educator" || c.role === "ta";
+  const educatorClasses = classes.filter((c) => isEducatorOf(c) && !c.archived);
+  const studentClasses = classes.filter((c) => !isEducatorOf(c) && !c.archived);
   const archivedClasses = classes.filter((c) => c.archived);
+
+  const openClassModal = (mode: "create" | "join") => {
+    setClassModalMode(mode);
+    setIsClassModalOpen(true);
+  };
 
   const renderClassItem = (c: ClassSummary, archived = false) => {
     const isActive = activeClassId === c.id;
@@ -386,24 +394,44 @@ export default function Sidebar({
 
         </div>
 
+        {/* Class Boards — classes the user is a student in */}
         <div className="px-3 mt-4">
           <div className="flex items-center justify-between px-1 mb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Classes</span>
-            <button onClick={() => setIsClassModalOpen(true)} className="text-muted hover:text-ink transition-colors" title="New or join class">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Class Boards</span>
+            <button onClick={() => openClassModal("join")} className="text-muted hover:text-ink transition-colors" title="Join a class">
               <IconPlus />
             </button>
           </div>
-
-          {activeClasses.length === 0 && archivedClasses.length === 0 ? (
+          {studentClasses.length === 0 ? (
             <button
-              onClick={() => setIsClassModalOpen(true)}
+              onClick={() => openClassModal("join")}
               className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
             >
-              + Create or join a class
+              + Join a class
+            </button>
+          ) : (
+            studentClasses.map((c) => renderClassItem(c))
+          )}
+        </div>
+
+        {/* Classes — classes the user created / teaches */}
+        <div className="px-3 mt-4">
+          <div className="flex items-center justify-between px-1 mb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Classes</span>
+            <button onClick={() => openClassModal("create")} className="text-muted hover:text-ink transition-colors" title="Create a class">
+              <IconPlus />
+            </button>
+          </div>
+          {educatorClasses.length === 0 ? (
+            <button
+              onClick={() => openClassModal("create")}
+              className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
+            >
+              + Create a class
             </button>
           ) : (
             <>
-              {activeClasses.map((c) => renderClassItem(c))}
+              {educatorClasses.map((c) => renderClassItem(c))}
               {archivedClasses.length > 0 && (
                 <>
                   <button
@@ -548,6 +576,7 @@ export default function Sidebar({
         isOpen={isClassModalOpen}
         onClose={() => setIsClassModalOpen(false)}
         onCreated={onClassesReload}
+        defaultMode={classModalMode}
       />
     </>
   );

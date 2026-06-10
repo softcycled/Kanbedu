@@ -68,6 +68,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
           if (oldBoardId && oldBoardId !== newBoardId) {
             await tx.boardMember.deleteMany({ where: { userId: a.userId, boardId: oldBoardId } });
+            // Unassign from tasks on the old board — treat as leaving the group.
+            const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
+            if (cols.length > 0) {
+              await tx.task.updateMany({
+                where: { column: { in: cols.map((c) => c.id) }, assigneeId: a.userId },
+                data: { assigneeId: null },
+              });
+            }
           }
           if (newBoardId) {
             await tx.boardMember.upsert({
@@ -109,6 +117,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await prisma.$transaction(async (tx) => {
         if (oldBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
+          const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
+          if (cols.length > 0) {
+            await tx.task.updateMany({
+              where: { column: { in: cols.map((c) => c.id) }, assigneeId: userId },
+              data: { assigneeId: null },
+            });
+          }
         }
         await tx.classMember.delete({ where: { userId_classId: { userId, classId: id } } });
       });
@@ -132,9 +147,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     await prisma.$transaction(async (tx) => {
       if (groupId !== undefined) {
-        // Remove from the previous group's board.
+        // Remove from the previous group's board and unassign their tasks.
         if (oldBoardId && oldBoardId !== newBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
+          const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
+          if (cols.length > 0) {
+            await tx.task.updateMany({
+              where: { column: { in: cols.map((c) => c.id) }, assigneeId: userId },
+              data: { assigneeId: null },
+            });
+          }
         }
         // Add to the new group's board (idempotent).
         if (newBoardId) {

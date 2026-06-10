@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { ClassSummary } from "../Sidebar";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
+
+interface GroupMember { id: string; name: string; handle: string | null; color: string; role: string; }
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -36,6 +38,15 @@ interface Props {
 export default function StudentClassView({ activeClass, currentUserId, onLeave }: Props) {
   const { push } = useToasts();
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+
+  useEffect(() => {
+    if (!activeClass.boardId) return;
+    fetch(`/api/classes/${activeClass.id}`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.members) setGroupMembers(d.members); })
+      .catch(() => {});
+  }, [activeClass.id, activeClass.boardId]);
 
   // ConfirmModal handles its own processing state and closes itself afterward;
   // we only surface a toast if the leave request fails.
@@ -59,14 +70,35 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
     </div>
   );
 
+  const memberStrip = groupMembers.length > 0 ? (
+    <div className="flex items-center gap-1.5">
+      {groupMembers.map((m) => (
+        <span
+          key={m.id}
+          title={`${m.name || m.handle}${m.role !== "student" ? " (Teacher)" : ""}`}
+          className="relative inline-flex items-center justify-center w-6 h-6 rounded-full text-[9px] font-semibold text-white flex-shrink-0 ring-2 ring-paper"
+          style={{ backgroundColor: m.color || "#4A90A4" }}
+        >
+          {(m.name || m.handle || "?").charAt(0).toUpperCase()}
+          {m.role !== "student" && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border border-paper flex items-center justify-center text-[6px] font-bold text-white">T</span>
+          )}
+        </span>
+      ))}
+    </div>
+  ) : null;
+
   const leaveButton = (
-    <button
-      onClick={() => setConfirmLeave(true)}
-      className="flex-shrink-0 text-[11px] text-muted hover:text-red-500 transition-colors"
-      title="Leave this class"
-    >
-      Leave class
-    </button>
+    <div className="flex items-center gap-3 flex-shrink-0">
+      {memberStrip}
+      <button
+        onClick={() => setConfirmLeave(true)}
+        className="text-[11px] text-muted hover:text-red-500 transition-colors"
+        title="Leave this class"
+      >
+        Leave class
+      </button>
+    </div>
   );
 
   return (
