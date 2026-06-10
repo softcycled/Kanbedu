@@ -192,7 +192,7 @@ function FilterBar({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Search tasks…"
-            className="w-28 sm:w-48 bg-transparent hover:bg-column-bg focus:bg-column-bg rounded-md pl-9 pr-4 py-1 text-sm text-ink outline-none transition-colors"
+            className="w-28 sm:w-48 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-4 py-1 text-sm text-ink outline-none transition-colors"
           />
         </div>
 
