@@ -22,7 +22,7 @@ export async function PATCH(
     const membership = await prisma.boardMember.findUnique({
       where: { userId_boardId: { userId: session.userId, boardId: id } },
     });
-    if (!membership) {
+    if (!membership || membership.role !== "owner") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

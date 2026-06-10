@@ -396,7 +396,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     [columnToDelete, broadcastRefresh, onColumnsChange, onTasksChange, boardId, toasts]
   );
 
+  const addingColumnRef = useRef(false);
   const handleAddColumn = useCallback(async () => {
+    if (addingColumnRef.current) return;
+    addingColumnRef.current = true;
     try {
       const res = await fetch("/api/columns", {
         method: "POST",
@@ -414,6 +417,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     } catch (error) {
       console.error("Failed to create column:", error);
       toasts.push({ title: "Could not add column", description: "Please try again." });
+    } finally {
+      addingColumnRef.current = false;
     }
   }, [boardId, broadcastRefresh, toasts]);
 

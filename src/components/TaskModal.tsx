@@ -367,7 +367,7 @@ export default function TaskModal({
   useEffect(() => { isEditingTitleRef.current = isEditingTitle; }, [isEditingTitle]);
   useEffect(() => { isEditingDescriptionRef.current = isEditingDescription; }, [isEditingDescription]);
 
-  const TITLE_CHAR_LIMIT = 100;
+  const TITLE_CHAR_LIMIT = 200;
 
   // commit title optimistically (non-blocking)
   const commitTitle = useCallback(() => {
