@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { profileUpdateSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function PATCH(req: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(session.userId, "auth_profile", 10, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
 
   try {
     const raw = await req.json();

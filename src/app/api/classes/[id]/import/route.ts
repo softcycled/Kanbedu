@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { parseCSV } from "@/lib/csvParser";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: import a CSV roster into a class.
 // Accepts multipart/form-data with a "file" field (.csv).
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "class_import", 5, 60);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {

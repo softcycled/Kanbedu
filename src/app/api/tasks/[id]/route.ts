@@ -4,6 +4,7 @@ import { updateTaskSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET single task with full details (activities, comments, etc.)
 export async function GET(
@@ -176,6 +177,9 @@ export async function PATCH(
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
   // Authorize: ensure the user is a member of the board this task belongs to
   const taskAuth = await prisma.task.findUnique({ where: { id }, select: { columnRel: { select: { boardId: true } } } });
@@ -497,6 +501,9 @@ export async function DELETE(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     // Ensure the task exists and belongs to a board the user can access
     const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });

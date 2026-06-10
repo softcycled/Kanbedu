@@ -4,6 +4,7 @@ import { createTaskSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
 const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }));
@@ -14,6 +15,9 @@ export async function PUT(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
   const raw = await req.json();
   const result = bulkReorderSchema.safeParse(raw);
@@ -120,6 +124,9 @@ export async function POST(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+  if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
   const raw = await req.json();
   const result = parseBody(createTaskSchema, raw);

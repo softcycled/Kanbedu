@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { transferOwnershipSchema, removeMemberSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(
   _request: NextRequest,
@@ -50,6 +51,9 @@ export async function POST(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     let raw: unknown;
     try {
@@ -107,6 +111,9 @@ export async function DELETE(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     let rawBody: unknown;
     try {

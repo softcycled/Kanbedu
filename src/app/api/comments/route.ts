@@ -4,6 +4,7 @@ import { createCommentSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
   const raw = await req.json();
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
 
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = await checkRateLimit(session.userId, "comments_create", 30, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
   // Ensure the user is a member of the board that contains the task
   const taskRow = await prisma.task.findUnique({ where: { id: data.taskId }, select: { columnRel: { select: { boardId: true } } } });

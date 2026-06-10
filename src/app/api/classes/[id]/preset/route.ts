@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { savePresetSchema, parseBody } from "@/lib/validations";
 import { coercePreset } from "@/lib/classBoards";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET: read the class preset (starting columns + seed tasks). Educator/TA only.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
       return NextResponse.json({ error: "Only educators can edit the preset." }, { status: 403 });

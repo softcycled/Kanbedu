@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateTagSchema, parseBody } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function PATCH(
   request: NextRequest,
@@ -13,6 +14,9 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const tagInfo = await prisma.tag.findUnique({ where: { id }, select: { boardId: true } });
     if (!tagInfo) {
@@ -60,6 +64,9 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const tagToDelete = await prisma.tag.findUnique({ where: { id }, select: { boardId: true } });
     if (!tagToDelete) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { passwordChangeSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(req: Request) {
@@ -9,6 +10,9 @@ export async function PATCH(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(session.userId, "auth_password", 5, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
 
   let raw: unknown;
   try {

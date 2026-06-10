@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateBoardSchema, parseBody } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // PATCH update board
 export async function PATCH(
@@ -14,6 +15,9 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const membership = await prisma.boardMember.findUnique({
       where: { userId_boardId: { userId: session.userId, boardId: id } },
@@ -54,6 +58,9 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const membership = await prisma.boardMember.findUnique({
       where: { userId_boardId: { userId: session.userId, boardId: id } },

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createInviteSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: create an invite link for a board
 export async function POST(req: NextRequest) {
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
+
+    const rl = await checkRateLimit(session.userId, "invites_create", 20, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const raw = await req.json();
     const result = parseBody(createInviteSchema, raw);

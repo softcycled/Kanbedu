@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createBoardSchema, reorderBoardsSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET all boards the current user is a member of
 export async function GET() {
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     const raw = await request.json();
     const result = parseBody(createBoardSchema, raw);
     if (!result.data) {
@@ -102,6 +106,9 @@ export async function PUT(request: NextRequest) {
     // auth: ensure user is authenticated and is a member of all affected boards
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const memberships = await prisma.boardMember.findMany({
       where: { userId: session.userId, boardId: { in: data.ids } },

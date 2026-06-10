@@ -8,8 +8,8 @@ export async function POST(req: Request) {
   try {
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     
-    // 1. IP-based rate limiting (20 attempts per 15 min per IP) to prevent generic botnet spam
-    const ipLimit = await checkRateLimit(ip, "login_ip", 20, 15);
+    // 1. IP-based rate limiting (5 attempts per 15 min per IP)
+    const ipLimit = await checkRateLimit(ip, "login_ip", 5, 15);
     if (!ipLimit.allowed) {
       return NextResponse.json({ error: "Too many requests from this IP. Try again in 15 minutes." }, { status: 429 });
     }

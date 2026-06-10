@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET columns (scoped by boardId)
 export async function GET(request: NextRequest) {
@@ -62,6 +63,10 @@ export async function POST(request: NextRequest) {
     // auth: ensure user is signed in and is a member of the board
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     const member = await isMemberOfBoard(session.userId, data.boardId);
     if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -107,6 +112,9 @@ export async function PATCH(request: NextRequest) {
     // auth: ensure user is signed in and is a member of the affected board
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const colIds = data.columns.map((c: any) => c.id);
     const cols = await prisma.column.findMany({ where: { id: { in: colIds } }, select: { id: true, boardId: true } });

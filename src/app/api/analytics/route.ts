@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = await checkRateLimit(session.userId, "analytics_read", 60, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
   const { searchParams } = new URL(request.url);
   const boardId = searchParams.get("boardId");

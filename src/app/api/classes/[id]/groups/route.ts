@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { createGroupSchema, updateGroupSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 async function requireEducator(userId: string, classId: string) {
   const role = await getClassRole(userId, classId);
@@ -18,6 +19,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
@@ -60,6 +65,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
@@ -116,6 +125,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl3 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl3.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     if (!(await requireEducator(session.userId, id))) {
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }

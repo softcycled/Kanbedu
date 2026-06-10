@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole } from "@/lib/auth";
 import { updateClassSchema, parseBody } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET: role-aware class detail.
 // Educators/TAs receive the full roster, groups and joinCode.
@@ -95,6 +96,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
       return NextResponse.json({ error: "Only educators can edit a class." }, { status: 403 });
@@ -142,6 +146,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
     const cls = await prisma.class.findUnique({
       where: { id },
       select: { ownerId: true, groups: { select: { boardId: true } } },
@@ -154,7 +161,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     await prisma.$transaction(async (tx) => {
       const boardIds = cls.groups.map((g) => g.boardId);
       if (boardIds.length > 0) {
-        // Deleting boards cascades columns, tasks, board members, and the Group rows.
+        // Column and Task have no onDelete cascade to Board/Column in the schema,
+        // so they must be deleted explicitly before the boards can be removed.
+        const columns = await tx.column.findMany({ where: { boardId: { in: boardIds } }, select: { id: true } });
+        const columnIds = columns.map((c) => c.id);
+        if (columnIds.length > 0) {
+          // Cascades comments, activities, column histories, description versions via onDelete: Cascade on those models.
+          await tx.task.deleteMany({ where: { column: { in: columnIds } } });
+          await tx.column.deleteMany({ where: { id: { in: columnIds } } });
+        }
+        // Cascades BoardMembers, BoardInvites, Tags, and Group rows.
         await tx.board.deleteMany({ where: { id: { in: boardIds } } });
       }
       // Must delete explicitly — not covered by Class cascade in all Postgres versions.

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole } from "@/lib/auth";
 import { cloneClassSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: clone a class for a new semester. Copies the preset and the group
 // structure (each group gets a fresh, empty board seeded from the preset).
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "class_clone", 5, 60);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {

@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
-  const limit = await checkRateLimit(ip, "email_verify", 20, 15);
+  const limit = await checkRateLimit(ip, "email_verify", 5, 15);
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

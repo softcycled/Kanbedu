@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // PATCH update column (rename, set done)
 export async function PATCH(
@@ -15,6 +16,9 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     // Check the user is a member of the board that owns this column
     // include `isDone` so we can enforce "always have a done column" rules
@@ -119,6 +123,9 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     // Check the user is a member of the board that owns this column
     // include `isDone` so we can enforce the "always-have-a-done-column" invariant

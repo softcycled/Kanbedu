@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTagSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
     // auth: ensure user is signed in and member of the board
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+    if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     const board = await prisma.board.findUnique({ where: { id: data.boardId } });
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
