@@ -45,9 +45,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       // Student view: just enough to render their group board or the lobby.
       const myGroup = cls.groups.find((g) => g.id === me?.groupId);
       // Include the student's own group members so the board can show a member list.
+      // Include the student's group peers + all educators/TAs (they oversee every group).
       const groupMembers = myGroup
         ? cls.members
-            .filter((m) => m.groupId === myGroup.id)
+            .filter((m) => m.groupId === myGroup.id || m.role === "educator" || m.role === "ta")
             .map((m) => ({ id: m.userId, name: m.user.name, handle: m.user.handle, color: m.user.color, role: m.role }))
         : [];
       return NextResponse.json({

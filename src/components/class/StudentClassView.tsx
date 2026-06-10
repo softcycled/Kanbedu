@@ -41,6 +41,7 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
 
   useEffect(() => {
+    setGroupMembers([]);
     if (!activeClass.boardId) return;
     fetch(`/api/classes/${activeClass.id}`, { cache: "no-store" })
       .then((r) => r.ok ? r.json() : null)
