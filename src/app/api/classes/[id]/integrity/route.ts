@@ -74,8 +74,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const movedByMap = new Map<string, string>(); // taskId -> display name
 
     if (movedByTaskIds.length > 0) {
+      // Include COMPLETE activities — moving directly to a Done column records
+      // "COMPLETE" not "MOVE", which is the most common pattern for cheating.
       const moveActivities = await prisma.taskActivity.findMany({
-        where: { taskId: { in: movedByTaskIds }, type: "MOVE" },
+        where: { taskId: { in: movedByTaskIds }, type: { in: ["MOVE", "COMPLETE"] } },
         include: { user: { select: { name: true, handle: true } } },
         orderBy: { createdAt: "desc" },
       });

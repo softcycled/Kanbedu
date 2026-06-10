@@ -255,15 +255,8 @@ export async function PATCH(
   const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
-  // Integrity signals (movedByNonAssignee) only make sense for class group boards.
-  // Never record them on personal/standalone boards.
-  if (updateData.movedByNonAssignee) {
-    const isGroupBoard = await prisma.group.findUnique({
-      where: { boardId: taskAuth.columnRel.boardId },
-      select: { id: true },
-    });
-    if (!isGroupBoard) delete updateData.movedByNonAssignee;
-  }
+  // movedByNonAssignee is server-computed — reject any client-supplied value.
+  delete updateData.movedByNonAssignee;
 
   let columnActuallyChanged = false;
 
@@ -318,6 +311,26 @@ export async function PATCH(
         }
       })();
     }
+  }
+
+  // Server-side integrity signal: set flag when a non-assignee moves the task to
+  // a different column, but only on class group boards and only when the assignee
+  // is not also changing in this same request.
+  if (
+    columnActuallyChanged &&
+    current.assigneeId &&
+    current.assigneeId !== session.userId &&
+    body.assigneeId === undefined
+  ) {
+    const isGroupBoard = await prisma.group.findFirst({
+      where: { boardId: taskAuth.columnRel.boardId },
+      select: { id: true },
+    });
+    if (isGroupBoard) updateData.movedByNonAssignee = true;
+  }
+  // Clear the flag when the assignee is changed — new assignee starts clean.
+  if (body.assigneeId !== undefined) {
+    updateData.movedByNonAssignee = false;
   }
 
   let tagOps: any = null;
