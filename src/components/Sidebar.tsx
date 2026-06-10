@@ -223,7 +223,8 @@ export default function Sidebar({
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [classModalMode, setClassModalMode] = useState<"options" | "create" | "join">("options");
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchivedBoards, setShowArchivedBoards] = useState(false);
+  const [showArchivedClasses, setShowArchivedClasses] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const router = useRouter();
@@ -273,7 +274,8 @@ export default function Sidebar({
   const isEducatorOf = (c: ClassSummary) => c.role === "educator" || c.role === "ta";
   const educatorClasses = classes.filter((c) => isEducatorOf(c) && !c.archived);
   const studentClasses = classes.filter((c) => !isEducatorOf(c) && !c.archived);
-  const archivedClasses = classes.filter((c) => c.archived);
+  const archivedEducatorClasses = classes.filter((c) => isEducatorOf(c) && c.archived);
+  const archivedStudentClasses = classes.filter((c) => !isEducatorOf(c) && c.archived);
 
   const openClassModal = (mode: "create" | "join") => {
     setClassModalMode(mode);
@@ -402,7 +404,7 @@ export default function Sidebar({
               <IconPlus />
             </button>
           </div>
-          {studentClasses.length === 0 ? (
+          {studentClasses.length === 0 && archivedStudentClasses.length === 0 ? (
             <button
               onClick={() => openClassModal("join")}
               className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
@@ -410,7 +412,20 @@ export default function Sidebar({
               + Join a class
             </button>
           ) : (
-            studentClasses.map((c) => renderClassItem(c))
+            <>
+              {studentClasses.map((c) => renderClassItem(c))}
+              {archivedStudentClasses.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowArchivedBoards((v) => !v)}
+                    className="w-full text-left px-2 py-1 mt-0.5 rounded-lg text-[11px] text-muted/70 hover:text-ink transition-colors"
+                  >
+                    {showArchivedBoards ? "Hide archived" : `Show archived (${archivedStudentClasses.length})`}
+                  </button>
+                  {showArchivedBoards && archivedStudentClasses.map((c) => renderClassItem(c, true))}
+                </>
+              )}
+            </>
           )}
         </div>
 
@@ -422,7 +437,7 @@ export default function Sidebar({
               <IconPlus />
             </button>
           </div>
-          {educatorClasses.length === 0 ? (
+          {educatorClasses.length === 0 && archivedEducatorClasses.length === 0 ? (
             <button
               onClick={() => openClassModal("create")}
               className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-muted hover:bg-ink/5 hover:text-ink transition-colors"
@@ -432,15 +447,15 @@ export default function Sidebar({
           ) : (
             <>
               {educatorClasses.map((c) => renderClassItem(c))}
-              {archivedClasses.length > 0 && (
+              {archivedEducatorClasses.length > 0 && (
                 <>
                   <button
-                    onClick={() => setShowArchived((v) => !v)}
+                    onClick={() => setShowArchivedClasses((v) => !v)}
                     className="w-full text-left px-2 py-1 mt-0.5 rounded-lg text-[11px] text-muted/70 hover:text-ink transition-colors"
                   >
-                    {showArchived ? "Hide archived" : `Show archived (${archivedClasses.length})`}
+                    {showArchivedClasses ? "Hide archived" : `Show archived (${archivedEducatorClasses.length})`}
                   </button>
-                  {showArchived && archivedClasses.map((c) => renderClassItem(c, true))}
+                  {showArchivedClasses && archivedEducatorClasses.map((c) => renderClassItem(c, true))}
                 </>
               )}
             </>
