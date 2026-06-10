@@ -38,6 +38,7 @@ interface Props {
   currentUserId: string;
   classBoards?: ClassBoardSummary[];
   onSwitchToBoard?: (boardId: string) => void;
+  onLeaveClass?: (classId: string) => Promise<boolean>;
 }
 
 export default function SettingsPanel({
@@ -49,6 +50,7 @@ export default function SettingsPanel({
   currentUserId,
   classBoards = [],
   onSwitchToBoard,
+  onLeaveClass,
 }: Props) {
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
@@ -88,6 +90,8 @@ export default function SettingsPanel({
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leaveClassConfirmOpen, setLeaveClassConfirmOpen] = useState(false);
+  const [isLeavingClass, setIsLeavingClass] = useState(false);
 
   const [transferDropdownOpen, setTransferDropdownOpen] = useState(false);
   const [removeDropdownOpen, setRemoveDropdownOpen] = useState(false);
@@ -224,7 +228,15 @@ export default function SettingsPanel({
     }
   };
 
-  if (!board) return null;
+  const performLeaveClass = async () => {
+    if (!selectedClassBoard || !onLeaveClass) return;
+    setIsLeavingClass(true);
+    const ok = await onLeaveClass(selectedClassBoard.classId).catch(() => false);
+    setIsLeavingClass(false);
+    if (ok) setSelectedClassBoardId(null);
+  };
+
+  if (!board && !selectedClassBoard) return null;
 
   return (
     <>
@@ -238,7 +250,7 @@ export default function SettingsPanel({
                 key={b.id}
                 onClick={() => { setSelectedBoardId(b.id); setSelectedClassBoardId(null); }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                  selectedBoardId === b.id
+                  selectedBoardId === b.id && !selectedClassBoardId
                     ? "bg-ink/8 text-ink font-medium"
                     : "text-ink/70 hover:bg-ink/5 hover:text-ink"
                 }`}
@@ -259,7 +271,7 @@ export default function SettingsPanel({
                 {classBoards.map((c) => (
                   <button
                     key={c.classId}
-                    onClick={() => { setSelectedClassBoardId(c.boardId); setSelectedBoardId(""); }}
+                    onClick={() => setSelectedClassBoardId(c.boardId)}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
                       selectedClassBoardId === c.boardId
                         ? "bg-ink/8 text-ink font-medium"
@@ -356,11 +368,33 @@ export default function SettingsPanel({
                   )}
                 </div>
               </section>
+
+              {onLeaveClass && (
+              <section>
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500/60 mb-3">Danger Zone</h4>
+                <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3.5 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">Leave class</p>
+                      <p className="text-xs text-muted mt-0.5">You can rejoin later with the class code.</p>
+                    </div>
+                    <button
+                      onClick={() => setLeaveClassConfirmOpen(true)}
+                      disabled={isLeavingClass}
+                      className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-ink hover:bg-ink/5 transition-colors disabled:opacity-40"
+                    >
+                      {isLeavingClass ? "Leaving…" : "Leave"}
+                    </button>
+                  </div>
+                </div>
+              </section>
+              )}
             </div>
           )}
 
-          {/* Personal board detail */}
-          <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8" style={{ display: selectedClassBoard ? "none" : undefined }}>
+          {/* Personal board detail — only rendered when no class board is selected */}
+          {!selectedClassBoard && board && (
+          <div className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-xl space-y-8">
             {/* Identity */}
             <section>
               <div className="flex items-start gap-4">
@@ -645,8 +679,19 @@ export default function SettingsPanel({
               </div>
             </section>
           </div>
+          )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={leaveClassConfirmOpen}
+        title="Leave this class?"
+        message={`You'll lose access to ${selectedClassBoard?.groupName ? `"${selectedClassBoard.groupName}"` : "your group board"} in ${selectedClassBoard?.className ?? "this class"}. You can rejoin later with the class code.`}
+        confirmLabel="Leave class"
+        danger
+        onClose={() => setLeaveClassConfirmOpen(false)}
+        onConfirm={performLeaveClass}
+      />
 
       <DeleteBoardModal
         board={deletingBoard}

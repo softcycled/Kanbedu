@@ -480,9 +480,10 @@ export default function BoardContainer({
             onReorder={handleReorderBoards}
             currentUserId={currentUserId}
             classBoards={classes
-              .filter((c) => (c.role === "student" || c.role === "member") && c.boardId && !c.archived)
+              .filter((c) => c.role === "student" && c.boardId && !c.archived)
               .map((c) => ({ classId: c.id, className: c.name, groupName: c.groupName ?? null, boardId: c.boardId! }))}
             onSwitchToBoard={(boardId) => { handleBoardSwitch(boardId); setActivePanel("board"); }}
+            onLeaveClass={handleLeaveClass}
           />
         )}
         {activePanel === "profile" && <ProfilePanel />}
