@@ -198,13 +198,15 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
         </div>
       ) : (
         <>
-          <div className="rounded-2xl border border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 px-5 py-4 mb-5 flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-base flex-shrink-0">⚠</span>
-            <p className="text-sm text-ink">
-              <span className="font-semibold">{data.totalFlagged}</span> {data.totalFlagged === 1 ? "task" : "tasks"} flagged across{" "}
-              <span className="font-semibold">{data.flaggedTeamCount}</span> of {data.teamCount} {data.teamCount === 1 ? "team" : "teams"}.
-            </p>
-          </div>
+          {data.flaggedTeamCount > data.teamCount / 2 && (
+            <div className="rounded-2xl border border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 px-5 py-4 mb-5 flex items-center gap-3">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-base flex-shrink-0">⚠</span>
+              <p className="text-sm text-ink">
+                <span className="font-semibold">{data.totalFlagged}</span> {data.totalFlagged === 1 ? "task" : "tasks"} flagged across{" "}
+                <span className="font-semibold">{data.flaggedTeamCount}</span> of {data.teamCount} {data.teamCount === 1 ? "team" : "teams"}.
+              </p>
+            </div>
+          )}
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
