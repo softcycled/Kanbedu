@@ -300,15 +300,25 @@ export default function SettingsPanel({
                     <p className="text-xs text-muted mt-0.5">{classBoardMembers.length} member{classBoardMembers.length !== 1 ? "s" : ""}</p>
                   </div>
                 </div>
-                {onSwitchToBoard && (
+              </section>
+
+              {onSwitchToBoard && (
+              <section>
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Board</h4>
+                <div className="flex items-center gap-3 p-4 bg-card-bg border border-border rounded-xl">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">Go to group board</p>
+                    <p className="text-xs text-muted mt-0.5">View and work on your group&apos;s tasks</p>
+                  </div>
                   <button
                     onClick={() => onSwitchToBoard(selectedClassBoard.boardId)}
-                    className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors flex-shrink-0"
                   >
                     Open board
                   </button>
-                )}
+                </div>
               </section>
+              )}
 
               <section>
                 <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
