@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { transferOwnershipSchema, removeMemberSchema, parseBody } from "@/lib/validations";
 
 export async function GET(
   _request: NextRequest,
@@ -50,12 +51,18 @@ export async function POST(
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
-    const raw = await request.json().catch(() => ({}));
-    const { action, toUserId } = raw as { action?: string; toUserId?: string };
-
-    if (action !== "transfer" || !toUserId) {
-      return NextResponse.json({ error: "Invalid action." }, { status: 400 });
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
+
+    const parsed = parseBody(transferOwnershipSchema, raw);
+    if (!parsed.data) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const { toUserId } = parsed.data;
 
     const requester = await prisma.boardMember.findUnique({
       where: { userId_boardId: { userId: session.userId, boardId: id } },
@@ -101,8 +108,14 @@ export async function DELETE(
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
-    const body = await request.json().catch(() => ({}));
-    const targetUserId = (body && body.userId) || session.userId;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      rawBody = {};
+    }
+    const parsedBody = parseBody(removeMemberSchema, rawBody);
+    const targetUserId = parsedBody.data?.userId || session.userId;
 
     const requester = await prisma.boardMember.findUnique({
       where: { userId_boardId: { userId: session.userId, boardId: id } },

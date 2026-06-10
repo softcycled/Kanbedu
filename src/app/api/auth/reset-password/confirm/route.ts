@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { resetPasswordConfirmSchema, parseBody } from "@/lib/validations";
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
@@ -10,21 +11,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   }
 
-  let token: string, newPassword: string;
+  let raw: unknown;
   try {
-    const body = await req.json();
-    token = (body.token ?? "").trim();
-    newPassword = body.newPassword ?? "";
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (!token) {
-    return NextResponse.json({ error: "Token is required." }, { status: 400 });
+  const result = parseBody(resetPasswordConfirmSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
-  if (!newPassword || newPassword.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
-  }
+  const { token, newPassword } = result.data;
 
   const record = await prisma.passwordResetToken.findUnique({ where: { token } });
 

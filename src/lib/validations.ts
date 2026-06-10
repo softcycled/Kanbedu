@@ -23,7 +23,7 @@ export const loginSchema = z.object({
 
 export const profileUpdateSchema = z
   .object({
-    name: z.string().trim().optional(),
+    name: z.string().trim().max(100, "Name is too long.").optional(),
     color: z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color.")
@@ -37,11 +37,11 @@ export const profileUpdateSchema = z
 // -- Boards --
 
 export const createBoardSchema = z.object({
-  name: z.string().trim().min(1, "Name is required."),
+  name: z.string().trim().min(1, "Name is required.").max(100, "Name is too long."),
 });
 
 export const updateBoardSchema = z.object({
-  name: z.string().trim().min(1, "Name is required.").optional(),
+  name: z.string().trim().min(1, "Name is required.").max(100, "Name is too long.").optional(),
 });
 
 export const reorderBoardsSchema = z.object({
@@ -51,13 +51,13 @@ export const reorderBoardsSchema = z.object({
 // -- Columns --
 
 export const createColumnSchema = z.object({
-  label: z.string().trim().min(1, "Label is required."),
+  label: z.string().trim().min(1, "Label is required.").max(60, "Label is too long."),
   boardId: z.string().min(1, "Board ID is required."),
 });
 
 export const updateColumnSchema = z
   .object({
-    label: z.string().trim().min(1, "Label must be non-empty.").optional(),
+    label: z.string().trim().min(1, "Label must be non-empty.").max(60, "Label is too long.").optional(),
     isDone: z.boolean().optional(),
     // A palette name selects an explicit color; null resets to color-by-position.
     color: z.enum(["blue", "amber", "green", "purple", "pink", "cyan", "yellow", "rose"]).nullable().optional(),
@@ -85,9 +85,9 @@ export const deleteColumnSchema = z
 // -- Tasks --
 
 export const createTaskSchema = z.object({
-  title: z.string().trim().min(1, "Title is required."),
+  title: z.string().trim().min(1, "Title is required.").max(200, "Title is too long."),
   column: z.string().min(1, "Column ID is required."),
-  description: z.string().optional(),
+  description: z.string().max(50000, "Description is too long.").optional(),
   assigneeId: z.string().nullable().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   deadline: z.string().nullable().optional(),
@@ -95,8 +95,8 @@ export const createTaskSchema = z.object({
 });
 
 export const updateTaskSchema = z.object({
-  title: z.string().trim().min(1).optional(),
-  description: z.string().optional(),
+  title: z.string().trim().min(1).max(200, "Title is too long.").optional(),
+  description: z.string().max(50000, "Description is too long.").optional(),
   column: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
@@ -110,7 +110,7 @@ export const updateTaskSchema = z.object({
 
 export const createCommentSchema = z.object({
   taskId: z.string().min(1, "Task ID is required."),
-  content: z.string().trim().min(1, "Comment content is required."),
+  content: z.string().trim().min(1, "Comment content is required.").max(10000, "Comment is too long."),
   author: z.string().trim().default(""),
 });
 
@@ -208,14 +208,41 @@ export const cloneClassSchema = z.object({
 // -- Tags --
 
 export const createTagSchema = z.object({
-  name: z.string().trim().min(1, "Name is required."),
+  name: z.string().trim().min(1, "Name is required.").max(50, "Name is too long."),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color."),
   boardId: z.string().min(1, "Board ID is required."),
 });
 
 export const updateTagSchema = z.object({
-  name: z.string().trim().min(1).optional(),
+  name: z.string().trim().min(1).max(50, "Name is too long.").optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color.").optional(),
+});
+
+// -- Auth (additional) --
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required.").max(200),
+  newPassword: z.string().min(8, "New password must be at least 8 characters.").max(200),
+});
+
+export const resetPasswordRequestSchema = z.object({
+  email: z.string().trim().email("Invalid email address.").toLowerCase().max(254),
+});
+
+export const resetPasswordConfirmSchema = z.object({
+  token: z.string().trim().min(1, "Token is required.").max(300),
+  newPassword: z.string().min(8, "Password must be at least 8 characters.").max(200),
+});
+
+// -- Board member actions --
+
+export const transferOwnershipSchema = z.object({
+  action: z.literal("transfer"),
+  toUserId: z.string().min(1, "Target user ID is required."),
+});
+
+export const removeMemberSchema = z.object({
+  userId: z.string().min(1).optional(),
 });
 
 // -- Helper --

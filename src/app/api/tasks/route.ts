@@ -77,8 +77,16 @@ export async function GET(request: NextRequest) {
   const takeRaw = searchParams.get("take");
   const skipRaw = searchParams.get("skip");
   // take=0 means no limit; omitted defaults to 100
-  const take = takeRaw === "0" ? undefined : (takeRaw ? Math.max(1, parseInt(takeRaw, 10)) : 100);
-  const skip = skipRaw ? Math.max(0, parseInt(skipRaw, 10)) : 0;
+  const parsedTake = takeRaw ? parseInt(takeRaw, 10) : null;
+  const parsedSkip = skipRaw ? parseInt(skipRaw, 10) : null;
+  if (parsedTake !== null && (isNaN(parsedTake) || parsedTake < 0)) {
+    return NextResponse.json({ error: "Invalid take parameter." }, { status: 400 });
+  }
+  if (parsedSkip !== null && (isNaN(parsedSkip) || parsedSkip < 0)) {
+    return NextResponse.json({ error: "Invalid skip parameter." }, { status: 400 });
+  }
+  const take = parsedTake === 0 ? undefined : (parsedTake !== null ? Math.min(parsedTake, 1000) : 100);
+  const skip = parsedSkip !== null ? parsedSkip : 0;
 
   const where = { columnRel: { boardId } };
   const [tasks, total] = await Promise.all([

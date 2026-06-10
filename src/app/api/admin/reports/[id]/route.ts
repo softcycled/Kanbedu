@@ -23,9 +23,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { status } = await req.json();
-    if (!["open", "in-progress", "resolved"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+    const { status } = body as { status?: string };
+    if (!["open", "in-progress", "resolved"].includes(status ?? "")) {
+      return NextResponse.json({ error: "Invalid status." }, { status: 400 });
     }
 
     const report = await prisma.bugReport.update({

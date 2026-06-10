@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { passwordChangeSchema, parseBody } from "@/lib/validations";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(req: Request) {
@@ -9,22 +10,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  let body: { currentPassword?: string; newPassword?: string };
+  let raw: unknown;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { currentPassword, newPassword } = body;
-
-  if (!currentPassword || !newPassword) {
-    return NextResponse.json({ error: "Current and new password are required." }, { status: 400 });
+  const result = parseBody(passwordChangeSchema, raw);
+  if (!result.data) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
-
-  if (newPassword.length < 8) {
-    return NextResponse.json({ error: "New password must be at least 8 characters." }, { status: 400 });
-  }
+  const { currentPassword, newPassword } = result.data;
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) {

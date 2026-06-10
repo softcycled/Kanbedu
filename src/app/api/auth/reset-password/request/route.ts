@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { resetPasswordRequestSchema, parseBody } from "@/lib/validations";
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
@@ -10,17 +11,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
-  let email: string;
+  let raw: unknown;
   try {
-    const body = await req.json();
-    email = (body.email ?? "").trim().toLowerCase();
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (!email) {
-    return NextResponse.json({ error: "Email is required." }, { status: 400 });
+  const result = parseBody(resetPasswordRequestSchema, raw);
+  if (!result.data) {
+    // Return success anyway — don't reveal whether the email is valid
+    return NextResponse.json({ success: true });
   }
+  const { email } = result.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
 
