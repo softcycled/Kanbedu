@@ -393,6 +393,21 @@ export default function Sidebar({
             </SortableContext>
           </DndContext>
 
+          {/* Class group boards — student boards from assigned groups */}
+          {studentClasses.filter((c) => c.boardId && !c.archived).map((c) => (
+            <button
+              key={`cb-${c.id}`}
+              onClick={() => { onBoardSwitch(c.boardId!); onPanelChange("board"); setMobileOpen(false); }}
+              className={`w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
+                activeBoardId === c.boardId && activePanel === "board" && !activeClassId
+                  ? "bg-ink/8 text-ink font-medium"
+                  : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+              }`}
+            >
+              <span className="truncate">{c.groupName || c.name}</span>
+              <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">class</span>
+            </button>
+          ))}
 
         </div>
 
