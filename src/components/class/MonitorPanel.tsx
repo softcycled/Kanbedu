@@ -166,8 +166,10 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
           <button
             key={g.groupId}
             onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
-            className={`text-left rounded-2xl border bg-card-bg p-5 transition-colors hover:bg-column-bg ${
-              g.needsAttention ? "border-orange-300 dark:border-orange-800" : "border-border/70"
+            className={`text-left rounded-2xl border p-5 transition-colors ${
+              g.needsAttention
+                ? "border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                : "border-border/70 bg-card-bg hover:bg-column-bg"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
