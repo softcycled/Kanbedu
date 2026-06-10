@@ -17,6 +17,10 @@ export default function InvitePage() {
     const checkInvite = async () => {
       try {
         const res = await fetch(`/api/invites/${token}`);
+        if (res.status === 401) {
+          router.push(`/login?next=/invite/${token}`);
+          return;
+        }
         const data = await res.json();
         if (!res.ok) {
           setMessage(data.error || "Invalid invite.");

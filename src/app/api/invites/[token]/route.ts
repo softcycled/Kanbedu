@@ -63,6 +63,11 @@ export async function GET(
 ) {
   const { token } = await params;
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+
     const invite = await prisma.boardInvite.findUnique({
       where: { token },
       include: { board: { select: { name: true } } },
