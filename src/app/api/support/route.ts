@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
 const bugReportSchema = z.object({
@@ -14,6 +15,11 @@ export async function POST(req: NextRequest) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const limit = await checkRateLimit(session.userId, "bug_report", 5, 60);
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "You've submitted too many reports recently. Please wait before submitting again." }, { status: 429 });
     }
 
     const body = await req.json();

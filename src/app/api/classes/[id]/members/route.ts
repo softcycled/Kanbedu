@@ -99,6 +99,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
     const { userId, groupId, role: newRole, remove } = result.data;
 
+    // TAs can assign students to groups or remove them, but only educators
+    // can promote/demote members — otherwise a TA could grant TA privileges.
+    if (newRole !== undefined && role !== "educator") {
+      return NextResponse.json({ error: "Only educators can change member roles." }, { status: 403 });
+    }
+
     const member = await prisma.classMember.findUnique({
       where: { userId_classId: { userId, classId: id } },
       include: { group: { select: { boardId: true } } },

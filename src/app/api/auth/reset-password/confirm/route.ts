@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const limit = await checkRateLimit(ip, "reset_confirm", 10, 15);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  }
+
   let token: string, newPassword: string;
   try {
     const body = await req.json();

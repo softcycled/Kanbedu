@@ -4,9 +4,15 @@ import { getSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET: validate a class join code without joining. Returns the class name.
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const limit = await checkRateLimit(ip, "class_join_check", 60, 15);
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
+
     const cls = await prisma.class.findUnique({
       where: { joinCode: code },
       select: { id: true, name: true, term: true, archived: true },
