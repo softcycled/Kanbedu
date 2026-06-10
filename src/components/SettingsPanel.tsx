@@ -343,7 +343,10 @@ export default function SettingsPanel({
                     <div className="px-4 py-6 text-center text-xs text-muted">No members found.</div>
                   ) : (
                     classBoardMembers.map((member, i) => {
-                      const roleInfo = ROLE_LABELS[member.role ?? "member"] ?? ROLE_LABELS.member;
+                      const isTeacher = member.role === "owner" || member.role === "admin";
+                      const roleInfo = isTeacher
+                        ? { label: "Teacher", color: "text-amber-400 bg-amber-400/10 border-amber-400/20" }
+                        : { label: "Student", color: "text-muted bg-ink/5 border-border" };
                       return (
                         <div
                           key={member.id}
