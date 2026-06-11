@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
 import CreateJoinClassModal from "./CreateJoinClassModal";
+import ConfirmModal from "./ConfirmModal";
 
 export interface ClassSummary {
   id: string;
@@ -554,34 +555,13 @@ export default function Sidebar({
                   )}
                 </button>
 
-                {!confirmSignOut ? (
-                  <button
-                    onClick={() => setConfirmSignOut(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors"
-                  >
-                    <IconSignOut />
-                    Sign out
-                  </button>
-                ) : (
-                  <div className="px-3 py-2.5 border-t border-border/60">
-                    <p className="text-xs text-muted mb-2">Sign out of Kanbedu?</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSignOut}
-                        disabled={signingOut}
-                        className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-                      >
-                        {signingOut ? "Signing out…" : "Yes, sign out"}
-                      </button>
-                      <button
-                        onClick={() => setConfirmSignOut(false)}
-                        className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-border text-muted hover:text-ink transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <button
+                  onClick={() => setConfirmSignOut(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors"
+                >
+                  <IconSignOut />
+                  Sign out
+                </button>
               </>
             )}
 
@@ -658,6 +638,17 @@ export default function Sidebar({
           </svg>
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmSignOut}
+        title="Sign out"
+        message="Are you sure you want to sign out of Kanbedu?"
+        confirmLabel="Sign out"
+        cancelLabel="Cancel"
+        danger
+        onClose={() => setConfirmSignOut(false)}
+        onConfirm={handleSignOut}
+      />
     </>
   );
 
