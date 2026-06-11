@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
-import PasswordInput from "./PasswordInput";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -663,19 +662,22 @@ export default function ProfilePanel() {
               <SectionBlock>
                 <SectionItem>
                   <div className="py-4 space-y-2">
-                    <PasswordInput
+                    <input
+                      type="password"
                       value={pwCurrent}
                       onChange={(e) => setPwCurrent(e.target.value)}
                       placeholder="Current password"
                       className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
                     />
-                    <PasswordInput
+                    <input
+                      type="password"
                       value={pwNew}
                       onChange={(e) => setPwNew(e.target.value)}
                       placeholder="New password"
                       className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
                     />
-                    <PasswordInput
+                    <input
+                      type="password"
                       value={pwConfirm}
                       onChange={(e) => setPwConfirm(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handlePasswordChange()}

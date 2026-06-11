@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import PasswordInput from "@/components/PasswordInput";
 
 // Only allow same-origin relative paths as a post-auth destination, to prevent
 // open-redirect abuse via the ?next= param.
@@ -218,13 +217,24 @@ function LoginContent() {
             </div>
 
             <div>
-              <label
-                className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                style={{ color: "#78716C" }}
-              >
-                Password
-              </label>
-              <PasswordInput
+              <div className="flex items-center justify-between mb-2">
+                <label
+                  className="block text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#78716C" }}
+                >
+                  Password
+                </label>
+                {mode === "login" && (
+                  <a href="/forgot-password" className="text-xs transition-colors" style={{ color: "#78716C" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
+                  >
+                    Forgot password?
+                  </a>
+                )}
+              </div>
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === "signup" ? "Min 8 characters" : "Your password"}
@@ -241,17 +251,6 @@ function LoginContent() {
                 onBlur={(e) => (e.target.style.borderColor = "transparent")}
               />
             </div>
-
-            {mode === "login" && (
-              <div className="text-center -mt-1">
-                <a href="/forgot-password" className="text-xs transition-colors" style={{ color: "#78716C" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-                >
-                  Forgot password?
-                </a>
-              </div>
-            )}
 
             {error && (
               <div
