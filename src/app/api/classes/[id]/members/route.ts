@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // --- Single-member branch (assign / move / role / remove) ---
     const result = parseBody(updateMemberSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
-    const { userId, groupId, role: newRole, remove } = result.data;
+    const { userId, groupId, role: newRole, remove, displayName } = result.data;
 
     // TAs can assign students to groups or remove them, but only educators
     // can promote/demote members — otherwise a TA could grant TA privileges.
@@ -132,7 +132,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
     if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });
 
-    // The class owner cannot be removed, re-grouped, or demoted.
+    // The class owner cannot be removed, re-grouped, or demoted (displayName is allowed).
     if (userId === cls.ownerId && (remove || groupId !== undefined || newRole !== undefined)) {
       return NextResponse.json({ error: "The class owner cannot be modified." }, { status: 400 });
     }
@@ -191,6 +191,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await tx.classMember.update({
           where: { userId_classId: { userId, classId: id } },
           data: { role: newRole },
+        });
+      }
+
+      if (displayName !== undefined) {
+        await tx.classMember.update({
+          where: { userId_classId: { userId, classId: id } },
+          data: { displayName },
         });
       }
     });

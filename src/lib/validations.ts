@@ -164,6 +164,8 @@ export const updateMemberSchema = z.object({
   role: z.enum(["student", "ta"]).optional(),
   // remove: when true, the member is removed from the class entirely.
   remove: z.boolean().optional(),
+  // displayName: educator-set per-class name override; null clears it.
+  displayName: z.string().trim().max(100).nullable().optional(),
 });
 
 // Batch assignment: move several students to groups at once. Powers
