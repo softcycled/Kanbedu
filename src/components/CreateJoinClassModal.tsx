@@ -114,7 +114,7 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
             <div className="mt-4 space-y-2">
               <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitCreate(); }} placeholder="Class name…" disabled={loading} className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30" />
               <input value={term} onChange={(e) => setTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitCreate(); }} placeholder="Term (optional, e.g. Fall 2026)" disabled={loading} className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30" />
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
             </div>
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setMode("options")} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50">Back</button>
@@ -129,7 +129,7 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
             <p className="text-xs text-muted mt-1">Paste the class link or code your teacher gave you.</p>
             <div className="mt-4">
               <input ref={inputRef} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitJoin(); }} placeholder="https://kanbedu.com/class/join/… or code" className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30" />
-              {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+              {error && <p role="alert" className="text-xs text-red-500 mt-2">{error}</p>}
             </div>
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setMode("options")} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors">Back</button>

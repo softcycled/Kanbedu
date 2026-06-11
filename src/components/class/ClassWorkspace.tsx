@@ -136,22 +136,25 @@ export default function ClassWorkspace(props: Props) {
     <div className="flex flex-col h-screen overflow-hidden">
       {header}
 
-      <nav className="flex-shrink-0 flex items-center gap-1 px-6 md:px-10 border-b border-border/60 overflow-x-auto no-scrollbar">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => {
-              setTab(t.id);
-              setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
-            }}
-            className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
-              tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <div className="flex-shrink-0 relative border-b border-border/60">
+        <nav className="flex items-center gap-1 px-3 md:px-10 overflow-x-auto no-scrollbar">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setTab(t.id);
+                setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
+              }}
+              className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+                tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-paper to-transparent md:hidden" />
+      </div>
 
       {archived && (
         <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-2 text-[11px] font-medium bg-amber-50 border-b border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">

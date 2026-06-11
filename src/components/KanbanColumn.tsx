@@ -143,7 +143,7 @@ function KanbanColumn({
           </div>
         )}
 
-        <AddTask column={columnId} onAdd={onAddTask} />
+        <AddTask column={columnId} onAdd={onAddTask} prominent={isBoardEmpty && columnIndex === 0} />
       </div>
     </div>
   );

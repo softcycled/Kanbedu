@@ -232,7 +232,7 @@ function AssignSelect({
   onPick: (groupId: string | null) => void;
 }) {
   const options = [
-    { value: LOBBY, label: "Lobby" },
+    { value: LOBBY, label: "Waiting" },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
   ];
   return (
@@ -619,7 +619,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-sm font-semibold text-ink">Roster</h2>
           <span className="text-[11px] text-muted truncate">
-            {students.length} student{students.length === 1 ? "" : "s"} · {lobby.length} in lobby
+            {students.length} student{students.length === 1 ? "" : "s"} · {lobby.length} waiting
           </span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -682,7 +682,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             <RosterDropdown
               value={bulkTarget}
               options={[
-                { value: LOBBY, label: "Lobby" },
+                { value: LOBBY, label: "Waiting" },
                 ...groups.map((g) => ({ value: g.id, label: g.name })),
               ]}
               onPick={applyBulk}
@@ -731,10 +731,10 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                     checked={allLobbySelected}
                     onChange={toggleSelectLobby}
                     className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
-                    title="Select everyone in the lobby"
+                    title="Select everyone waiting"
                   />
                 )}
-                <h3 className="text-sm font-semibold text-ink">Lobby</h3>
+                <h3 className="text-sm font-semibold text-ink">Waiting</h3>
               </div>
               <span className="text-[11px] text-muted flex-shrink-0">{lobby.length} waiting</span>
             </div>
@@ -871,7 +871,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         title="Delete this group?"
         message={
           confirmDeleteGroup
-            ? `"${confirmDeleteGroup.name}" and its board, including all of the group's tasks, will be permanently deleted. Students in it return to the lobby. This cannot be undone.`
+            ? `"${confirmDeleteGroup.name}" and its board, including all of the group's tasks, will be permanently deleted. Students in it return to waiting. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete group"

@@ -205,6 +205,7 @@ function LoginContent() {
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
+                autoFocus={mode === "login"}
                 className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
                 style={{
                   backgroundColor: "#EFEDE8",
@@ -254,6 +255,7 @@ function LoginContent() {
 
             {error && (
               <div
+                role="alert"
                 className="text-xs font-medium px-3 py-2 rounded-lg"
                 style={{ backgroundColor: "#FDF0EB", color: "#E8613A" }}
               >

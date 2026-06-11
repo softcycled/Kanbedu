@@ -279,7 +279,7 @@ export default function Sidebar({
 
   // Reset popup state on close
   useEffect(() => {
-    if (!accountOpen) { setPopupView("menu"); setConfirmSignOut(false); }
+    if (!accountOpen) { setPopupView("menu"); }
   }, [accountOpen]);
 
   // Poll unread count
@@ -556,7 +556,7 @@ export default function Sidebar({
                 </button>
 
                 <button
-                  onClick={() => setConfirmSignOut(true)}
+                  onClick={() => { setAccountOpen(false); setConfirmSignOut(true); }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors"
                 >
                   <IconSignOut />
@@ -639,16 +639,6 @@ export default function Sidebar({
         </button>
       </div>
 
-      <ConfirmModal
-        isOpen={confirmSignOut}
-        title="Sign out"
-        message="Are you sure you want to sign out of Kanbedu?"
-        confirmLabel="Sign out"
-        cancelLabel="Cancel"
-        danger
-        onClose={() => setConfirmSignOut(false)}
-        onConfirm={handleSignOut}
-      />
     </>
   );
 
@@ -695,6 +685,16 @@ export default function Sidebar({
           ))}
         </div>
       </nav>
+      <ConfirmModal
+        isOpen={confirmSignOut}
+        title="Sign out"
+        message="Are you sure you want to sign out of Kanbedu?"
+        confirmLabel="Sign out"
+        cancelLabel="Cancel"
+        danger
+        onClose={() => setConfirmSignOut(false)}
+        onConfirm={handleSignOut}
+      />
       <CreateJoinModal
         isOpen={isCreateJoinOpen}
         onClose={() => setIsCreateJoinOpen(false)}

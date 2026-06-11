@@ -151,7 +151,7 @@ export default function ColumnHeader({
           title="Column options"
           draggable={false}
           onClick={(e) => { e.stopPropagation(); menuOpen ? closeMenu() : openMenu(); }}
-          className="p-1 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+          className="p-1.5 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3" cy="8" r="1.5" />

@@ -1304,7 +1304,7 @@ export default function TaskModal({
               setShowActivity(next);
               if (next && activities.length === 0) void fetchActivitiesForTask(task.id);
             }}
-            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-ink transition-colors w-full text-left"
           >
             <svg
               className={`transition-transform duration-150 ${showActivity ? "rotate-90" : ""}`}
@@ -1357,7 +1357,7 @@ export default function TaskModal({
               setShowHistory(next);
               if (next && versions.length === 0) void fetchVersionsDeduped();
             }}
-            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted hover:text-ink transition-colors w-full text-left"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-ink transition-colors w-full text-left"
           >
             <svg
               className={`transition-transform duration-150 ${showHistory ? "rotate-90" : ""}`}

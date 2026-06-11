@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +24,11 @@ export default function ConfirmModal({
   onConfirm,
 }: Props) {
   const [processing, setProcessing] = useState(false);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isOpen) confirmRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,7 +62,7 @@ export default function ConfirmModal({
           >
             {cancelLabel}
           </button>
-          <button onClick={handleConfirm} disabled={processing} className={confirmBtnClass}>
+          <button ref={confirmRef} onClick={handleConfirm} disabled={processing} className={confirmBtnClass}>
             {processing ? `${confirmLabel}…` : confirmLabel}
           </button>
         </div>

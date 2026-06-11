@@ -5,15 +5,17 @@ import { useState, useRef } from "react";
 interface Props {
   column: string;
   onAdd: (title: string, column: string) => Promise<void>;
+  prominent?: boolean;
 }
 
 const TITLE_CHAR_LIMIT = 100;
 
-export default function AddTask({ column, onAdd }: Props) {
+export default function AddTask({ column, onAdd, prominent = false }: Props) {
   const [active, setActive] = useState(false);
   const [value, setValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleActivate = () => {
@@ -36,14 +38,18 @@ export default function AddTask({ column, onAdd }: Props) {
       return;
     }
     setIsEmpty(false);
+    setSaveError(false);
     setIsSaving(true);
     try {
       await onAdd(trimmed, column);
       setValue("");
       setIsEmpty(false);
+      setSaveError(false);
       setActive(false);
     } catch (err) {
       console.error("Failed to add task:", err);
+      setSaveError(true);
+      inputRef.current?.focus();
     } finally {
       setIsSaving(false);
     }
@@ -65,6 +71,7 @@ export default function AddTask({ column, onAdd }: Props) {
       setActive(false);
       setValue("");
       setIsEmpty(false);
+      setSaveError(false);
     }
   };
 
@@ -74,7 +81,7 @@ export default function AddTask({ column, onAdd }: Props) {
         <input
           ref={inputRef}
           value={value}
-          onChange={(e) => { setValue(e.target.value); if (isEmpty) setIsEmpty(false); }}
+          onChange={(e) => { setValue(e.target.value); if (isEmpty) setIsEmpty(false); if (saveError) setSaveError(false); }}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder="Task title…"
@@ -83,13 +90,25 @@ export default function AddTask({ column, onAdd }: Props) {
             text-sm text-ink placeholder:text-muted
             border focus:outline-none focus-ring
             shadow-card
-            ${isEmpty ? "border-red-400" : "border-border"}
+            ${isEmpty || saveError ? "border-red-400" : "border-border"}
           `}
         />
-        <p className={`text-xs mt-1.5 px-1 ${isEmpty || value.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
-          {isSaving ? "Adding…" : isEmpty ? "Title can't be empty" : value.length > TITLE_CHAR_LIMIT ? `${value.length}/${TITLE_CHAR_LIMIT} characters, too long` : "Enter to add · Esc to cancel"}
+        <p role="status" className={`text-xs mt-1.5 px-1 ${isEmpty || saveError || value.length > TITLE_CHAR_LIMIT ? "text-red-400" : "text-muted"}`}>
+          {isSaving ? "Adding…" : saveError ? "Failed to save — try again" : isEmpty ? "Title can't be empty" : value.length > TITLE_CHAR_LIMIT ? `${value.length}/${TITLE_CHAR_LIMIT} characters, too long` : "Enter to add · Esc to cancel"}
         </p>
       </div>
+    );
+  }
+
+  if (prominent) {
+    return (
+      <button
+        onClick={handleActivate}
+        className="mt-3 w-full px-4 py-3 rounded-xl border-2 border-dashed border-border hover:border-ink/30 hover:bg-card-bg text-sm text-muted hover:text-ink transition-all duration-150 flex items-center justify-center gap-2"
+      >
+        <span className="text-base leading-none">+</span>
+        <span>Add your first task</span>
+      </button>
     );
   }
 

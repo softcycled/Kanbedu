@@ -272,7 +272,7 @@ function FilterBar({
 
       {/* Mobile sheet */}
       {mobileOpen && (
-        <div className="sm:hidden fixed inset-0 z-50" data-modal-open>
+        <div role="dialog" aria-modal="true" aria-label="Filters" className="sm:hidden fixed inset-0 z-50" data-modal-open>
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto bg-card-bg rounded-t-2xl border-t border-border safe-area-bottom">
             <div className="sticky top-0 bg-card-bg flex items-center justify-between px-4 py-3 border-b border-border/60">

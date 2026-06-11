@@ -40,6 +40,10 @@ export default function ClassJoinPage() {
     try {
       const res = await fetch(`/api/classes/join/${code}`, { method: "POST" });
       const data = await res.json();
+      if (res.status === 401) {
+        router.push(`/login?next=/class/join/${encodeURIComponent(code)}`);
+        return;
+      }
       if (!res.ok) {
         setMessage(data.error || "Failed to join.");
         setStatus("error");

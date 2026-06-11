@@ -53,7 +53,7 @@ export default function DeleteColumnModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+    <div role="dialog" aria-modal="true" aria-label={`Delete column "${column.label}"`} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
       <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
         <p className="text-sm font-semibold text-ink">Delete column "{column.label}"?</p>
         <p className="text-xs text-muted mt-1">
