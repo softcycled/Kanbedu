@@ -115,27 +115,17 @@ function TaskCard({ task, onClick }: Props) {
         {assignees.length > 0 && (
           <>
             <span className="text-muted text-xs">·</span>
-            <div className="relative group/assignee flex-shrink-0">
-              <div className="flex items-center">
-                {assignees.slice(0, 3).map((a, i) => (
+            <div className="flex items-center flex-shrink-0">
+              {assignees.slice(0, 3).map((a, i) => (
+                <div key={a.id} className={`relative group/avatar hover:z-10 ${i > 0 ? "-ml-1" : ""}`}>
                   <div
-                    key={a.id}
-                    className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm ring-1 ring-card-bg ${i > 0 ? "-ml-1" : ""}`}
+                    className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm ring-1 ring-card-bg"
                     style={{ backgroundColor: a.color }}
                   >
                     {a.name.charAt(0).toUpperCase()}
                   </div>
-                ))}
-                {assignees.length > 3 && (
-                  <span className="-ml-1 flex items-center justify-center w-4 h-4 rounded-full text-[8px] font-bold bg-muted/30 text-ink ring-1 ring-card-bg">
-                    +{assignees.length - 3}
-                  </span>
-                )}
-              </div>
-              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/assignee:opacity-100 transition-opacity duration-150">
-                <div className="flex flex-col gap-1.5 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
-                  {assignees.map((a) => (
-                    <div key={a.id} className="flex items-center gap-2">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150">
+                    <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
                       <span
                         className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
                         style={{ backgroundColor: a.color }}
@@ -149,9 +139,14 @@ function TaskCard({ task, onClick }: Props) {
                         )}
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              ))}
+              {assignees.length > 3 && (
+                <span className="-ml-1 flex items-center justify-center w-4 h-4 rounded-full text-[8px] font-bold bg-muted/30 text-ink ring-1 ring-card-bg">
+                  +{assignees.length - 3}
+                </span>
+              )}
             </div>
           </>
         )}
