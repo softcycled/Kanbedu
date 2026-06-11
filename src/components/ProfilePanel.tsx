@@ -708,11 +708,6 @@ export default function ProfilePanel() {
                   </SettingRow>
                 </SectionItem>
                 <SectionItem>
-                  <SettingRow label="Connected accounts" description="Link third-party services" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
                   <SettingRow label="Delete account" description="Permanently remove your data" disabled>
                     <ComingSoonBadge />
                   </SettingRow>
@@ -768,7 +763,7 @@ export default function ProfilePanel() {
                   </SettingRow>
                 </SectionItem>
                 <SectionItem>
-                  <SettingRow label="Push notifications" description="Mobile push notifications (coming later)" disabled>
+                  <SettingRow label="Push notifications" description="Browser push notifications for tasks and mentions" disabled>
                     <ComingSoonBadge />
                   </SettingRow>
                 </SectionItem>
