@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import PasswordInput from "@/components/PasswordInput";
 
 // Only allow same-origin relative paths as a post-auth destination, to prevent
 // open-redirect abuse via the ?next= param.
@@ -223,8 +224,7 @@ function LoginContent() {
               >
                 Password
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === "signup" ? "Min 8 characters" : "Your password"}

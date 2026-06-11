@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function ResetPasswordPage() {
   const params = useParams();
@@ -68,8 +69,7 @@ export default function ResetPasswordPage() {
                 <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "#78716C" }}>
                   New password
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min 8 characters"
@@ -86,8 +86,7 @@ export default function ResetPasswordPage() {
                 <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "#78716C" }}>
                   Confirm password
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Repeat your password"
