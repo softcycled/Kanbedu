@@ -30,6 +30,38 @@ model User {
   passwordResetTokens PasswordResetToken[]
   ownedClasses        Class[]                  @relation("ClassOwner")
   classMemberships    ClassMember[]
+  notifications       Notification[]
+  pushSubscriptions   PushSubscription[]
+}
+
+// In-app notification feed. Push delivery is best-effort on top of this.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // "ASSIGNED" | "COMMENT"
+  title     String
+  body      String   @default("")
+  read      Boolean  @default(false)
+  taskId    String?
+  boardId   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// Browser push endpoint per user/device (Web Push / VAPID).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model EmailVerification {

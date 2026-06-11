@@ -30,6 +30,7 @@
     "react-dom": "^18",
     "recharts": "^3.8.1",
     "resend": "^6.12.4",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.0.1",
     "playwright": "^1.60.0",
     "postcss": "^8",
