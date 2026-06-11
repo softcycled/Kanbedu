@@ -183,15 +183,17 @@ export default function ColumnHeader({
                   </button>
                 )}
                 <div className="border-t border-border" />
-                {/* Mark / Unmark as Done */}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => { e.stopPropagation(); onSetDone(); closeMenu(); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                >
-                  {isDone ? "Unmark as Done" : "Mark as Done"}
-                </button>
+                {/* Mark as Done — only shown for non-done columns */}
+                {!isDone && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={(e) => { e.stopPropagation(); onSetDone(); closeMenu(); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                  >
+                    Mark as Done
+                  </button>
+                )}
                 {/* Delete */}
                 {isDynamic && !isDone && (
                   <button

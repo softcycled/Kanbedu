@@ -1181,13 +1181,13 @@ export default function TaskModal({
               )}
 
               {isCreatingTag && tagCreatePhase === "name" && (
-                <div className="p-3">
+                <div className="p-2">
                   <input
                     autoFocus
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     placeholder="Tag name…"
-                    className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                    className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
                         setIsCreatingTag(false);
@@ -1812,7 +1812,7 @@ export default function TaskModal({
                               value={newTagName}
                               onChange={(e) => setNewTagName(e.target.value)}
                               placeholder="Tag name…"
-                              className="w-full bg-column-bg border-none rounded-md px-2 py-1 text-xs text-ink outline-none"
+                              className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
                               onKeyDown={(e) => {
                                 if (e.key === "Escape") {
                                   setIsCreatingTag(false);
