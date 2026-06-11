@@ -97,10 +97,15 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         return false;
       }
 
-      // Assignee filter (OR within category)
+      // Assignee filter (OR within category) — a multi-assignee task matches
+      // if ANY of its assignees is selected
       if (selectedAssignees.length > 0) {
-        const assigneeId = task.assigneeId || "unassigned";
-        if (!selectedAssignees.includes(assigneeId)) return false;
+        const taskAssigneeIds = task.assignees?.length
+          ? task.assignees.map((a) => a.id)
+          : task.assigneeId
+          ? [task.assigneeId]
+          : ["unassigned"];
+        if (!taskAssigneeIds.some((id) => selectedAssignees.includes(id))) return false;
       }
 
       // Tags filter (OR within category - match if task has ANY of the selected tags)
@@ -606,13 +611,19 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       )
     );
 
-    // Persist to server
+    // Persist to server. Mover mismatch = current user is in none of the
+    // task's assignees (server recomputes this; the hint is informational).
     const isColumnChange = task.column !== destColumn;
+    const taskAssigneeIdSet = task.assignees?.length
+      ? task.assignees.map((a) => a.id)
+      : task.assigneeId
+      ? [task.assigneeId]
+      : [];
     const isMoverMismatch =
       isColumnChange &&
-      !!task.assigneeId &&
+      taskAssigneeIdSet.length > 0 &&
       !!currentUserId &&
-      task.assigneeId !== currentUserId;
+      !taskAssigneeIdSet.includes(currentUserId);
 
     const res = await fetch(`/api/tasks/${activeId}`, {
       method: "PATCH",
@@ -670,6 +681,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       column,
       columnUpdatedAt: now,
       assigneeId: null,
+      assignees: [],
       order: maxOrder + 1,
       priority: "medium",
       movedByNonAssignee: false,
@@ -752,7 +764,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                 title: prevTask.title,
                 column: prevTask.column,
                 description: prevTask.description || undefined,
-                assigneeId: prevTask.assigneeId || undefined,
+                // restore the full assignee set, not just the first assignee
+                assigneeIds: prevTask.assignees?.length
+                  ? prevTask.assignees.map((a) => a.id)
+                  : prevTask.assigneeId
+                  ? [prevTask.assigneeId]
+                  : undefined,
                 priority: prevTask.priority !== "medium" ? prevTask.priority : undefined,
                 deadline: prevTask.deadline ? String(prevTask.deadline) : undefined,
                 tagIds: prevTask.tags?.map((t) => t.id),

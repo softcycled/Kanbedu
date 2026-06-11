@@ -49,6 +49,13 @@ function TaskCard({ task, onClick }: Props) {
   };
   const p = task.priority ?? "medium";
 
+  // Full assignee set; fall back to the legacy single assignee shape
+  const assignees = task.assignees?.length
+    ? task.assignees
+    : task.assigneeUser
+    ? [task.assigneeUser]
+    : [];
+
   const rootClass = `group relative bg-card-bg rounded-2xl px-4 py-4 shadow-card hover:shadow-card-hover hover:-translate-y-1 cursor-pointer select-none border border-transparent hover:border-border`;
 
   return (
@@ -105,30 +112,44 @@ function TaskCard({ task, onClick }: Props) {
           </span>
         )}
 
-        {task.assigneeUser && (
+        {assignees.length > 0 && (
           <>
             <span className="text-muted text-xs">·</span>
             <div className="relative group/assignee flex-shrink-0">
-              <div
-                className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm"
-                style={{ backgroundColor: task.assigneeUser.color }}
-              >
-                {task.assigneeUser.name.charAt(0).toUpperCase()}
+              <div className="flex items-center">
+                {assignees.slice(0, 3).map((a, i) => (
+                  <div
+                    key={a.id}
+                    className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm ring-1 ring-card-bg ${i > 0 ? "-ml-1" : ""}`}
+                    style={{ backgroundColor: a.color }}
+                  >
+                    {a.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {assignees.length > 3 && (
+                  <span className="-ml-1 flex items-center justify-center w-4 h-4 rounded-full text-[8px] font-bold bg-muted/30 text-ink ring-1 ring-card-bg">
+                    +{assignees.length - 3}
+                  </span>
+                )}
               </div>
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/assignee:opacity-100 transition-opacity duration-150">
-                <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
-                  <span
-                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                    style={{ backgroundColor: task.assigneeUser.color }}
-                  >
-                    {task.assigneeUser.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="text-[13px] font-semibold text-white leading-tight">{task.assigneeUser.name}</span>
-                    {task.assigneeUser.handle && (
-                      <span className="text-[11px] text-white/50 leading-tight">@{task.assigneeUser.handle}</span>
-                    )}
-                  </div>
+                <div className="flex flex-col gap-1.5 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+                  {assignees.map((a) => (
+                    <div key={a.id} className="flex items-center gap-2">
+                      <span
+                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                        style={{ backgroundColor: a.color }}
+                      >
+                        {a.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-semibold text-white leading-tight">{a.name}</span>
+                        {a.handle && (
+                          <span className="text-[11px] text-white/50 leading-tight">@{a.handle}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -154,6 +175,8 @@ const tagsDigest = (tags: Task["tags"]) =>
   (tags ?? []).map((t) => `${t.id}|${t.name}|${t.color}`).join(",");
 const assigneeUserDigest = (u: Task["assigneeUser"]) =>
   u ? `${u.color}|${u.name}|${u.handle ?? ""}` : "";
+const assigneesDigest = (list: Task["assignees"]) =>
+  (list ?? []).map((a) => `${a.id}|${a.color}|${a.name}`).join(",");
 
 export default memo(TaskCard, (prev, next) => {
   const prevCount = (prev.task.comments && prev.task.comments.length) || (prev.task as any).commentCount || ((prev.task as any)._count?.comments) || 0;
@@ -169,6 +192,7 @@ export default memo(TaskCard, (prev, next) => {
     prev.task.completedAt === next.task.completedAt &&
     prevCount === nextCount &&
     tagsDigest(prev.task.tags) === tagsDigest(next.task.tags) &&
-    assigneeUserDigest(prev.task.assigneeUser) === assigneeUserDigest(next.task.assigneeUser)
+    assigneeUserDigest(prev.task.assigneeUser) === assigneeUserDigest(next.task.assigneeUser) &&
+    assigneesDigest(prev.task.assignees) === assigneesDigest(next.task.assignees)
   );
 });

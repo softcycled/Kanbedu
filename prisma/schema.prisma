@@ -23,6 +23,7 @@ model User {
   boards              BoardMember[]
   bugReports          BugReport[]
   assignedTasks       Task[]                   @relation("TaskAssignees")
+  taskAssignments     TaskAssignee[]
   activities          TaskActivity[]
   descriptionVersions TaskDescriptionVersion[]
   emailVerifications  EmailVerification[]
@@ -107,6 +108,7 @@ model Task {
   movedByNonAssignee  Boolean                  @default(false)
   comments            Comment[]
   assigneeUser        User?                    @relation("TaskAssignees", fields: [assigneeId], references: [id])
+  assignees           TaskAssignee[]
   columnRel           Column                   @relation("ColumnTasks", fields: [column], references: [id])
   activities          TaskActivity[]
   columnHistory       TaskColumnHistory[]
@@ -120,6 +122,19 @@ model Task {
   @@index([assigneeId])
   @@index([completedAt])
   @@index([createdAt])
+}
+
+// Full assignee set for a task (multi-assignee). Task.assigneeId is kept in
+// sync as the first assignee so legacy single-assignee paths keep working.
+model TaskAssignee {
+  taskId     String
+  userId     String
+  assignedAt DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
 
 model Tag {

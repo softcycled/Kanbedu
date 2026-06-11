@@ -5,6 +5,7 @@ import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getBoardNameOverrides } from "@/lib/classNames";
 
 // GET single task with full details (activities, comments, etc.)
 export async function GET(
@@ -69,6 +70,10 @@ export async function GET(
     columnUpdatedAt: true,
     assigneeId: true,
     assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+    assignees: {
+      orderBy: { assignedAt: "asc" },
+      select: { user: { select: { id: true, name: true, color: true, handle: true } } },
+    },
     order: true,
     priority: true,
     movedByNonAssignee: true,
@@ -149,6 +154,23 @@ export async function GET(
 
   const queryMs = taskQueryMs + activitiesMs + commentsMs;
 
+  // Flatten assignee junction rows to plain user objects, then overlay
+  // educator-set roster names (class group boards) on every name we return.
+  const nameOverrides = await getBoardNameOverrides(taskAuth.columnRel.boardId);
+  {
+    const t = task as any;
+    t.assignees = (t.assignees ?? []).map((a: any) => ({
+      ...a.user,
+      name: nameOverrides.get(a.user.id) ?? a.user.name,
+    }));
+    if (t.assigneeUser) {
+      t.assigneeUser.name = nameOverrides.get(t.assigneeUser.id) ?? t.assigneeUser.name;
+    }
+    for (const act of t.activities ?? []) {
+      if (act.user) act.user.name = nameOverrides.get(act.user.id) ?? act.user.name;
+    }
+  }
+
   // Measure serialization cost explicitly (JSON.stringify)
   const serializeStart = Date.now();
   const bodyString = JSON.stringify(task);
@@ -189,14 +211,19 @@ export async function PATCH(
 
   // Validate that any assignee/tags are scoped to this task's board — prevents
   // assigning to a non-member or attaching another board's tags. Null assignee
-  // (unassign) and empty tagIds (clear) are intentionally allowed.
+  // (unassign) and empty tagIds/assigneeIds (clear) are intentionally allowed.
+  // assigneeIds (multi) wins over legacy assigneeId when both are present.
   const boardId = taskAuth.columnRel.boardId;
-  if (body.assigneeId) {
-    const assigneeMember = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: body.assigneeId, boardId } },
-      select: { id: true },
+  const assigneeSetChanged = body.assigneeIds !== undefined || body.assigneeId !== undefined;
+  const newAssigneeIds: string[] | null = assigneeSetChanged
+    ? [...new Set(body.assigneeIds ?? (body.assigneeId ? [body.assigneeId] : []))]
+    : null;
+  if (newAssigneeIds && newAssigneeIds.length > 0) {
+    const assigneeMembers = await prisma.boardMember.findMany({
+      where: { userId: { in: newAssigneeIds }, boardId },
+      select: { userId: true },
     });
-    if (!assigneeMember) {
+    if (assigneeMembers.length !== newAssigneeIds.length) {
       return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
     }
   }
@@ -234,6 +261,7 @@ export async function PATCH(
       description: true,
       column: true,
       assigneeId: true,
+      assignees: { select: { userId: true } },
       priority: true,
       order: true,
       completedAt: true,
@@ -252,11 +280,22 @@ export async function PATCH(
   }
 
   // Only bump updatedAt for meaningful field changes, not order/position changes
-  const CONTENT_FIELDS = ["title", "description", "assigneeId", "deadline", "priority"];
+  const CONTENT_FIELDS = ["title", "description", "assigneeId", "assigneeIds", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
 
   // movedByNonAssignee is server-computed — reject any client-supplied value.
   delete updateData.movedByNonAssignee;
+
+  // Assignee set change: replace junction rows atomically and mirror the first
+  // assignee onto assigneeId for legacy paths. assigneeIds is not a Task column.
+  delete updateData.assigneeIds;
+  if (newAssigneeIds !== null) {
+    updateData.assigneeId = newAssigneeIds[0] ?? null;
+    updateData.assignees = {
+      deleteMany: {},
+      create: newAssigneeIds.map((userId) => ({ userId })),
+    };
+  }
 
   let columnActuallyChanged = false;
 
@@ -318,12 +357,15 @@ export async function PATCH(
 
   // Server-side integrity signal: set flag when a non-assignee moves the task to
   // a different column, but only on class group boards and only when the assignee
-  // is not also changing in this same request.
+  // is not also changing in this same request. With multi-assignee, the mover is
+  // a non-assignee only when they're in none of the task's assignee set.
+  const currentAssigneeIds: string[] = (current?.assignees ?? []).map((a: any) => a.userId);
+  if (currentAssigneeIds.length === 0 && current?.assigneeId) currentAssigneeIds.push(current.assigneeId);
   if (
     columnActuallyChanged &&
-    current.assigneeId &&
-    current.assigneeId !== session.userId &&
-    body.assigneeId === undefined
+    currentAssigneeIds.length > 0 &&
+    !currentAssigneeIds.includes(session.userId) &&
+    !assigneeSetChanged
   ) {
     const isGroupBoard = await prisma.group.findFirst({
       where: { boardId: taskAuth.columnRel.boardId },
@@ -331,8 +373,8 @@ export async function PATCH(
     });
     if (isGroupBoard) updateData.movedByNonAssignee = true;
   }
-  // Clear the flag when the assignee is changed — new assignee starts clean.
-  if (body.assigneeId !== undefined) {
+  // Clear the flag when the assignee set is changed — new assignees start clean.
+  if (assigneeSetChanged) {
     updateData.movedByNonAssignee = false;
   }
 
@@ -383,6 +425,10 @@ export async function PATCH(
         columnUpdatedAt: true,
         assigneeId: true,
         assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+        assignees: {
+          orderBy: { assignedAt: "asc" },
+          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
+        },
         order: true,
         priority: true,
         movedByNonAssignee: true,
@@ -400,7 +446,7 @@ export async function PATCH(
         postUpdateWork.push(prisma.taskDescriptionVersion.create({ data: { taskId: id, userId: session.userId, content: body.description } }));
         postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", "Updated the description"));
       }
-      if (body.assigneeId !== undefined) postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignee"));
+      if (assigneeSetChanged) postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));
       if (body.tagIds !== undefined) postUpdateWork.push(recordActivity(id, session.userId, "TAG", "Updated tags"));
       try {
         await Promise.allSettled(postUpdateWork);
@@ -425,6 +471,10 @@ export async function PATCH(
         columnUpdatedAt: true,
         assigneeId: true,
         assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+        assignees: {
+          orderBy: { assignedAt: "asc" },
+          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
+        },
         order: true,
         priority: true,
         movedByNonAssignee: true,
@@ -476,10 +526,25 @@ export async function PATCH(
 
 
 
+  // Class group boards: overlay educator-set roster names so the card doesn't
+  // flash self-chosen names after an update. Then flatten the junction rows.
+  const patchNameOverrides =
+    updated.assigneeUser || updated.assignees?.length
+      ? await getBoardNameOverrides(taskAuth.columnRel.boardId)
+      : new Map<string, string>();
+  if (updated.assigneeUser) {
+    updated.assigneeUser.name = patchNameOverrides.get(updated.assigneeUser.id) ?? updated.assigneeUser.name;
+  }
+  const flatAssignees = (updated.assignees ?? []).map((a: any) => ({
+    ...a.user,
+    name: patchNameOverrides.get(a.user.id) ?? a.user.name,
+  }));
+
   // Compose a minimal response; ensure `tags`, `comments`, and `activities` are present so
   // client code can safely replace local task objects without structural surprises.
   const response = {
     ...updated,
+    assignees: flatAssignees,
     tags: updated.tags ?? [],
     comments: [],
     activities: [],

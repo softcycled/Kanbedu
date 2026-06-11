@@ -303,7 +303,15 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
               key={task.id}
               task={task}
               columnEntry={columnMap.get(task.column)}
-              member={task.assigneeId ? memberMap.get(task.assigneeId) ?? null : null}
+              members={
+                task.assignees?.length
+                  ? task.assignees
+                      .map((a) => memberMap.get(a.id))
+                      .filter((m): m is BoardMemberData => !!m)
+                  : task.assigneeId
+                  ? [memberMap.get(task.assigneeId)].filter((m): m is BoardMemberData => !!m)
+                  : []
+              }
               onClick={() => onTaskClick(task)}
             />
           ))}
@@ -318,11 +326,11 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
 interface RowProps {
   task: Task;
   columnEntry: (ColumnData & { paletteIdx: number }) | undefined;
-  member: BoardMemberData | null;
+  members: BoardMemberData[];
   onClick: () => void;
 }
 
-const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: RowProps) {
+const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: RowProps) {
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const avatarRef = useRef<HTMLSpanElement>(null);
 
@@ -378,36 +386,50 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: Ro
         {pCfg.label}
       </span>
 
-      {/* Assignee avatar — always visible, tap to show name tooltip */}
-      <span ref={avatarRef} className="w-7 flex-shrink-0 flex items-center justify-center">
-        {member ? (
+      {/* Assignee avatars — always visible, tap to show names tooltip */}
+      <span ref={avatarRef} className="min-w-7 flex-shrink-0 flex items-center justify-center">
+        {members.length > 0 ? (
           <span
             className="relative"
             onClick={(e) => { e.stopPropagation(); setTooltipOpen((v) => !v); }}
             onMouseEnter={() => setTooltipOpen(true)}
             onMouseLeave={() => setTooltipOpen(false)}
           >
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 cursor-pointer"
-              style={{ backgroundColor: member.color || nameToColor(member.name) }}
-            >
-              {member.name.charAt(0).toUpperCase()}
+            <span className="flex items-center cursor-pointer">
+              {members.slice(0, 3).map((m, i) => (
+                <span
+                  key={m.id}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-paper ${i > 0 ? "-ml-2" : ""}`}
+                  style={{ backgroundColor: m.color || nameToColor(m.name) }}
+                >
+                  {m.name.charAt(0).toUpperCase()}
+                </span>
+              ))}
+              {members.length > 3 && (
+                <span className="-ml-2 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold bg-muted/30 text-ink ring-1 ring-paper">
+                  +{members.length - 3}
+                </span>
+              )}
             </span>
             {tooltipOpen && (
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50">
-                <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
-                  <span
-                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                    style={{ backgroundColor: member.color || nameToColor(member.name) }}
-                  >
-                    {member.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="text-[13px] font-semibold text-white leading-tight">{member.name}</span>
-                    {member.handle && (
-                      <span className="text-[11px] text-white/50 leading-tight">@{member.handle}</span>
-                    )}
-                  </div>
+                <div className="flex flex-col gap-1.5 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+                  {members.map((m) => (
+                    <div key={m.id} className="flex items-center gap-2">
+                      <span
+                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                        style={{ backgroundColor: m.color || nameToColor(m.name) }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-semibold text-white leading-tight">{m.name}</span>
+                        {m.handle && (
+                          <span className="text-[11px] text-white/50 leading-tight">@{m.handle}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -436,5 +458,5 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, member, onClick }: Ro
   String(prev.task.deadline) === String(next.task.deadline) &&
   String(prev.task.completedAt) === String(next.task.completedAt) &&
   prev.columnEntry?.id === next.columnEntry?.id &&
-  prev.member?.id === next.member?.id
+  prev.members.map((m) => m.id).join(",") === next.members.map((m) => m.id).join(",")
 );

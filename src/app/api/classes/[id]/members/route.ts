@@ -1,8 +1,31 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { updateMemberSchema, assignMembersSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
+
+// Remove a user from all task assignments on a board: delete their junction
+// rows, then re-mirror assigneeId to the next remaining assignee (or null) so
+// the legacy single-assignee column stays consistent.
+async function unassignUserFromBoardTasks(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  boardId: string
+) {
+  const cols = await tx.column.findMany({ where: { boardId }, select: { id: true } });
+  if (cols.length === 0) return;
+  const colIds = cols.map((c) => c.id);
+  await tx.taskAssignee.deleteMany({
+    where: { userId, task: { column: { in: colIds } } },
+  });
+  await tx.$executeRaw`
+    UPDATE "Task" t SET "assigneeId" = (
+      SELECT ta."userId" FROM "TaskAssignee" ta
+      WHERE ta."taskId" = t."id" ORDER BY ta."assignedAt" ASC LIMIT 1
+    )
+    WHERE t."column" IN (${Prisma.join(colIds)}) AND t."assigneeId" = ${userId}`;
+}
 
 // PATCH: assign/move a student to a group, return them to the lobby, change
 // their role, remove them from the class, or assign many students at once
@@ -73,13 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           if (oldBoardId && oldBoardId !== newBoardId) {
             await tx.boardMember.deleteMany({ where: { userId: a.userId, boardId: oldBoardId } });
             // Unassign from tasks on the old board — treat as leaving the group.
-            const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
-            if (cols.length > 0) {
-              await tx.task.updateMany({
-                where: { column: { in: cols.map((c) => c.id) }, assigneeId: a.userId },
-                data: { assigneeId: null },
-              });
-            }
+            await unassignUserFromBoardTasks(tx, a.userId, oldBoardId);
           }
           if (newBoardId) {
             await tx.boardMember.upsert({
@@ -127,13 +144,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await prisma.$transaction(async (tx) => {
         if (oldBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
-          const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
-          if (cols.length > 0) {
-            await tx.task.updateMany({
-              where: { column: { in: cols.map((c) => c.id) }, assigneeId: userId },
-              data: { assigneeId: null },
-            });
-          }
+          await unassignUserFromBoardTasks(tx, userId, oldBoardId);
         }
         await tx.classMember.delete({ where: { userId_classId: { userId, classId: id } } });
       });
@@ -160,13 +171,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         // Remove from the previous group's board and unassign their tasks.
         if (oldBoardId && oldBoardId !== newBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
-          const cols = await tx.column.findMany({ where: { boardId: oldBoardId }, select: { id: true } });
-          if (cols.length > 0) {
-            await tx.task.updateMany({
-              where: { column: { in: cols.map((c) => c.id) }, assigneeId: userId },
-              data: { assigneeId: null },
-            });
-          }
+          await unassignUserFromBoardTasks(tx, userId, oldBoardId);
         }
         // Add to the new group's board (idempotent).
         if (newBoardId) {

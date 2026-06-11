@@ -89,6 +89,8 @@ export const createTaskSchema = z.object({
   column: z.string().min(1, "Column ID is required."),
   description: z.string().max(50000, "Description is too long.").optional(),
   assigneeId: z.string().nullable().optional(),
+  // Multi-assignee: full assignee set. Takes precedence over assigneeId when present.
+  assigneeIds: z.array(z.string()).max(10, "Too many assignees.").optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   deadline: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
@@ -100,6 +102,8 @@ export const updateTaskSchema = z.object({
   column: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
+  // Multi-assignee: full assignee set. Takes precedence over assigneeId when present.
+  assigneeIds: z.array(z.string()).max(10, "Too many assignees.").optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   deadline: z.string().nullable().optional(),
   movedByNonAssignee: z.boolean().optional(),

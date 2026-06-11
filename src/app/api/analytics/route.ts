@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getBoardNameOverrides } from "@/lib/classNames";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -24,23 +25,42 @@ export async function GET(request: NextRequest) {
   const HISTORY_CUTOFF = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
   // Run columns and tasks in parallel — tasks filter via relation instead of prefetching IDs
-  const [columns, tasks] = await Promise.all([
+  const [columns, tasks, nameOverrides] = await Promise.all([
     prisma.column.findMany({
       where: { boardId },
       orderBy: { order: "asc" },
     }),
+    // Explicit select keeps the payload lean — skips description (up to 50KB
+    // per task) and other fields analytics never reads.
     prisma.task.findMany({
       where: { columnRel: { boardId } },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        priority: true,
+        column: true,
+        columnUpdatedAt: true,
+        createdAt: true,
+        completedAt: true,
+        deadline: true,
+        movedByNonAssignee: true,
         _count: { select: { comments: true } },
         columnHistory: {
           where: { enteredAt: { gte: HISTORY_CUTOFF } },
           orderBy: { enteredAt: "asc" },
+          select: { columnId: true, enteredAt: true, exitedAt: true },
         },
-        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+        assigneeId: true,
+        assigneeUser: { select: { name: true, handle: true } },
+        assignees: {
+          orderBy: { assignedAt: "asc" },
+          select: { userId: true, user: { select: { name: true, handle: true } } },
+        },
       },
       orderBy: { createdAt: "asc" },
     }),
+    // Class group boards show educator-set roster names in analytics
+    getBoardNameOverrides(boardId),
   ]);
 
   if (columns.length === 0) {
@@ -175,6 +195,25 @@ export async function GET(request: NextRequest) {
   // ── Task details ──────────────────────────────────────────────
   const nonDoneColumnIdSet = new Set(columns.filter((c) => !c.isDone).map((c) => c.id));
 
+  // Resolve display names for a task's full assignee set (roster override →
+  // @handle → name). Falls back to the legacy single assignee for old rows.
+  const getAssigneeNames = (t: (typeof tasks)[number]): string[] => {
+    if (t.assignees.length > 0) {
+      return t.assignees.map(
+        (a) =>
+          nameOverrides.get(a.userId) ??
+          (a.user.handle ? `@${a.user.handle}` : a.user.name || "(unknown)")
+      );
+    }
+    if (t.assigneeId) {
+      return [
+        nameOverrides.get(t.assigneeId) ??
+          (t.assigneeUser?.handle ? `@${t.assigneeUser.handle}` : t.assigneeUser?.name || "(unknown)"),
+      ];
+    }
+    return [];
+  };
+
   const taskDetails = tasks.map((t) => {
     const col = columnMap.get(t.column);
     const isDone = col?.isDone ?? false;
@@ -199,16 +238,15 @@ export async function GET(request: NextRequest) {
     return {
       id: t.id,
       title: t.title,
-      assignee: t.assigneeUser?.handle ? `@${t.assigneeUser.handle}` : t.assigneeUser?.name || "(unassigned)",
+      assignee: getAssigneeNames(t).join(", ") || "(unassigned)",
       priority: t.priority,
       columnId: t.column,
       columnLabel: col?.label ?? t.column,
       columnIsDone: isDone,
       createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
       completedAt: t.completedAt?.toISOString() ?? null,
       deadline: t.deadline?.toISOString() ?? null,
-      commentCount: (t as any).commentCount ?? (t as any)._count?.comments ?? ((t as any).comments?.length ?? 0),
+      commentCount: t._count.comments,
       cycleTimeMs,
       currentPhaseMs,
       totalAgeMs,
@@ -240,7 +278,7 @@ export async function GET(request: NextRequest) {
   const stagnantCount = activeTasks.filter((t) => t.currentPhaseMs > THREE_DAYS_MS).length;
 
   // Comment density: avg comments per task
-  const totalComments = tasks.reduce((sum, t) => sum + ((t as any).commentCount ?? (t as any)._count?.comments ?? ((t as any).comments?.length ?? 0)), 0);
+  const totalComments = tasks.reduce((sum, t) => sum + t._count.comments, 0);
   const commentDensity = tasks.length > 0 ? totalComments / tasks.length : 0;
 
   // Integrity check: flag completed tasks that look like last-minute fabrication.
@@ -285,18 +323,21 @@ export async function GET(request: NextRequest) {
     { total: number; completed: number; overdue: number; cycleTimes: number[] }
   >();
 
-  for (const t of taskDetails) {
-    if (t.assignee === "(unassigned)") continue;
-    const name = t.assignee;
-    if (!assigneeMap.has(name)) {
-      assigneeMap.set(name, { total: 0, completed: 0, overdue: 0, cycleTimes: [] });
+  // Distribute each task to every one of its assignees — a shared task counts
+  // toward each member's totals. taskDetails is index-aligned with tasks.
+  tasks.forEach((rawTask, i) => {
+    const t = taskDetails[i];
+    for (const name of getAssigneeNames(rawTask)) {
+      if (!assigneeMap.has(name)) {
+        assigneeMap.set(name, { total: 0, completed: 0, overdue: 0, cycleTimes: [] });
+      }
+      const entry = assigneeMap.get(name)!;
+      entry.total++;
+      if (t.columnIsDone) entry.completed++;
+      if (t.deadline && new Date(t.deadline) < now && !t.columnIsDone) entry.overdue++;
+      if (t.cycleTimeMs !== null) entry.cycleTimes.push(t.cycleTimeMs);
     }
-    const entry = assigneeMap.get(name)!;
-    entry.total++;
-    if (t.columnIsDone) entry.completed++;
-    if (t.deadline && new Date(t.deadline) < now && !t.columnIsDone) entry.overdue++;
-    if (t.cycleTimeMs !== null) entry.cycleTimes.push(t.cycleTimeMs);
-  }
+  });
 
   const assignees = Array.from(assigneeMap.entries())
     .map(([name, data]) => ({
@@ -317,25 +358,30 @@ export async function GET(request: NextRequest) {
     (t) => t.createdAt < HISTORY_CUTOFF && t.columnHistory.length === 0
   );
 
-  return NextResponse.json({
-    columns: phaseStatsWithBottleneck,
-    tasks: taskDetails,
-    assignees,
-    summary: {
-      total: tasks.length,
-      completed,
-      inProgress: inProgressCount,
-      overdue,
-      avgCycleTimeMs,
-      stagnantCount,
-      stagnantRate: activeTasks.length > 0 ? stagnantCount / activeTasks.length : 0,
-      commentDensity,
-      deadlineAdherence:
-        completedWithDeadline.length > 0
-          ? { onTime, total: completedWithDeadline.length }
-          : null,
-      suspiciousTasks,
-      historyTruncated,
+  return NextResponse.json(
+    {
+      columns: phaseStatsWithBottleneck,
+      tasks: taskDetails,
+      assignees,
+      summary: {
+        total: tasks.length,
+        completed,
+        inProgress: inProgressCount,
+        overdue,
+        avgCycleTimeMs,
+        stagnantCount,
+        stagnantRate: activeTasks.length > 0 ? stagnantCount / activeTasks.length : 0,
+        commentDensity,
+        deadlineAdherence:
+          completedWithDeadline.length > 0
+            ? { onTime, total: completedWithDeadline.length }
+            : null,
+        suspiciousTasks,
+        historyTruncated,
+      },
     },
-  });
+    // Analytics tolerates short staleness — let the browser reuse a recent
+    // response instead of re-hitting the DB on every panel open.
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  );
 }

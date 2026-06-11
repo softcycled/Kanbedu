@@ -65,7 +65,9 @@ export default function TaskModal({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const [assigneeId, setAssigneeId] = useState("");
+  // Multi-assignee: ordered set of user ids. Joined-string debounce keeps
+  // comparisons stable across renders.
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
   const assigneeDropdownRef = useRef<HTMLDivElement>(null);
   const [columnId, setColumnId] = useState("");
@@ -149,12 +151,12 @@ export default function TaskModal({
   const [showHistory, setShowHistory] = useState(false);
 
   const debouncedDescription = useDebounce(description, 600);
-  const debouncedAssigneeId = useDebounce(assigneeId, 600);
+  const debouncedAssigneeIds = useDebounce(assigneeIds.join(","), 600);
   const debouncedDeadline = useDebounce(deadline, 600);
   const [optimisticTagIds, setOptimisticTagIds] = useState<string[] | null>(null);
 
   const prevTask = useRef<string | null>(null);
-  const originalTask = useRef<{ description?: string; assigneeId?: string | null; deadline?: string } | null>(null);
+  const originalTask = useRef<{ description?: string; assigneeIds?: string; deadline?: string } | null>(null);
   const isMounted = useRef(false);
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
@@ -185,13 +187,18 @@ export default function TaskModal({
       setOptimisticTagIds(null);
       setShowActivity(false);
       setShowHistory(false);
-      setAssigneeId(task.assigneeId ?? "");
+      const taskAssigneeIds = task.assignees?.length
+        ? task.assignees.map((a) => a.id)
+        : task.assigneeId
+        ? [task.assigneeId]
+        : [];
+      setAssigneeIds(taskAssigneeIds);
       setColumnId(task.column ?? "");
       setDeadline(formatDateForInput(task.deadline));
 
       originalTask.current = {
         description: task.description ?? "",
-        assigneeId: task.assigneeId,
+        assigneeIds: taskAssigneeIds.join(","),
         deadline: formatDateForInput(task.deadline),
       };
 
@@ -558,11 +565,13 @@ export default function TaskModal({
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    if (debouncedAssigneeId !== (originalTask.current?.assigneeId ?? "")) {
-      void handleUpdateWithFeedback(task.id, { assigneeId: debouncedAssigneeId === "" ? null : debouncedAssigneeId });
+    if (debouncedAssigneeIds !== (originalTask.current?.assigneeIds ?? "")) {
+      void handleUpdateWithFeedback(task.id, {
+        assigneeIds: debouncedAssigneeIds === "" ? [] : debouncedAssigneeIds.split(","),
+      } as unknown as Partial<Task>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedAssigneeId]);
+  }, [debouncedAssigneeIds]);
 
   // Auto-save description when debounced value changes
   useEffect(() => {
@@ -595,8 +604,8 @@ export default function TaskModal({
     if (description !== originalTask.current?.description) {
       updates.description = description;
     }
-    if (assigneeId !== originalTask.current?.assigneeId) {
-      updates.assigneeId = assigneeId === "" ? null : assigneeId;
+    if (assigneeIds.join(",") !== (originalTask.current?.assigneeIds ?? "")) {
+      (updates as any).assigneeIds = assigneeIds;
     }
     const deadlineValue = deadline ? dateInputToISOString(deadline) : null;
     const originalDeadline = originalTask.current?.deadline 
@@ -610,7 +619,7 @@ export default function TaskModal({
     if (Object.keys(updates).length > 0) {
       void handleUpdateWithFeedback(task.id, updates);
     }
-  }, [task, description, assigneeId, deadline, handleUpdateWithFeedback]);
+  }, [task, description, assigneeIds, deadline, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(() => {
     setConfirmDelete(false);
@@ -856,13 +865,13 @@ export default function TaskModal({
     const priorityLabelClass = variant === "mobile" ? "capitalize" : "capitalize text-white";
     return (
       <>
-        {/* Assignee */}
+        {/* Assignees — multi-select; clicking a member toggles them */}
         <div className="flex items-center gap-1.5 text-xs text-muted">
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="7" cy="5" r="2.5"/>
             <path d="M2 13a5 5 0 0110 0"/>
           </svg>
-          Assignee
+          {assigneeIds.length > 1 ? "Assignees" : "Assignee"}
         </div>
         <div ref={assigneeDropdownRef} className="relative">
           <button
@@ -871,50 +880,77 @@ export default function TaskModal({
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
             {(() => {
-              const m = boardMembers.find((bm) => bm.id === assigneeId);
-              if (!m) return <span className="text-muted">Unassigned</span>;
+              const selected = assigneeIds
+                .map((id) => boardMembers.find((bm) => bm.id === id))
+                .filter((m): m is NonNullable<typeof m> => !!m);
+              if (selected.length === 0) return <span className="text-muted">Unassigned</span>;
               return (
                 <>
-                  <span
-                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ backgroundColor: m.color }}
-                  >
-                    {m.name.charAt(0).toUpperCase()}
+                  <span className="flex items-center flex-shrink-0">
+                    {selected.slice(0, 3).map((m, i) => (
+                      <span
+                        key={m.id}
+                        className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`}
+                        style={{ backgroundColor: m.color }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                    ))}
                   </span>
-                  <span className="truncate">{m.name}</span>
+                  <span className="truncate">
+                    {selected.length === 1
+                      ? selected[0].name
+                      : `${selected[0].name} +${selected.length - 1}`}
+                  </span>
                 </>
               );
             })()}
           </button>
           {assigneeDropdownOpen && (
             <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta")].map((m) => {
-                const isSelected = m.id === assigneeId;
+              <button
+                type="button"
+                onClick={() => {
+                  userHasEdited.current = true;
+                  setAssigneeIds([]);
+                  setAssigneeDropdownOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                  assigneeIds.length === 0 ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                }`}
+              >
+                <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                </span>
+                <span className="truncate">Unassigned</span>
+                {assigneeIds.length === 0 && (
+                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 6l3 3 5-5"/>
+                  </svg>
+                )}
+              </button>
+              {boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta").map((m) => {
+                const isSelected = assigneeIds.includes(m.id);
                 return (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => {
                       userHasEdited.current = true;
-                      setAssigneeId(m.id);
-                      setAssigneeDropdownOpen(false);
+                      setAssigneeIds((prev) =>
+                        prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                      );
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                       isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                     }`}
                   >
-                    {m.id === "" ? (
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                      </span>
-                    ) : (
-                      <span
-                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{ backgroundColor: m.color }}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
+                    <span
+                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ backgroundColor: m.color }}
+                    >
+                      {m.name.charAt(0).toUpperCase()}
+                    </span>
                     <span className="truncate">{m.name}</span>
                     {isSelected && (
                       <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1498,7 +1534,9 @@ export default function TaskModal({
 
             {/* Quick meta row — desktop only; mobile renders the full properties grid below */}
             {isDesktop && (() => {
-              const m = boardMembers.find((bm) => bm.id === assigneeId);
+              const metaAssignees = assigneeIds
+                .map((id) => boardMembers.find((bm) => bm.id === id))
+                .filter((mm): mm is NonNullable<typeof mm> => !!mm);
               const hasDeadline = !!deadline && deadlineInfo.severity !== "none";
               const colIdx = columns.findIndex((c) => c.id === columnId);
               const colLabel = columns.find((c) => c.id === columnId)?.label;
@@ -1588,51 +1626,69 @@ export default function TaskModal({
                     )}
                   </div>
 
-                  {/* Assignee */}
-                  {m && (
+                  {/* Assignees — multi-select; clicking a member toggles them */}
+                  {metaAssignees.length > 0 && (
                     <div ref={metaAssigneeRef} className="relative">
                       <button
                         type="button"
                         onClick={() => setOpenMetaProp((cur) => cur === "assignee" ? null : "assignee")}
                         className={`${itemClass} text-ink`}
                       >
-                        <span
-                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                          style={{ backgroundColor: m.color }}
-                        >
-                          {m.name.charAt(0).toUpperCase()}
+                        <span className="flex items-center flex-shrink-0">
+                          {metaAssignees.slice(0, 3).map((mm, i) => (
+                            <span
+                              key={mm.id}
+                              className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`}
+                              style={{ backgroundColor: mm.color }}
+                            >
+                              {mm.name.charAt(0).toUpperCase()}
+                            </span>
+                          ))}
                         </span>
-                        <span>{m.name}</span>
+                        <span>
+                          {metaAssignees.length === 1
+                            ? metaAssignees[0].name
+                            : `${metaAssignees[0].name} +${metaAssignees.length - 1}`}
+                        </span>
                       </button>
                       {openMetaProp === "assignee" && (
                         <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          {[{ id: "", name: "Unassigned", color: "", handle: undefined as string | null | undefined }, ...boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta")].map((bm) => {
-                            const isSelected = bm.id === assigneeId;
+                          <button
+                            type="button"
+                            onClick={() => {
+                              userHasEdited.current = true;
+                              setAssigneeIds([]);
+                              setOpenMetaProp(null);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                          >
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
+                            </span>
+                            <span className="truncate">Unassigned</span>
+                          </button>
+                          {boardMembers.filter((bm) => bm.classRole !== "educator" && bm.classRole !== "ta").map((bm) => {
+                            const isSelected = assigneeIds.includes(bm.id);
                             return (
                               <button
                                 key={bm.id}
                                 type="button"
                                 onClick={() => {
                                   userHasEdited.current = true;
-                                  setAssigneeId(bm.id);
-                                  setOpenMetaProp(null);
+                                  setAssigneeIds((prev) =>
+                                    prev.includes(bm.id) ? prev.filter((id) => id !== bm.id) : [...prev, bm.id]
+                                  );
                                 }}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                                   isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                                 }`}
                               >
-                                {bm.id === "" ? (
-                                  <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                                  </span>
-                                ) : (
-                                  <span
-                                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                    style={{ backgroundColor: bm.color }}
-                                  >
-                                    {bm.name.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
+                                <span
+                                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                  style={{ backgroundColor: bm.color }}
+                                >
+                                  {bm.name.charAt(0).toUpperCase()}
+                                </span>
                                 <span className="truncate">{bm.name}</span>
                                 {isSelected && (
                                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">

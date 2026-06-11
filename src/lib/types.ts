@@ -47,6 +47,14 @@ export interface Task {
     color: string;
     handle?: string | null;
   } | null;
+  // Full assignee set (multi-assignee). assigneeId/assigneeUser mirror the
+  // first entry for legacy single-assignee paths.
+  assignees?: {
+    id: string;
+    name: string;
+    color: string;
+    handle?: string | null;
+  }[];
   order: number;
   priority: string;
   movedByNonAssignee: boolean;

@@ -37,6 +37,24 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    group: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+    },
+    classMember: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    taskAssignee: {
+      deleteMany: vi.fn(),
+    },
+    // Rate limiter reads the DB ledger; resolve as a fresh bucket so routes
+    // under test never get throttled.
+    rateLimit: {
+      findUnique: vi.fn(),
+      upsert: vi.fn().mockResolvedValue({ hits: 1, expiresAt: new Date(Date.now() + 60000) }),
+      update: vi.fn(),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
   },
 }));
 
@@ -133,12 +151,12 @@ describe('Authorization - integration (light)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('PATCH /api/tasks/[id] moving to a dest column in another board returns 403', async () => {
+  it('PATCH /api/tasks/[id] moving to a dest column in another board returns 400', async () => {
     (auth.getSession as any).mockResolvedValue({ userId: 'u1' });
     // First call: taskAuth check
     (prisma.task.findUnique as any).mockResolvedValueOnce({ columnRel: { boardId: 'b1' } });
     // Second call: fetch current
-    (prisma.task.findUnique as any).mockResolvedValueOnce({ id: 't1', title: 't', description: '', column: 'c1', assigneeId: null, priority: null, order: 0, completedAt: null, tags: [] });
+    (prisma.task.findUnique as any).mockResolvedValueOnce({ id: 't1', title: 't', description: '', column: 'c1', assigneeId: null, assignees: [], priority: null, order: 0, completedAt: null, tags: [] });
     // dest column belongs to a different board
     (prisma.column.findUnique as any).mockResolvedValue({ id: 'cX', boardId: 'b2' });
 
@@ -149,6 +167,8 @@ describe('Authorization - integration (light)', () => {
 
     const req = new Request('http://localhost/api/tasks/t1', { method: 'PATCH', body: JSON.stringify({ column: 'cX' }), headers: { 'Content-Type': 'application/json' } });
     const res: any = await taskRoute.PATCH(req as any, { params: { id: 't1' } } as any);
-    expect(res.status).toBe(403);
+    // Cross-board moves are rejected outright (same-board rule) before the
+    // dest-board membership check — 400, not 403.
+    expect(res.status).toBe(400);
   });
 });

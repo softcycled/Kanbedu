@@ -4,6 +4,7 @@ import { createTaskSchema, parseBody } from "@/lib/validations";
 import { getSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
+import { getBoardNameOverrides } from "@/lib/classNames";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
@@ -93,23 +94,37 @@ export async function GET(request: NextRequest) {
   const skip = parsedSkip !== null ? parsedSkip : 0;
 
   const where = { columnRel: { boardId } };
-  const [tasks, total] = await Promise.all([
+  const [tasks, total, nameOverrides] = await Promise.all([
     prisma.task.findMany({
       where,
       include: {
         _count: { select: { comments: true } },
         assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
+        assignees: {
+          orderBy: { assignedAt: "asc" },
+          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
+        },
         tags: true,
       },
       orderBy: [{ column: "asc" }, { order: "asc" }],
       ...(take !== undefined ? { take, skip } : {}),
     }),
     prisma.task.count({ where }),
+    getBoardNameOverrides(boardId),
   ]);
 
   // Return lean payload for board/list: do not include full comment bodies here.
+  // Class group boards show educator-set roster names instead of self-chosen ones.
   const mapped = tasks.map((t) => ({
     ...t,
+    assigneeUser: t.assigneeUser
+      ? { ...t.assigneeUser, name: nameOverrides.get(t.assigneeUser.id) ?? t.assigneeUser.name }
+      : t.assigneeUser,
+    // flatten junction rows to plain user objects for the UI
+    assignees: t.assignees.map((a) => ({
+      ...a.user,
+      name: nameOverrides.get(a.user.id) ?? a.user.name,
+    })),
     // preserve shape expected by UI but keep comments empty to avoid payload bloat
     comments: [],
     // expose a compact comment count
@@ -153,15 +168,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Validate that the assignee (if any) is a member of this board and that any
-  // tags belong to it — prevents assigning to a non-member or attaching another
-  // board's tags.
-  if (data.assigneeId) {
-    const assigneeMember = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: data.assigneeId, boardId: destinationColumn.boardId } },
-      select: { id: true },
+  // Resolve the assignee set: assigneeIds (multi) wins over legacy assigneeId.
+  // Validate every assignee is a board member and that any tags belong to this
+  // board — prevents assigning to a non-member or attaching another board's tags.
+  const assigneeIds = [...new Set(data.assigneeIds ?? (data.assigneeId ? [data.assigneeId] : []))];
+  if (assigneeIds.length > 0) {
+    const assigneeMembers = await prisma.boardMember.findMany({
+      where: { userId: { in: assigneeIds }, boardId: destinationColumn.boardId },
+      select: { userId: true },
     });
-    if (!assigneeMember) {
+    if (assigneeMembers.length !== assigneeIds.length) {
       return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
     }
   }
@@ -176,7 +192,8 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
-  // Create the task but avoid heavy includes (comments/activities) — return minimal fields quickly
+  // Create the task but avoid heavy includes (comments/activities) — return minimal fields quickly.
+  // assigneeId mirrors the first assignee; the junction rows hold the full set.
   const created = await prisma.task.create({
     data: {
       title: data.title,
@@ -185,12 +202,18 @@ export async function POST(req: Request) {
       columnUpdatedAt: now,
       completedAt: destinationColumn?.isDone ? now : null,
       ...(data.description ? { description: data.description } : {}),
-      ...(data.assigneeId ? { assigneeId: data.assigneeId } : {}),
+      ...(assigneeIds.length > 0 ? { assigneeId: assigneeIds[0] } : {}),
+      ...(assigneeIds.length > 0
+        ? { assignees: { create: assigneeIds.map((userId) => ({ userId })) } }
+        : {}),
       ...(data.priority ? { priority: data.priority } : {}),
       ...(data.deadline ? { deadline: new Date(data.deadline) } : {}),
       ...(data.tagIds?.length ? { tags: { connect: data.tagIds.map((id) => ({ id })) } } : {}),
     },
-    include: { tags: true },
+    include: {
+      tags: true,
+      assignees: { include: { user: { select: { id: true, name: true, color: true, handle: true } } } },
+    },
   });
 
   // Fire-and-forget non-critical work: history and activity logging
@@ -210,6 +233,14 @@ export async function POST(req: Request) {
     }
   })();
 
+  // Flatten junction rows to user objects; class group boards show roster names.
+  const createNameOverrides =
+    created.assignees.length > 0 ? await getBoardNameOverrides(destinationColumn.boardId) : new Map<string, string>();
+  const createdAssignees = created.assignees.map((a) => ({
+    ...a.user,
+    name: createNameOverrides.get(a.user.id) ?? a.user.name,
+  }));
+
   // Minimal response payload for fast client update
   const responseTask = {
     id: created.id,
@@ -222,6 +253,8 @@ export async function POST(req: Request) {
     column: created.column,
     columnUpdatedAt: created.columnUpdatedAt,
     assigneeId: created.assigneeId ?? null,
+    assigneeUser: createdAssignees[0] ?? null,
+    assignees: createdAssignees,
     order: created.order,
     priority: created.priority,
     movedByNonAssignee: created.movedByNonAssignee ?? false,
