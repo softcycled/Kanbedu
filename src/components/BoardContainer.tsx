@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Task, Board } from "@/lib/types";
 import BoardComp from "./Board";
 import Sidebar, { Panel, ClassSummary } from "./Sidebar";
+import NotificationBell from "./NotificationBell";
 import StudentClassView from "./class/StudentClassView";
 import dynamic from "next/dynamic";
 const AnalyticsPanel = dynamic(() => import("./AnalyticsPanel"), {
@@ -460,6 +461,7 @@ export default function BoardContainer({
                 onColumnsChange={setColumns}
                 isLoading={isLoadingBoard}
                 currentUserId={currentUserId}
+                headerTrailing={<NotificationBell />}
               />
             </div>
           </>
