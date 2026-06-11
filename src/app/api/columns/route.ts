@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const newOrder = (maxOrder._max.order || 0) + 1;
 
     const column = await prisma.column.create({
-      data: { label: data.label, order: newOrder, boardId: data.boardId },
+      data: { label: data.label, order: newOrder, boardId: data.boardId, color: data.color ?? null },
     });
 
     prisma.board.findUnique({

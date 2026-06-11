@@ -53,6 +53,7 @@ export const reorderBoardsSchema = z.object({
 export const createColumnSchema = z.object({
   label: z.string().trim().min(1, "Label is required.").max(60, "Label is too long."),
   boardId: z.string().min(1, "Board ID is required."),
+  color: z.enum(["blue", "orange", "green", "purple", "pink", "cyan", "yellow", "red"]).nullable().optional(),
 });
 
 export const updateColumnSchema = z
@@ -60,7 +61,7 @@ export const updateColumnSchema = z
     label: z.string().trim().min(1, "Label must be non-empty.").max(60, "Label is too long.").optional(),
     isDone: z.boolean().optional(),
     // A palette name selects an explicit color; null resets to color-by-position.
-    color: z.enum(["blue", "amber", "green", "purple", "pink", "cyan", "yellow", "rose"]).nullable().optional(),
+    color: z.enum(["blue", "orange", "green", "purple", "pink", "cyan", "yellow", "red"]).nullable().optional(),
   })
   .refine((data) => data.label !== undefined || data.isDone !== undefined || data.color !== undefined, {
     message: "No valid fields to update.",

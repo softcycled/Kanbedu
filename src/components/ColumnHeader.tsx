@@ -11,14 +11,13 @@ interface Props {
   onRename: (newLabel: string) => Promise<void>;
   onDelete: () => void;
   onSetDone: () => void;
-  isDynamic: boolean; // true if user-created, false if default
+  isDynamic: boolean;
   columnIndex?: number;
   color?: string | null;
   onSetColor?: (name: string | null) => void;
   isDragging?: boolean;
   dragListeners?: Record<string, unknown>;
 }
-
 
 export default function ColumnHeader({
   columnId,
@@ -37,9 +36,10 @@ export default function ColumnHeader({
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuView, setMenuView] = useState<"main" | "color">("main");
   const inputRef = useRef<HTMLInputElement>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const colors = resolveColumnPalette(color, columnIndex);
 
@@ -47,8 +47,7 @@ export default function ColumnHeader({
     if (editValue.trim() && editValue !== label) {
       try {
         await onRename(editValue.trim());
-      } catch (error) {
-        console.error("Failed to rename column:", error);
+      } catch {
         setEditValue(label);
       }
     }
@@ -56,12 +55,8 @@ export default function ColumnHeader({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSave();
-    } else if (e.key === "Escape") {
-      setEditValue(label);
-      setIsEditing(false);
-    }
+    if (e.key === "Enter") handleSave();
+    else if (e.key === "Escape") { setEditValue(label); setIsEditing(false); }
   };
 
   useEffect(() => {
@@ -72,22 +67,33 @@ export default function ColumnHeader({
   }, [isEditing]);
 
   useEffect(() => {
-    if (!pickerOpen) return;
+    if (!menuOpen) return;
     const onDown = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPickerOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [pickerOpen]);
+  }, [menuOpen]);
+
+  const openMenu = () => {
+    setMenuView("main");
+    setMenuOpen(true);
+  };
+
+  const closeMenu = () => setMenuOpen(false);
 
   const pickColor = (name: string | null) => {
     onSetColor?.(name);
-    setPickerOpen(false);
+    closeMenu();
   };
 
   return (
@@ -99,47 +105,10 @@ export default function ColumnHeader({
       data-column-id={columnId}
       {...(dragListeners as React.HTMLAttributes<HTMLDivElement>)}
     >
-      {/* Color dot — also the trigger for the color picker. */}
-      <div ref={pickerRef} className="relative flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          aria-label="Change column color"
-          title="Change column color"
-          draggable={false}
-          onClick={(e) => { e.stopPropagation(); if (onSetColor) setPickerOpen((v) => !v); }}
-          className={`w-2.5 h-2.5 rounded-full ${colors.dot} ${onSetColor ? "cursor-pointer ring-offset-1 hover:ring-2 ring-ink/20" : ""} block`}
-        />
-        {pickerOpen && onSetColor && (
-          <div
-            role="menu"
-            className="absolute left-0 top-full mt-2 z-50 w-max bg-card-bg border border-border rounded-xl shadow-modal p-2"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <div className="grid grid-cols-4 gap-1.5">
-              {COLUMN_PALETTE.map((p) => (
-                <button
-                  key={p.name}
-                  type="button"
-                  aria-label={p.name}
-                  title={p.name}
-                  onClick={() => pickColor(p.name)}
-                  className={`w-6 h-6 rounded-full ${p.dot} transition-transform hover:scale-110 ${
-                    color === p.name ? "ring-2 ring-ink ring-offset-1 ring-offset-card-bg" : ""
-                  }`}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => pickColor(null)}
-              className="mt-2 w-full text-[11px] text-muted hover:text-ink transition-colors py-1 rounded-md hover:bg-ink/5"
-            >
-              {color ? "Reset to default" : "Default (by position)"}
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Decorative color dot */}
+      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`} />
 
+      {/* Label — click to rename */}
       {isEditing ? (
         <input
           ref={inputRef}
@@ -162,42 +131,113 @@ export default function ColumnHeader({
         </h2>
       )}
 
-      <span className="ml-auto text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
+      {/* Done badge — visual only */}
+      {isDone && (
+        <span className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 select-none">
+          ✓ Done
+        </span>
+      )}
+
+      {/* Task count */}
+      <span className="text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
         {taskCount}
       </span>
 
-      {/* Done-column badge / toggle */}
-      {isDone ? (
-        <span
-          title="This is the Done column. Click to unmark"
-          onClick={(e) => { e.stopPropagation(); onSetDone(); }}
-          className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 cursor-pointer hover:bg-green-200 dark:hover:bg-green-950/60 transition-colors select-none"
-        >
-          ✓ Done
-        </span>
-      ) : (
+      {/* ⋯ options menu */}
+      <div ref={menuRef} className="relative flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
         <button
-          onClick={onSetDone}
-          title="Mark as Done column"
-          aria-label="Mark as Done column"
+          type="button"
+          aria-label="Column options"
+          title="Column options"
           draggable={false}
-          className="flex-shrink-0 text-xs text-muted hover:text-green-700 dark:hover:text-green-300 transition-colors px-1 py-0.5 rounded hover:bg-green-50 dark:hover:bg-green-950/20"
+          onClick={(e) => { e.stopPropagation(); menuOpen ? closeMenu() : openMenu(); }}
+          className="p-1 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
         >
-          ✓
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="3" cy="8" r="1.5" />
+            <circle cx="8" cy="8" r="1.5" />
+            <circle cx="13" cy="8" r="1.5" />
+          </svg>
         </button>
-      )}
 
-      {isDynamic && !isDone && (
-        <button
-          onClick={onDelete}
-          className="ml-1 text-xs text-muted hover:text-red-600 transition-colors flex-shrink-0"
-          title="Delete column"
-          aria-label="Delete column"
-          draggable={false}
-        >
-          ✕
-        </button>
-      )}
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {menuView === "main" ? (
+              <>
+                {/* Change color */}
+                {onSetColor && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setMenuView("color")}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                  >
+                    <span>Change color</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted flex-shrink-0">
+                      <path d="M4 2l4 4-4 4" />
+                    </svg>
+                  </button>
+                )}
+                <div className="border-t border-border" />
+                {/* Mark / Unmark as Done */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => { e.stopPropagation(); onSetDone(); closeMenu(); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                >
+                  {isDone ? "Unmark as Done" : "Mark as Done"}
+                </button>
+                {/* Delete */}
+                {isDynamic && !isDone && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={(e) => { e.stopPropagation(); onDelete(); closeMenu(); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-column-bg transition-colors"
+                  >
+                    Delete column
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Color picker — named list, like tagging */}
+                <button
+                  type="button"
+                  onClick={() => setMenuView("main")}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors border-b border-border"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                    <path d="M8 2L4 6l4 4" />
+                  </svg>
+                  <span className="font-medium">Color</span>
+                </button>
+                {COLUMN_PALETTE.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => pickColor(color === p.name ? null : p.name)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
+                  >
+                    <span className={`w-3 h-3 rounded-full flex-shrink-0 ${p.dot}`} />
+                    <span className="capitalize flex-1 text-left">{p.name}</span>
+                    {color === p.name && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                        <path d="M2 6l3 3 5-5" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

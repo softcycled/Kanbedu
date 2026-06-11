@@ -18,6 +18,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Task, Comment, ColumnData } from "@/lib/types";
+import { resolveColumnPalette } from "@/lib/columnPalette";
 import KanbanColumn from "./KanbanColumn";
 import Skeleton from "./Skeleton";
 import dynamic from "next/dynamic";
@@ -157,9 +158,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     return () => window.removeEventListener("resize", update);
   }, [viewMode]);
 
-  // Done column is always pinned to the rightmost position.
+  // Done column is always pinned last. nonDone sorted by order so index-based
+  // colours are stable if the columns array ever arrives out-of-sequence.
   const sortedColumns = useMemo(() => {
-    const nonDone = columns.filter((c) => !c.isDone);
+    const nonDone = columns.filter((c) => !c.isDone).sort((a, b) => a.order - b.order);
     const done = columns.filter((c) => c.isDone);
     return [...nonDone, ...done];
   }, [columns]);
@@ -557,15 +559,16 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
       const reordered = arrayMove(sortedColumns, oldIndex, newIndex);
+      // Stamp new order values immediately so col.order stays in sync with
+      // array position — prevents stale values from fighting index-based colors.
+      const withOrders = reordered.map((col, idx) => ({ ...col, order: idx }));
 
-      // Update local state immediately
-      onColumnsChange(reordered);
+      onColumnsChange(withOrders);
 
-      // Persist order to server — fire-and-forget, UI already updated
       fetch("/api/columns", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns: reordered.map((col, idx) => ({ id: col.id, order: idx })) }),
+        body: JSON.stringify({ columns: withOrders.map((col) => ({ id: col.id, order: col.order })) }),
       }).catch((error) => console.error("Failed to persist column order:", error));
 
       broadcastRefresh();
@@ -1028,14 +1031,18 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                 />
               </div>
             )}
-            {activeColumn && (
-              <div className="w-[72vw] md:w-80 bg-card-bg/95 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-xl opacity-95 pointer-events-none scale-105">
-                <div className="p-3 font-bold text-sm text-ink">{activeColumn.label}</div>
-                <div className="px-3 pb-3 text-xs text-muted">
-                  {getTasksByColumn(activeColumn.id).length} tasks
+            {activeColumn && (() => {
+              const dragIdx = sortedColumns.findIndex((c) => c.id === activeColumn.id);
+              const dragColors = resolveColumnPalette(activeColumn.color, dragIdx);
+              return (
+                <div className={`w-[72vw] md:w-80 rounded-lg border-2 shadow-xl opacity-95 pointer-events-none scale-105 ${dragColors.bg} ${dragColors.border}`}>
+                  <div className={`p-3 font-bold text-sm ${dragColors.text}`}>{activeColumn.label}</div>
+                  <div className="px-3 pb-3 text-xs text-muted">
+                    {getTasksByColumn(activeColumn.id).length} tasks
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </DragOverlay>
         </DndContext>
       </div>
