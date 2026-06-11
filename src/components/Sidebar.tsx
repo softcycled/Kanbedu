@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
 import CreateJoinClassModal from "./CreateJoinClassModal";
+import NotificationBell from "./NotificationBell";
 
 export interface ClassSummary {
   id: string;
@@ -480,7 +481,8 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3">
+      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3 flex items-center gap-1">
+        <NotificationBell />
         {accountOpen && account && (
           <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20">
             <div className="px-3 py-2 border-b border-border/60">
@@ -500,7 +502,7 @@ export default function Sidebar({
 
         <button
           onClick={() => setAccountOpen((v) => !v)}
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+          className="flex-1 min-w-0 flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
           aria-label="Account menu"
         >
           {account ? (
