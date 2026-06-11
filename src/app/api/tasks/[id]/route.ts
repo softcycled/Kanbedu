@@ -448,6 +448,23 @@ export async function PATCH(
       }
       if (assigneeSetChanged) postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));
       if (body.tagIds !== undefined) postUpdateWork.push(recordActivity(id, session.userId, "TAG", "Updated tags"));
+      if (newAssigneeIds && newAssigneeIds.length > 0) {
+        const { sendNotification } = await import("@/lib/send-notifications");
+        newAssigneeIds
+          .filter((uid: string) => uid !== session.userId)
+          .forEach((uid: string) => {
+            postUpdateWork.push(
+              sendNotification(uid, {
+                type: "ASSIGNED",
+                title: `You were assigned to "${updated.title}"`,
+                body: "",
+                tag: `assigned-${id}`,
+                taskId: id,
+                boardId,
+              })
+            );
+          });
+      }
       try {
         await Promise.allSettled(postUpdateWork);
       } catch (err) {
@@ -503,6 +520,24 @@ export async function PATCH(
       }
       if (body.assigneeIds !== undefined) {
         postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));
+        if (newAssigneeIds && newAssigneeIds.length > 0) {
+          const oldIds = new Set((current.assignees as { userId: string }[]).map((a) => a.userId));
+          const { sendNotification } = await import("@/lib/send-notifications");
+          newAssigneeIds
+            .filter((uid: string) => uid !== session.userId && !oldIds.has(uid))
+            .forEach((uid: string) => {
+              postUpdateWork.push(
+                sendNotification(uid, {
+                  type: "ASSIGNED",
+                  title: `You were assigned to "${updated.title}"`,
+                  body: "",
+                  tag: `assigned-${id}`,
+                  taskId: id,
+                  boardId,
+                })
+              );
+            });
+        }
       } else if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
         if (body.assigneeId) {
           postUpdateWork.push(

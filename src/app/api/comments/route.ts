@@ -42,6 +42,34 @@ export async function POST(req: Request) {
 
   await recordActivity(data.taskId, session.userId, "COMMENT", "Added a comment");
 
+  // Fire-and-forget: notify task assignees about the new comment
+  (async () => {
+    try {
+      const task = await prisma.task.findUnique({
+        where: { id: data.taskId },
+        select: { title: true, assignees: { select: { userId: true } }, columnRel: { select: { boardId: true } } },
+      });
+      if (!task) return;
+      const { sendNotification } = await import("@/lib/send-notifications");
+      await Promise.allSettled(
+        task.assignees
+          .filter((a) => a.userId !== session.userId)
+          .map((a) =>
+            sendNotification(a.userId, {
+              type: "COMMENT",
+              title: `New comment on "${task.title}"`,
+              body: data.content.slice(0, 120),
+              tag: `comment-${data.taskId}`,
+              taskId: data.taskId,
+              boardId: task.columnRel?.boardId ?? undefined,
+            })
+          )
+      );
+    } catch (err) {
+      console.error("[notifications] comment trigger failed:", err);
+    }
+  })();
+
   prisma.board.findUnique({
     where: { id: taskRow.columnRel.boardId },
     select: { realtimeSecret: true },

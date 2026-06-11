@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -214,6 +215,70 @@ const NAV_ITEMS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: "accessibility", label: "Accessibility",      icon: <IconAccessibility /> },
   { id: "privacy",       label: "Privacy & Security", icon: <IconPrivacy /> },
 ];
+
+// ── Notifications tab ─────────────────────────────────────────
+
+function NotificationsTab() {
+  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
+
+  const handlePushToggle = async (v: boolean) => {
+    if (v) await subscribe();
+    else await unsubscribe();
+  };
+
+  return (
+    <div className="max-w-lg space-y-8">
+      <div>
+        <h2 className="text-base font-semibold text-ink">Notifications</h2>
+        <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
+      </div>
+      <div className="space-y-6">
+        <SectionTitle>Alerts & Updates</SectionTitle>
+        <SectionBlock>
+          <SectionItem>
+            <SettingRow label="Task assigned" description="Notify when a task is assigned to you" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow label="Comments & mentions" description="Notify when someone comments or mentions you" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow label="Deadline reminders" description="Get reminded before tasks are due" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow label="Board invitations" description="Notify when you are invited to a board" disabled>
+              <ComingSoonBadge />
+            </SettingRow>
+          </SectionItem>
+          <SectionItem>
+            <SettingRow
+              label="Push notifications"
+              description={
+                !isSupported
+                  ? "Not supported in this browser"
+                  : isSubscribed
+                  ? "Browser push notifications are enabled"
+                  : "Enable browser push notifications for tasks and mentions"
+              }
+              disabled={!isSupported || isLoading}
+            >
+              {!isSupported ? (
+                <span className="text-xs text-muted">Not supported</span>
+              ) : (
+                <Toggle checked={isSubscribed} onChange={handlePushToggle} disabled={isLoading} />
+              )}
+            </SettingRow>
+          </SectionItem>
+        </SectionBlock>
+      </div>
+    </div>
+  );
+}
 
 // ── Appearance tab (needs useTheme, separate component so hook is always called) ──
 
@@ -733,44 +798,7 @@ export default function ProfilePanel() {
         )}
 
         {/* Notifications */}
-        {activeTab === "notifications" && (
-          <div className="max-w-lg space-y-8">
-            <div>
-              <h2 className="text-base font-semibold text-ink">Notifications</h2>
-              <p className="text-sm text-muted mt-0.5">Control what alerts you receive</p>
-            </div>
-            <div className="space-y-6">
-              <SectionTitle>Alerts & Updates</SectionTitle>
-              <SectionBlock>
-                <SectionItem>
-                  <SettingRow label="Task assigned" description="Notify when a task is assigned to you" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Comments & mentions" description="Notify when someone comments or mentions you" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Deadline reminders" description="Get reminded before tasks are due" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Board invitations" description="Notify when you are invited to a board" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-                <SectionItem>
-                  <SettingRow label="Push notifications" description="Browser push notifications for tasks and mentions" disabled>
-                    <ComingSoonBadge />
-                  </SettingRow>
-                </SectionItem>
-              </SectionBlock>
-            </div>
-          </div>
-        )}
+        {activeTab === "notifications" && <NotificationsTab />}
 
         {/* Boards */}
         {activeTab === "boards" && (
