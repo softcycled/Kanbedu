@@ -348,7 +348,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                           title: t.title,
                           column: created.id,
                           description: t.description || undefined,
-                          assigneeId: t.assigneeId || undefined,
+                          assigneeIds: t.assignees?.length
+                            ? t.assignees.map((a) => a.id)
+                            : t.assigneeId
+                            ? [t.assigneeId]
+                            : undefined,
                           priority: t.priority !== "medium" ? t.priority : undefined,
                           deadline: t.deadline ? String(t.deadline) : undefined,
                           tagIds: t.tags?.map((tg) => tg.id),

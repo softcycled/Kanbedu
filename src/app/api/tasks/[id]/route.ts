@@ -501,7 +501,9 @@ export async function PATCH(
           recordActivity(id, session.userId, "UPDATE", "Updated the description")
         );
       }
-      if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
+      if (body.assigneeIds !== undefined) {
+        postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));
+      } else if (body.assigneeId !== undefined && body.assigneeId !== current.assigneeId) {
         if (body.assigneeId) {
           postUpdateWork.push(
             prisma.user.findUnique({ where: { id: body.assigneeId } }).then((newUser) =>

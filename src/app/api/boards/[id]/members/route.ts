@@ -4,6 +4,31 @@ import { getSession } from "@/lib/auth";
 import { transferOwnershipSchema, removeMemberSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
 
+// Remove a board member and clean up their task assignments on that board.
+async function removeMemberAndCleanAssignees(boardId: string, userId: string) {
+  await prisma.$transaction(async (tx) => {
+    const affected = await tx.taskAssignee.findMany({
+      where: { userId, task: { columnRel: { boardId } } },
+      select: { taskId: true },
+    });
+
+    if (affected.length > 0) {
+      const taskIds = affected.map((a) => a.taskId);
+      await tx.taskAssignee.deleteMany({ where: { userId, taskId: { in: taskIds } } });
+      for (const { taskId } of affected) {
+        const next = await tx.taskAssignee.findFirst({
+          where: { taskId },
+          orderBy: { assignedAt: "asc" },
+          select: { userId: true },
+        });
+        await tx.task.update({ where: { id: taskId }, data: { assigneeId: next?.userId ?? null } });
+      }
+    }
+
+    await tx.boardMember.delete({ where: { userId_boardId: { userId, boardId } } });
+  });
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -157,7 +182,7 @@ export async function DELETE(
         return NextResponse.json({ error: "Owner cannot leave board without transferring ownership." }, { status: 403 });
       }
 
-      await prisma.boardMember.delete({ where: { userId_boardId: { userId: session.userId, boardId: id } } });
+      await removeMemberAndCleanAssignees(id, session.userId);
       return NextResponse.json({ success: true });
     }
 
@@ -172,7 +197,7 @@ export async function DELETE(
     if (!target) return NextResponse.json({ error: "Member not found." }, { status: 404 });
     if (target.role === "owner") return NextResponse.json({ error: "Cannot remove owner. Transfer first." }, { status: 400 });
 
-    await prisma.boardMember.delete({ where: { userId_boardId: { userId: targetUserId, boardId: id } } });
+    await removeMemberAndCleanAssignees(id, targetUserId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
