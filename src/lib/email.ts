@@ -1,6 +1,5 @@
-import { Resend } from "resend";
-
-const FROM = "Kanbedu <noreply@kanbedu.com>";
+const FROM_NAME = "Kanbedu";
+const FROM_EMAIL = "noreply@kanbedu.com";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 function emailLayout(content: string): string {
@@ -37,13 +36,34 @@ function ctaButton(href: string, label: string): string {
   return `<a href="${href}" style="display:block;text-align:center;background:#1C1917;color:#F7F5F0;font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;text-decoration:none;margin:24px 0 0">${label}</a>`;
 }
 
-export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-  const resetUrl = `${BASE_URL}/reset-password/${token}`;
-
-  if (!process.env.RESEND_API_KEY) {
-    console.info(`[email] Password reset link for ${to}: ${resetUrl}`);
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  if (!process.env.BREVO_API_KEY) {
+    console.info(`[email] No BREVO_API_KEY — would send "${subject}" to ${to}`);
     return;
   }
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": process.env.BREVO_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Brevo email failed (${res.status}): ${body}`);
+  }
+}
+
+export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
+  const resetUrl = `${BASE_URL}/reset-password/${token}`;
 
   const content = `
     <h1 style="font-size:18px;font-weight:700;color:#1C1917;margin:0 0 8px">Reset your password</h1>
@@ -56,22 +76,11 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
       If you didn't request a password reset, you can safely ignore this email. Your password won't change.
     </p>`;
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
-    from: FROM,
-    to,
-    subject: "Reset your Kanbedu password",
-    html: emailLayout(content),
-  });
+  await sendEmail(to, "Reset your Kanbedu password", emailLayout(content));
 }
 
 export async function sendVerificationEmail(to: string, token: string): Promise<void> {
   const verifyUrl = `${BASE_URL}/verify-email/${token}`;
-
-  if (!process.env.RESEND_API_KEY) {
-    console.info(`[email] Verification link for ${to}: ${verifyUrl}`);
-    return;
-  }
 
   const content = `
     <h1 style="font-size:18px;font-weight:700;color:#1C1917;margin:0 0 8px">Confirm your email</h1>
@@ -84,11 +93,5 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
       If you didn't create a Kanbedu account, you can safely ignore this email.
     </p>`;
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
-    from: FROM,
-    to,
-    subject: "Verify your Kanbedu email",
-    html: emailLayout(content),
-  });
+  await sendEmail(to, "Verify your Kanbedu email", emailLayout(content));
 }

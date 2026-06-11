@@ -155,7 +155,7 @@ export default async function PrivacyPage() {
             <ul>
               <li><strong>Supabase:</strong> database hosting. Stores all account data, content, and usage data.</li>
               <li><strong>Vercel:</strong> hosting and deployment. Processes all web requests and server logs including IP addresses.</li>
-              <li><strong>Resend:</strong> email delivery. Receives your email address to send transactional emails (verification links, password resets, and board invites).</li>
+              <li><strong>Brevo:</strong> email delivery. Receives your email address to send transactional emails (verification links, password resets, and board invites).</li>
               <li><strong>Sentry:</strong> error monitoring. Receives diagnostic data including session identifiers and browser information when errors occur.</li>
             </ul>
             <p>
