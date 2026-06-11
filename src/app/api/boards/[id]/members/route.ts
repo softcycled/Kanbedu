@@ -31,19 +31,25 @@ export async function GET(
     }
 
     // If this board belongs to a class group, include each member's class role
-    // so the UI can filter educators/TAs out of the assignee dropdown.
+    // so the UI can filter educators/TAs out of the assignee dropdown, and
+    // overlay educator-set display names (CSV roster) over self-chosen names.
     const group = await prisma.group.findUnique({ where: { boardId: id }, select: { classId: true } });
     let classRoleMap = new Map<string, string>();
+    let nameOverrideMap = new Map<string, string>();
     if (group) {
       const classMembers = await prisma.classMember.findMany({
         where: { classId: group.classId, userId: { in: members.map((m) => m.userId) } },
-        select: { userId: true, role: true },
+        select: { userId: true, role: true, displayName: true },
       });
       classRoleMap = new Map(classMembers.map((cm) => [cm.userId, cm.role]));
+      nameOverrideMap = new Map(
+        classMembers.filter((cm) => cm.displayName).map((cm) => [cm.userId, cm.displayName!])
+      );
     }
 
     const formattedMembers = members.map((m) => ({
       ...m.user,
+      name: nameOverrideMap.get(m.userId) ?? m.user.name,
       role: m.role,
       classRole: classRoleMap.get(m.userId) ?? null,
     }));

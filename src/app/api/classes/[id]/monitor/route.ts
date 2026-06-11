@@ -93,7 +93,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         perColumn,
         members: g.members.map((m) => ({
           id: m.user.id,
-          name: m.user.name,
+          // Educator-set roster name wins over the student's self-chosen name
+          name: m.displayName ?? m.user.name,
           handle: m.user.handle,
           color: m.user.color,
         })),

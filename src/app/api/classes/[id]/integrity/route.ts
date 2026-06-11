@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, getClassRole } from "@/lib/auth";
+import { getClassNameOverrides } from "@/lib/classNames";
 
 // Integrity detection thresholds — kept in sync with the per-board analytics
 // route (src/app/api/analytics/route.ts). A task is flagged if it was completed
@@ -22,11 +23,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Only educators can view integrity." }, { status: 403 });
     }
 
-    const groups = await prisma.group.findMany({
-      where: { classId: id },
-      orderBy: { order: "asc" },
-      include: { board: { include: { columns: { orderBy: { order: "asc" } } } } },
-    });
+    const [groups, nameOverrides] = await Promise.all([
+      prisma.group.findMany({
+        where: { classId: id },
+        orderBy: { order: "asc" },
+        include: { board: { include: { columns: { orderBy: { order: "asc" } } } } },
+      }),
+      // Educator-set roster names override self-chosen account names here
+      getClassNameOverrides(id),
+    ]);
 
     // Map every column id -> its board and done-state, so a task (which only
     // knows its column id) can be bucketed back to its group board.
@@ -60,6 +65,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             where: { column: { in: allColumnIds } },
             include: {
               assigneeUser: { select: { name: true, handle: true } },
+              assignees: {
+                orderBy: { assignedAt: "asc" },
+                select: { userId: true, user: { select: { name: true, handle: true } } },
+              },
               columnHistory: {
                 where: { enteredAt: { gte: historyCutoff } },
                 select: { columnId: true },
@@ -68,9 +77,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           });
 
     // For tasks flagged as movedByNonAssignee, look up who actually moved them
-    // by finding the most recent MOVE activity where the actor isn't the assignee.
+    // by finding the most recent MOVE activity where the actor isn't an assignee.
     const movedByTaskIds = tasks.filter((t) => t.movedByNonAssignee).map((t) => t.id);
-    const taskAssigneeMap = new Map(tasks.map((t) => [t.id, t.assigneeId ?? null]));
+    const taskAssigneeSetMap = new Map(
+      tasks.map((t) => [
+        t.id,
+        new Set(t.assignees.length > 0 ? t.assignees.map((a) => a.userId) : t.assigneeId ? [t.assigneeId] : []),
+      ])
+    );
     const movedByMap = new Map<string, string>(); // taskId -> display name
 
     if (movedByTaskIds.length > 0) {
@@ -83,9 +97,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       });
       for (const act of moveActivities) {
         if (movedByMap.has(act.taskId)) continue; // keep most recent
-        const assigneeId = taskAssigneeMap.get(act.taskId);
-        if (act.userId !== assigneeId) {
-          movedByMap.set(act.taskId, act.user.handle ? `@${act.user.handle}` : act.user.name);
+        const assigneeSet = taskAssigneeSetMap.get(act.taskId);
+        if (!assigneeSet?.has(act.userId)) {
+          movedByMap.set(
+            act.taskId,
+            nameOverrides.get(act.userId) ?? (act.user.handle ? `@${act.user.handle}` : act.user.name)
+          );
         }
       }
     }
@@ -128,9 +145,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
       if (!isSpeedRun && !isColumnSkip && !isMovedByOther) continue;
 
-      const assignee = t.assigneeUser?.handle
-        ? `@${t.assigneeUser.handle}`
-        : t.assigneeUser?.name || "(unassigned)";
+      // All assignees, roster names first — lecturers see every student on a shared task
+      const assigneeNames =
+        t.assignees.length > 0
+          ? t.assignees.map(
+              (a) => nameOverrides.get(a.userId) ?? (a.user.handle ? `@${a.user.handle}` : a.user.name)
+            )
+          : t.assigneeId
+          ? [
+              nameOverrides.get(t.assigneeId) ??
+                (t.assigneeUser?.handle ? `@${t.assigneeUser.handle}` : t.assigneeUser?.name || "(unknown)"),
+            ]
+          : [];
+      const assignee = assigneeNames.join(", ") || "(unassigned)";
 
       const skippedColumns = isColumnSkip
         ? (orderedNonDoneByBoard.get(info.boardId) ?? [])
