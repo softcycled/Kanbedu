@@ -20,7 +20,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
 import CreateJoinClassModal from "./CreateJoinClassModal";
-import NotificationBell from "./NotificationBell";
 
 export interface ClassSummary {
   id: string;
@@ -232,6 +231,11 @@ export default function Sidebar({
   const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [popupView, setPopupView] = useState<"menu" | "notifications">("menu");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<{ id: string; title: string; body: string; read: boolean; createdAt: string }[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -270,6 +274,46 @@ export default function Sidebar({
     } catch {
       setSigningOut(false);
     }
+  };
+
+  // Reset popup state on close
+  useEffect(() => {
+    if (!accountOpen) { setPopupView("menu"); setConfirmSignOut(false); }
+  }, [accountOpen]);
+
+  // Poll unread count
+  useEffect(() => {
+    const fetchCount = () =>
+      fetch("/api/notifications").then((r) => r.ok ? r.json() : null).then((d) => d && setUnreadCount(d.unreadCount)).catch(() => {});
+    fetchCount();
+    const id = setInterval(fetchCount, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const openNotifications = () => {
+    setPopupView("notifications");
+    setNotifLoading(true);
+    fetch("/api/notifications")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) { setNotifications(d.notifications); setUnreadCount(d.unreadCount); } })
+      .catch(() => {})
+      .finally(() => setNotifLoading(false));
+  };
+
+  const markAllRead = async () => {
+    await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    setNotifications((p) => p.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
   };
 
   const isEducatorOf = (c: ClassSummary) => c.role === "educator" || c.role === "ta";
@@ -481,40 +525,127 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3 flex items-center gap-1">
-        <NotificationBell />
+      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3">
         {accountOpen && account && (
-          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20">
-            <div className="px-3 py-2 border-b border-border/60">
-              <p className="text-sm font-medium text-ink truncate">{account.name || "Your account"}</p>
-              <p className="text-xs text-muted truncate">{account.handle ? `@${account.handle}` : account.email}</p>
-            </div>
-            <button
-              onClick={handleSignOut}
-              disabled={signingOut}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors disabled:opacity-50"
-            >
-              <IconSignOut />
-              {signingOut ? "Signing out…" : "Sign out"}
-            </button>
+          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20 overflow-hidden">
+
+            {popupView === "menu" && (
+              <>
+                <div className="px-3 py-2 border-b border-border/60">
+                  <p className="text-sm font-medium text-ink truncate">{account.name || "Your account"}</p>
+                  <p className="text-xs text-muted truncate">{account.handle ? `@${account.handle}` : account.email}</p>
+                </div>
+
+                <button
+                  onClick={openNotifications}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-ink/80 hover:bg-ink/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M9 2a6 6 0 0 1 6 6v3.5l1.5 2.5H1.5L3 11.5V8A6 6 0 0 1 9 2z" />
+                      <path d="M7 15.5a2 2 0 0 0 4 0" />
+                    </svg>
+                    Notifications
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full bg-red-500 text-white px-1">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {!confirmSignOut ? (
+                  <button
+                    onClick={() => setConfirmSignOut(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors"
+                  >
+                    <IconSignOut />
+                    Sign out
+                  </button>
+                ) : (
+                  <div className="px-3 py-2.5 border-t border-border/60">
+                    <p className="text-xs text-muted mb-2">Sign out of Kanbedu?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSignOut}
+                        disabled={signingOut}
+                        className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        {signingOut ? "Signing out…" : "Yes, sign out"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmSignOut(false)}
+                        className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-border text-muted hover:text-ink transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {popupView === "notifications" && (
+              <>
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                  <button onClick={() => setPopupView("menu")} className="flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                      <path d="M8 2L4 6l4 4" />
+                    </svg>
+                    Back
+                  </button>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} className="text-xs text-muted hover:text-ink transition-colors">
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifLoading && notifications.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted text-center">Loading…</p>
+                  ) : notifications.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted text-center">No notifications yet</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <div key={n.id} className={`px-3 py-2.5 border-b border-border/40 last:border-0 ${!n.read ? "bg-[var(--c-accent-lt)] dark:bg-accent/5" : ""}`}>
+                        <div className="flex items-start gap-2">
+                          <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${!n.read ? "bg-accent" : "bg-transparent"}`} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-ink leading-snug">{n.title}</p>
+                            {n.body && <p className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</p>}
+                            <p className="text-[10px] text-muted/60 mt-0.5">{timeAgo(n.createdAt)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+
           </div>
         )}
 
         <button
           onClick={() => setAccountOpen((v) => !v)}
-          className="flex-1 min-w-0 flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
           aria-label="Account menu"
         >
-          {account ? (
-            <span
-              className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold"
-              style={{ backgroundColor: account.color, color: getTextColor(account.color) }}
-            >
-              {getInitials(account.name) || "?"}
-            </span>
-          ) : (
-            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-ink/10 motion-safe:animate-pulse" />
-          )}
+          <div className="relative flex-shrink-0">
+            {account ? (
+              <span
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold"
+                style={{ backgroundColor: account.color, color: getTextColor(account.color) }}
+              >
+                {getInitials(account.name) || "?"}
+              </span>
+            ) : (
+              <span className="w-7 h-7 rounded-full bg-ink/10 motion-safe:animate-pulse" />
+            )}
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-card-bg" />
+            )}
+          </div>
           <span className="flex-1 min-w-0 text-sm font-medium text-ink truncate">
             {account ? account.name || "Account" : ""}
           </span>
