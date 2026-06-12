@@ -409,6 +409,19 @@ export default function BoardContainer({
     });
   }, []);
 
+  const handleReorderClasses = useCallback(async (ids: string[]) => {
+    const res = await fetch("/api/classes", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) return;
+    setClasses((prev) => {
+      const map = new Map(prev.map((c) => [c.id, c]));
+      return ids.map((id) => map.get(id)!).filter(Boolean);
+    });
+  }, []);
+
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -425,6 +438,7 @@ export default function BoardContainer({
         onCreateBoard={handleCreateBoard}
         onJoinBoard={handleJoinBoard}
         onReorder={handleReorderBoards}
+        onClassReorder={handleReorderClasses}
         onBoardHover={prefetchBoard}
         isAdmin={isAdmin}
       />

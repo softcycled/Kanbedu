@@ -51,6 +51,7 @@ interface Props {
   onCreateBoard: (name: string) => Promise<void>;
   onJoinBoard: (inviteInput: string) => Promise<void>;
   onReorder: (ids: string[]) => Promise<void>;
+  onClassReorder: (ids: string[]) => Promise<void>;
   onBoardHover?: (id: string) => void;
   isAdmin?: boolean;
 }
@@ -180,15 +181,6 @@ function SortableBoardItem({
   return (
     <div ref={setNodeRef} style={style} className="group flex items-center gap-1 rounded-lg">
       <button
-        {...attributes}
-        {...listeners}
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-        className="opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
-      >
-        <GripDots />
-      </button>
-      <button
         onClick={onClick}
         onMouseEnter={onHover && !isActive ? () => onHover(board.id) : undefined}
         className={`flex-1 flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
@@ -198,6 +190,69 @@ function SortableBoardItem({
         }`}
       >
         <span className="truncate">{board.name}</span>
+      </button>
+      <button
+        {...attributes}
+        {...listeners}
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+        className="opacity-20 group-hover:opacity-60 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
+      >
+        <GripDots />
+      </button>
+    </div>
+  );
+}
+
+function SortableClassItem({
+  cls,
+  isActive,
+  archived,
+  onClick,
+}: {
+  cls: ClassSummary;
+  isActive: boolean;
+  archived?: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: cls.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const isEducator = cls.role === "educator" || cls.role === "ta";
+
+  return (
+    <div ref={setNodeRef} style={style} className="group flex items-center gap-1 rounded-lg">
+      <button
+        onClick={onClick}
+        className={`flex-1 flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors text-left min-w-0 ${
+          isActive
+            ? "bg-ink/8 text-ink font-medium"
+            : archived
+            ? "text-ink/40 hover:bg-ink/5 hover:text-ink/60"
+            : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+        }`}
+      >
+        <span className="truncate">{cls.name}</span>
+        {archived ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
+        ) : isEducator ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+        ) : null}
+      </button>
+      <button
+        {...attributes}
+        {...listeners}
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+        className="opacity-20 group-hover:opacity-60 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
+      >
+        <GripDots />
       </button>
     </div>
   );
@@ -216,6 +271,7 @@ export default function Sidebar({
   onCreateBoard,
   onJoinBoard,
   onReorder,
+  onClassReorder,
   onBoardHover,
   isAdmin = false,
 }: Props) {
@@ -363,6 +419,15 @@ export default function Sidebar({
     await onReorder(reordered.map((b) => b.id));
   };
 
+  const handleClassDragEnd = (list: ClassSummary[]) => async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = list.findIndex((c) => c.id === active.id);
+    const newIndex = list.findIndex((c) => c.id === over.id);
+    const reordered = arrayMove(list, oldIndex, newIndex);
+    await onClassReorder(reordered.map((c) => c.id));
+  };
+
   const handleCreateBoard = async () => {
     const name = newBoardName.trim();
     if (!name) return;
@@ -459,7 +524,18 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              {studentClasses.map((c) => renderClassItem(c))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(studentClasses)}>
+                <SortableContext items={studentClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {studentClasses.map((c) => (
+                    <SortableClassItem
+                      key={c.id}
+                      cls={c}
+                      isActive={activeClassId === c.id}
+                      onClick={() => { onClassSelect(c); setMobileOpen(false); }}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {archivedStudentClasses.length > 0 && (
                 <>
                   <button
@@ -492,7 +568,18 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              {educatorClasses.map((c) => renderClassItem(c))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(educatorClasses)}>
+                <SortableContext items={educatorClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {educatorClasses.map((c) => (
+                    <SortableClassItem
+                      key={c.id}
+                      cls={c}
+                      isActive={activeClassId === c.id}
+                      onClick={() => { onClassSelect(c); setMobileOpen(false); }}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {archivedEducatorClasses.length > 0 && (
                 <>
                   <button
