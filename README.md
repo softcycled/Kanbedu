@@ -74,7 +74,7 @@ Originally designed for student group projects, it features robust authenticatio
 | :--- | :--- | :--- |
 | **Framework** | Next.js 14 (App Router) | Server-side rendering, API routes, and optimized client interactivity. |
 | **Language** | TypeScript | End-to-end type safety for a robust, maintainable codebase. |
-| **Database** | Supabase (PostgreSQL) | Scalable, high-performance relational storage with built-in backups. |
+| **Database** | Neon (PostgreSQL) | Scalable, high-performance relational storage with built-in backups. |
 | **ORM** | Prisma | Type-safe database access layer and simplified migrations. |
 | **Realtime** | Supabase Realtime | WebSocket-based instant state synchronization across clients. |
 | **Styling** | Tailwind CSS | Custom design system using the "Paper & Ink" aesthetic. |
