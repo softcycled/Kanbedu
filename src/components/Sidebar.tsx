@@ -196,7 +196,7 @@ function SortableBoardItem({
         {...listeners}
         tabIndex={-1}
         aria-label="Drag to reorder"
-        className="opacity-20 group-hover:opacity-60 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
+        className="opacity-0 group-hover:opacity-50 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
       >
         <GripDots />
       </button>
@@ -250,7 +250,7 @@ function SortableClassItem({
         {...listeners}
         tabIndex={-1}
         aria-label="Drag to reorder"
-        className="opacity-20 group-hover:opacity-60 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
+        className="opacity-0 group-hover:opacity-50 hover:!opacity-90 transition-opacity cursor-grab active:cursor-grabbing touch-none text-muted flex-shrink-0 px-0.5 py-1"
       >
         <GripDots />
       </button>
