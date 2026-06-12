@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import PriorityIcon from "./PriorityIcon";
+import Avatar from "./Avatar";
 
 interface Props {
   task: Task;
@@ -118,20 +119,10 @@ function TaskCard({ task, onClick }: Props) {
             <div className="flex items-center flex-shrink-0">
               {assignees.slice(0, 3).map((a, i) => (
                 <div key={a.id} className={`relative group/avatar hover:z-10 ${i > 0 ? "-ml-1" : ""}`}>
-                  <div
-                    className="flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow-sm ring-1 ring-card-bg"
-                    style={{ backgroundColor: a.color }}
-                  >
-                    {a.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={a.name} color={a.color} size="xs" className="shadow-sm ring-1 ring-card-bg" />
                   <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150">
                     <div className="flex items-center gap-2 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
-                      <span
-                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                        style={{ backgroundColor: a.color }}
-                      >
-                        {a.name.charAt(0).toUpperCase()}
-                      </span>
+                      <Avatar name={a.name} color={a.color} size="lg" />
                       <div className="flex flex-col">
                         <span className="text-[13px] font-semibold text-white leading-tight">{a.name}</span>
                         {a.handle && (

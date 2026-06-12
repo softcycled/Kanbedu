@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, memo } from "react";
 import { BoardMemberData, Tag } from "@/lib/types";
-import { getTextColorForBg } from "@/lib/labelPalette";
+import Avatar from "./Avatar";
 
 interface Props {
   searchQuery: string;
@@ -113,7 +113,7 @@ function FilterBar({
         selectedAssignees.includes("unassigned"),
         () => toggleSelection(selectedAssignees, "unassigned", setSelectedAssignees),
         <>
-          <div className="w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</div>
+          <Avatar size="sm" />
           <span className="text-sm text-ink">Unassigned</span>
         </>
       )}
@@ -123,9 +123,7 @@ function FilterBar({
           selectedAssignees.includes(m.id),
           () => toggleSelection(selectedAssignees, m.id, setSelectedAssignees),
           <>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: m.color, color: getTextColorForBg(m.color) }}>
-              {m.name.charAt(0).toUpperCase()}
-            </div>
+            <Avatar name={m.name} color={m.color} size="sm" />
             <span className="text-sm text-ink">{m.name}</span>
           </>
         )

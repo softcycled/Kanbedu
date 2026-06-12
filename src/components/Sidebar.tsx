@@ -21,6 +21,7 @@ import { Board } from "@/lib/types";
 import CreateJoinModal from "./CreateJoinModal";
 import CreateJoinClassModal from "./CreateJoinClassModal";
 import ConfirmModal from "./ConfirmModal";
+import Avatar from "./Avatar";
 
 export interface ClassSummary {
   id: string;
@@ -132,18 +133,6 @@ function IconSignOut() {
   );
 }
 
-// Account-row avatar helpers (mirrors ProfilePanel's avatar rendering).
-function getInitials(name: string) {
-  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
-}
-
-function getTextColor(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.57 ? "#1C1917" : "#FAFAF9";
-}
 
 function GripDots() {
   return (
@@ -700,12 +689,7 @@ export default function Sidebar({
         >
           <div className="relative flex-shrink-0">
             {account ? (
-              <span
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold"
-                style={{ backgroundColor: account.color, color: getTextColor(account.color) }}
-              >
-                {getInitials(account.name) || "?"}
-              </span>
+              <Avatar name={account.name} color={account.color} size="lg" />
             ) : (
               <span className="w-7 h-7 rounded-full bg-ink/10 motion-safe:animate-pulse" />
             )}

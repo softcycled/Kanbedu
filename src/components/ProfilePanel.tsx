@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import Avatar from "./Avatar";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -63,18 +64,6 @@ const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];
 const DEFAULT_COLOR = AVATAR_COLORS[0].hex;
 
 // ── Helpers ───────────────────────────────────────────────────
-
-function getTextColor(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.57 ? "#1C1917" : "#FAFAF9";
-}
-
-function getInitials(name: string) {
-  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
-}
 
 // ── Reusable primitives ───────────────────────────────────────
 
@@ -538,9 +527,7 @@ export default function ProfilePanel() {
     return <div className="flex-1 flex items-center justify-center text-muted text-sm">Loading…</div>;
   }
 
-  const initials = getInitials(name) || "?";
   const previewColor = hoverColor?.hex ?? color;
-  const textColor = getTextColor(previewColor);
 
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -584,12 +571,7 @@ export default function ProfilePanel() {
                 <SectionItem>
                   <div className="py-4">
                     <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold select-none flex-shrink-0 transition-colors duration-150"
-                        style={{ backgroundColor: previewColor, color: textColor }}
-                      >
-                        {initials}
-                      </div>
+                      <Avatar name={name} color={previewColor} size="xl" className="select-none transition-colors duration-150" />
                       <div>
                         <p className="text-sm font-medium text-ink">{name || "No name set"}</p>
                         <p className="text-xs text-muted">{hoverColor ? hoverColor.name : profile?.handle ? `@${profile.handle}` : profile?.email ?? ""}</p>
