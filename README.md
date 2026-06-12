@@ -18,7 +18,7 @@
 
 ## Overview
 
-Kanbedu is a high-performance project tracking application inspired by the minimalism of physical Kanban boards and the power of modern productivity tools like ClickUp. Built with Next.js 14 and a "Paper & Ink" design system, it provides a distraction-free environment for teams to organize, track, and analyze their workflows in real-time.
+Kanbedu is a high-performance project tracking application inspired by the minimalism of physical Kanban boards and the power of modern productivity tools like ClickUp. Built with Next.js 16.2 and a "Paper & Ink" design system, it provides a distraction-free environment for teams to organize, track, and analyze their workflows in real-time.
 
 Originally designed for student group projects, it features robust authentication, deep analytical insights, and an administrative layer for system-wide health monitoring and support.
 
@@ -72,7 +72,7 @@ Originally designed for student group projects, it features robust authenticatio
 
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Framework** | Next.js 14 (App Router) | Server-side rendering, API routes, and optimized client interactivity. |
+| **Framework** | Next.js 16.2 (App Router) | Server-side rendering, API routes, and optimized client interactivity. |
 | **Language** | TypeScript | End-to-end type safety for a robust, maintainable codebase. |
 | **Database** | Neon (PostgreSQL) | Scalable, high-performance relational storage with built-in backups. |
 | **ORM** | Prisma | Type-safe database access layer and simplified migrations. |
