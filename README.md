@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14-1C1917?style=flat-square" alt="Next.js">
+  <img src="https://img.shields.io/badge/Next.js-16.2-1C1917?style=flat-square" alt="Next.js">
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square" alt="TypeScript">
   <img src="https://img.shields.io/badge/Database-Neon-3ECF8E?style=flat-square" alt="Neon">
   <img src="https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?style=flat-square" alt="Tailwind CSS">
