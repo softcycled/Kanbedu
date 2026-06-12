@@ -435,9 +435,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
             )}
           </span>
         ) : (
-          <span className="w-6 h-6 rounded-full border border-border/60 flex items-center justify-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-muted/40" />
-          </span>
+          <span className="w-6 h-6 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
         )}
       </span>
 

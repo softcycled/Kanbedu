@@ -919,9 +919,7 @@ export default function TaskModal({
                   assigneeIds.length === 0 ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                 }`}
               >
-                <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                </span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
                 <span className="truncate">Unassigned</span>
                 {assigneeIds.length === 0 && (
                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1662,9 +1660,7 @@ export default function TaskModal({
                             }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
                           >
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full border border-border flex items-center justify-center">
-                              <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-                            </span>
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
                             <span className="truncate">Unassigned</span>
                           </button>
                           {boardMembers.filter((bm) => bm.classRole !== "educator" && bm.classRole !== "ta").map((bm) => {

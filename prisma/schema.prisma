@@ -293,6 +293,7 @@ model ClassMember {
   role        String  @default("student") // "educator" | "ta" | "student"
   groupId     String? // null = lobby (not yet sorted)
   displayName String? // educator-set override from CSV import; shown instead of user.name in class contexts
+  order       Int     @default(0)
   class       Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   group       Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)

@@ -34,7 +34,7 @@ export async function GET() {
           select: { id: true, name: true, boardId: true, board: { select: { realtimeSecret: true } } },
         },
       },
-      orderBy: { class: { createdAt: "asc" } },
+      orderBy: [{ order: "asc" }, { class: { createdAt: "asc" } }],
     });
 
     const classes = memberships.map((m) => ({
@@ -111,5 +111,32 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to create class:", error);
     return NextResponse.json({ error: "Failed to create class." }, { status: 500 });
+  }
+}
+
+// PUT: reorder the caller's class memberships by storing an explicit order index.
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+    const { ids } = await request.json();
+    if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+      return NextResponse.json({ error: "Invalid ids." }, { status: 400 });
+    }
+
+    await prisma.$transaction(
+      ids.map((classId, index) =>
+        prisma.classMember.updateMany({
+          where: { userId: session.userId, classId },
+          data: { order: index },
+        })
+      )
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Failed to reorder classes:", error);
+    return NextResponse.json({ error: "Failed to reorder classes." }, { status: 500 });
   }
 }
