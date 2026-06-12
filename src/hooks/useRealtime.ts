@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
+const POLL_INTERVAL = 10_000;
+
 export function useRealtime(channelSecret: string | null, onRefresh?: (payload?: unknown) => void) {
   const onRefreshRef = useRef(onRefresh);
   useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
@@ -10,26 +12,31 @@ export function useRealtime(channelSecret: string | null, onRefresh?: (payload?:
   useEffect(() => {
     if (!channelSecret) return;
 
+    // No Supabase credentials — fall back to polling
+    if (!supabase) {
+      const interval = setInterval(() => { onRefreshRef.current?.(); }, POLL_INTERVAL);
+      const onVisibility = () => { if (!document.hidden) onRefreshRef.current?.(); };
+      document.addEventListener("visibilitychange", onVisibility);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    }
+
     let destroyed = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    // Mutable ref so both setup() and the cleanup closure always point to the
-    // current channel, including after a retry creates a new one.
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setup = () => {
       if (destroyed) return;
-      channel = supabase.channel(`board-${channelSecret}`);
+      channel = supabase!.channel(`board-${channelSecret}`);
       channel
         .on("broadcast", { event: "refresh" }, (ev) => {
-          try {
-            onRefreshRef.current?.(ev?.payload ?? ev);
-          } catch {}
+          try { onRefreshRef.current?.(ev?.payload ?? ev); } catch {}
         })
         .subscribe((status) => {
-          // TIMED_OUT means the initial subscribe handshake failed (transient network).
-          // Remove the dead channel and retry once after a short delay.
           if (status === "TIMED_OUT" && !destroyed) {
-            if (channel) { supabase.removeChannel(channel); channel = null; }
+            if (channel) { supabase!.removeChannel(channel); channel = null; }
             retryTimer = setTimeout(setup, 5000);
           }
         });
@@ -37,17 +44,13 @@ export function useRealtime(channelSecret: string | null, onRefresh?: (payload?:
 
     setup();
 
-    // When returning to a hidden tab, fire a full refresh to catch any events
-    // missed while the WebSocket was idle or the tab was backgrounded.
-    const onVisibility = () => {
-      if (!document.hidden) onRefreshRef.current?.();
-    };
+    const onVisibility = () => { if (!document.hidden) onRefreshRef.current?.(); };
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       destroyed = true;
       if (retryTimer !== null) clearTimeout(retryTimer);
-      if (channel) supabase.removeChannel(channel);
+      if (channel) supabase!.removeChannel(channel);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [channelSecret]);
