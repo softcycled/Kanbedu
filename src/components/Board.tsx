@@ -93,9 +93,15 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      // Search query filter (title)
-      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (searchQuery) {
+        const words = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+        const haystack = [
+          task.title,
+          ...(task.assignees?.map((a) => a.name) ?? []),
+          task.assigneeUser?.name ?? "",
+          ...(task.tags?.map((t) => t.name) ?? []),
+        ].join(" ").toLowerCase();
+        if (!words.every((w) => haystack.includes(w))) return false;
       }
 
       // Assignee filter (OR within category) — a multi-assignee task matches

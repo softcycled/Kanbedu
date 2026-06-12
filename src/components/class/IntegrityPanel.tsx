@@ -162,7 +162,17 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
       ),
     }))
     .filter((g) => g.flagged.length > 0)
-    .filter((g) => !groupSearch.trim() || g.name.toLowerCase().includes(groupSearch.toLowerCase()))
+    .filter((g) => {
+      const q = groupSearch.trim().toLowerCase();
+      if (!q) return true;
+      const words = q.split(/\s+/).filter(Boolean);
+      const haystack = [
+        g.name,
+        ...g.flagged.map((t) => t.title),
+        ...g.flagged.map((t) => t.assignee),
+      ].join(" ").toLowerCase();
+      return words.every((w) => haystack.includes(w));
+    })
     .sort((a, b) =>
       sortOrder === "flagCount" ? b.flagged.length - a.flagged.length : a.name.localeCompare(b.name)
     );
