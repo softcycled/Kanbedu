@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
-import { nameToColor } from "@/lib/avatarColor";
+import Avatar from "./Avatar";
 
 const PRIORITY_CONFIG: Record<
   string,
@@ -397,13 +397,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
           >
             <span className="flex items-center cursor-pointer">
               {members.slice(0, 3).map((m, i) => (
-                <span
-                  key={m.id}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-paper ${i > 0 ? "-ml-2" : ""}`}
-                  style={{ backgroundColor: m.color || nameToColor(m.name) }}
-                >
-                  {m.name.charAt(0).toUpperCase()}
-                </span>
+                <Avatar key={m.id} name={m.name} color={m.color} size="md" className={`ring-1 ring-paper ${i > 0 ? "-ml-2" : ""}`} />
               ))}
               {members.length > 3 && (
                 <span className="-ml-2 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold bg-muted/30 text-ink ring-1 ring-paper">
@@ -416,12 +410,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
                 <div className="flex flex-col gap-1.5 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
                   {members.map((m) => (
                     <div key={m.id} className="flex items-center gap-2">
-                      <span
-                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                        style={{ backgroundColor: m.color || nameToColor(m.name) }}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
+                      <Avatar name={m.name} color={m.color} size="lg" />
                       <div className="flex flex-col">
                         <span className="text-[13px] font-semibold text-white leading-tight">{m.name}</span>
                         {m.handle && (
@@ -435,7 +424,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
             )}
           </span>
         ) : (
-          <span className="w-6 h-6 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
+          <Avatar size="md" />
         )}
       </span>
 

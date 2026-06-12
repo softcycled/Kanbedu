@@ -20,6 +20,7 @@ import MarkdownText from "./MarkdownText";
 import MarkdownToolbar from "./MarkdownToolbar";
 import { getColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
+import Avatar from "./Avatar";
 import { useToasts } from "@/components/Toasts";
 
 const getColumnDot = (index: number) =>
@@ -888,13 +889,7 @@ export default function TaskModal({
                 <>
                   <span className="flex items-center flex-shrink-0">
                     {selected.slice(0, 3).map((m, i) => (
-                      <span
-                        key={m.id}
-                        className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`}
-                        style={{ backgroundColor: m.color }}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
+                      <Avatar key={m.id} name={m.name} color={m.color} size="sm" className={`ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`} />
                     ))}
                   </span>
                   <span className="truncate">
@@ -919,7 +914,7 @@ export default function TaskModal({
                   assigneeIds.length === 0 ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                 }`}
               >
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
+                <Avatar size="sm" />
                 <span className="truncate">Unassigned</span>
                 {assigneeIds.length === 0 && (
                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -943,12 +938,7 @@ export default function TaskModal({
                       isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                     }`}
                   >
-                    <span
-                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ backgroundColor: m.color }}
-                    >
-                      {m.name.charAt(0).toUpperCase()}
-                    </span>
+                    <Avatar name={m.name} color={m.color} size="sm" />
                     <span className="truncate">{m.name}</span>
                     {isSelected && (
                       <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1327,12 +1317,7 @@ export default function TaskModal({
               ) : (
                 activities.map((a) => (
                   <div key={a.id} className="flex gap-2.5 items-start">
-                    <div
-                      className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
-                      style={{ backgroundColor: a.user?.color || "#cbd5e1" }}
-                    >
-                      {a.user?.name.charAt(0).toUpperCase() || "?"}
-                    </div>
+                    <Avatar name={a.user?.name} color={a.user?.color} size="sm" className="mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         <span className="text-xs font-semibold text-ink">{a.user?.handle ? `@${a.user.handle}` : a.user?.name || "System"}</span>
@@ -1385,12 +1370,7 @@ export default function TaskModal({
                     <div key={v.id} className="space-y-2">
                       <div className="flex items-center justify-between flex-wrap gap-1">
                         <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                            style={{ backgroundColor: v.user.color }}
-                          >
-                            {v.user.name.charAt(0).toUpperCase()}
-                          </div>
+                          <Avatar name={v.user.name} color={v.user.color} size="xs" />
                           <span className="text-xs font-semibold text-ink">{v.user.handle ? `@${v.user.handle}` : v.user.name}</span>
                         </div>
                         <span className="text-[10px] text-muted">{new Date(v.createdAt).toLocaleString()}</span>
@@ -1634,13 +1614,7 @@ export default function TaskModal({
                       >
                         <span className="flex items-center flex-shrink-0">
                           {metaAssignees.slice(0, 3).map((mm, i) => (
-                            <span
-                              key={mm.id}
-                              className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`}
-                              style={{ backgroundColor: mm.color }}
-                            >
-                              {mm.name.charAt(0).toUpperCase()}
-                            </span>
+                            <Avatar key={mm.id} name={mm.name} color={mm.color} size="sm" className={`ring-1 ring-card-bg ${i > 0 ? "-ml-1.5" : ""}`} />
                           ))}
                         </span>
                         <span>
@@ -1660,7 +1634,7 @@ export default function TaskModal({
                             }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
                           >
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-border flex items-center justify-center text-[10px] text-muted font-bold">?</span>
+                            <Avatar size="sm" />
                             <span className="truncate">Unassigned</span>
                           </button>
                           {boardMembers.filter((bm) => bm.classRole !== "educator" && bm.classRole !== "ta").map((bm) => {
@@ -1679,12 +1653,7 @@ export default function TaskModal({
                                   isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
                                 }`}
                               >
-                                <span
-                                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                  style={{ backgroundColor: bm.color }}
-                                >
-                                  {bm.name.charAt(0).toUpperCase()}
-                                </span>
+                                <Avatar name={bm.name} color={bm.color} size="sm" />
                                 <span className="truncate">{bm.name}</span>
                                 {isSelected && (
                                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1957,17 +1926,11 @@ export default function TaskModal({
                     const commentMember = boardMembers.find(
                       (bm) => (bm.handle && `@${bm.handle}` === c.author) || bm.name === c.author
                     );
-                    const avatarColor = commentMember?.color ?? nameToColor(c.author || "A");
                     const displayName = commentMember?.name ?? c.author;
                     return (
                     <div key={c.id} className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span
-                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                          style={{ backgroundColor: avatarColor }}
-                        >
-                          {(displayName || "A").charAt(0).toUpperCase()}
-                        </span>
+                        <Avatar name={displayName} color={commentMember?.color} size="md" />
                         <span className="text-sm font-semibold text-ink">
                           {displayName || <span className="italic font-normal text-muted">Anonymous</span>}
                         </span>
