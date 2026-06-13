@@ -66,6 +66,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   useEffect(() => {
     if (window.matchMedia("(max-width: 768px)").matches) setViewMode("list");
   }, []);
+  useEffect(() => { setMobileFilterOpen(false); }, [viewMode]);
 
   // Toggle slider refs/state for animated highlight
   const toggleRef = useRef<HTMLDivElement | null>(null);
