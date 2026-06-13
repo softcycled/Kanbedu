@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 const COOKIE_NAME = "kanbedu-session";
 const SECRET_RAW = process.env.KANBEDU_JWT_SECRET;
 if (!SECRET_RAW) {

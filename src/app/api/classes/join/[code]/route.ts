@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 // GET: validate a class join code without joining. Returns the class name.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const ip = getClientIp(req);
     const limit = await checkRateLimit(ip, "class_join_check", 60, 15);
     if (!limit.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });

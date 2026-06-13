@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema, parseBody } from "@/lib/validations";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const ip = getClientIp(req);
     
     // Strict rate limit: Max 5 signups per IP per hour to prevent bot mass-creation
     const ipLimit = await checkRateLimit(ip, "signup_ip", 5, 60);

@@ -22,12 +22,21 @@ export async function POST(req: NextRequest) {
     }
     const data = result.data;
 
-    // Verify user is a member of this board
-    const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: data.boardId } },
-    });
-    if (!membership) {
-      return NextResponse.json({ error: "You are not a member of this board." }, { status: 403 });
+    // Verify user is the owner of this board (members cannot mint invites)
+    const [membership, groupBoard] = await Promise.all([
+      prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: session.userId, boardId: data.boardId } },
+      }),
+      prisma.group.findFirst({
+        where: { boardId: data.boardId },
+        select: { id: true },
+      }),
+    ]);
+    if (!membership || membership.role !== "owner") {
+      return NextResponse.json({ error: "Only the board owner can create invite links." }, { status: 403 });
+    }
+    if (groupBoard) {
+      return NextResponse.json({ error: "Invite links are not available for class group boards." }, { status: 403 });
     }
 
     // Create invite with 7-day expiration

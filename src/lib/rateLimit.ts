@@ -1,5 +1,22 @@
 import { prisma } from "@/lib/prisma";
 
+// Returns the real client IP from trusted Vercel headers.
+// x-real-ip is set by Vercel's edge and is not client-spoofable.
+// Falls back to the rightmost entry in x-forwarded-for (added by the closest proxy),
+// which is harder to spoof than the leftmost (client-controlled) entry.
+export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const last = xff.split(",").at(-1)?.trim();
+    if (last) return last;
+  }
+
+  return "unknown";
+}
+
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;

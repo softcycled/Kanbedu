@@ -124,20 +124,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const userId = userByEmail.get(row.email);
       const groupId = row.groupName ? (groupIdByName.get(row.groupName.toLowerCase()) ?? null) : null;
 
-      // Upsert the roster entry
+      // Upsert the roster entry only — never auto-enroll existing accounts.
+      // claimedBy is set exclusively by the student via the join-code flow.
       await prisma.classRosterEntry.upsert({
         where: { classId_email: { classId: id, email: row.email } },
-        create: { classId: id, email: row.email, name: row.name, groupName: row.groupName, claimedBy: userId ?? null },
-        update: { name: row.name, groupName: row.groupName, claimedBy: userId ?? null },
+        create: { classId: id, email: row.email, name: row.name, groupName: row.groupName },
+        update: { name: row.name, groupName: row.groupName },
       });
 
       if (userId) {
-        // User exists — upsert ClassMember with displayName and optional group assignment
-        await prisma.classMember.upsert({
-          where: { userId_classId: { userId, classId: id } },
-          create: { userId, classId: id, role: "student", displayName: row.name, groupId },
-          update: { displayName: row.name, ...(groupId !== null ? { groupId } : {}) },
-        });
         matched++;
       } else {
         unmatched++;

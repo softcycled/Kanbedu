@@ -31,9 +31,9 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
                 </svg>
               </div>
               <p className="text-sm font-medium mb-1" style={{ color: "#1C1917" }}>Your email has been verified</p>
-              <p className="text-xs mb-5" style={{ color: "#78716C" }}>Your Kanbedu account is now fully set up.</p>
-              <a href="/" className="block w-full py-2.5 text-sm font-medium rounded-xl text-center" style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}>
-                Continue to app
+              <p className="text-xs mb-5" style={{ color: "#78716C" }}>Your Kanbedu account is now fully set up. Log in to continue.</p>
+              <a href="/login" className="block w-full py-2.5 text-sm font-medium rounded-xl text-center" style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}>
+                Log in
               </a>
             </>
           ) : (

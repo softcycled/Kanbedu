@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { resetPasswordRequestSchema, parseBody } from "@/lib/validations";
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const ip = getClientIp(req);
   const ipLimit = await checkRateLimit(ip, "reset_password_ip", 5, 60);
   if (!ipLimit.allowed) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
