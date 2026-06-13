@@ -164,14 +164,23 @@ function CardFace({ card, overlay }: { card: Card; overlay?: boolean }) {
 function DraggableCard({ card, nudge }: { card: Card; nudge: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className={`touch-none cursor-grab active:cursor-grabbing transition-opacity ${nudge ? "animate-nudge" : ""}`}
-      style={{ opacity: isDragging ? 0.2 : 1 }}
-    >
-      <CardFace card={card} />
+    <div className="relative">
+      {nudge && (
+        <div className="absolute -top-8 right-0 z-10 pointer-events-none animate-fade-in">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white text-[#161412] shadow-lg whitespace-nowrap">
+            drag me →
+          </span>
+        </div>
+      )}
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={`touch-none cursor-grab active:cursor-grabbing transition-opacity ${nudge ? "animate-nudge" : ""}`}
+        style={{ opacity: isDragging ? 0.2 : 1 }}
+      >
+        <CardFace card={card} />
+      </div>
     </div>
   );
 }
@@ -246,7 +255,7 @@ export default function DemoBoard() {
   useEffect(() => {
     if (everDragged) return;
     const show = setTimeout(() => setNudgeId("c1"), 1500);
-    const hide = setTimeout(() => setNudgeId(null),  2300);
+    const hide = setTimeout(() => setNudgeId(null),  3800);
     return () => { clearTimeout(show); clearTimeout(hide); };
   }, [everDragged]);
 
@@ -270,9 +279,11 @@ export default function DemoBoard() {
           if (!over) return;
           const newCol = over.id as ColId;
           if (!COL_META.find((c) => c.id === newCol)) return;
-          setCards((prev) =>
-            prev.map((c) => (c.id === active.id ? { ...c, column: newCol } : c))
-          );
+          setCards((prev) => {
+            const card = prev.find((c) => c.id === active.id);
+            if (!card) return prev;
+            return [...prev.filter((c) => c.id !== active.id), { ...card, column: newCol }];
+          });
         }}
       >
         <div className="overflow-x-auto">
