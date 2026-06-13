@@ -352,7 +352,7 @@ function NameInput({
 
 // ── Main component ────────────────────────────────────────────
 
-export default function ProfilePanel() {
+export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
@@ -535,6 +535,11 @@ export default function ProfilePanel() {
       {/* ── Left nav ── */}
       <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 px-3 no-scrollbar flex md:block items-center gap-1">
         <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Settings</p>
+        {onClose && (
+          <button onClick={onClose} className="md:hidden flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors mr-1" aria-label="Close settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        )}
         <ul className="flex md:block space-y-0 md:space-y-0.5 gap-1">
           {NAV_ITEMS.map((item) => (
             <li key={item.id}>

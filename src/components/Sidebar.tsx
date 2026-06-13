@@ -305,7 +305,6 @@ export default function Sidebar({
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<{ id: string; title: string; body: string; read: boolean; createdAt: string }[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
-  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,7 +322,7 @@ export default function Sidebar({
   useEffect(() => {
     if (!accountOpen) return;
     const onDown = (e: MouseEvent) => {
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
+      if (!(e.target as Element).closest?.('[data-account-section]')) setAccountOpen(false);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAccountOpen(false); };
     document.addEventListener("mousedown", onDown);
@@ -620,9 +619,9 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div ref={accountRef} className="relative border-t border-border/60 px-3 py-3">
+      <div data-account-section="" className="relative border-t border-border/60 py-3">
         {accountOpen && account && (
-          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20 overflow-hidden">
+          <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20 overflow-hidden">
 
             {popupView === "menu" && (
               <>
@@ -702,7 +701,7 @@ export default function Sidebar({
 
         <button
           onClick={() => setAccountOpen((v) => !v)}
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
           aria-label="Account menu"
         >
           <div className="relative flex-shrink-0">
@@ -740,10 +739,10 @@ export default function Sidebar({
       {/* Mobile overlay — always mounted, slides in/out with CSS */}
       <div className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           onClick={() => setMobileOpen(false)}
         />
-        <aside className={`absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal transition-transform duration-250 ease-out ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal transition-transform duration-250 ease-out ${mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"}`}>
           {sidebarContent}
         </aside>
       </div>

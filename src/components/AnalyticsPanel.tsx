@@ -6,6 +6,7 @@ import Skeleton from "./Skeleton";
 interface Props {
   boardName: string;
   boardId: string;
+  onClose?: () => void;
 }
 
 // ── Types ─────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ const PRIORITY_LABEL: Record<string, string> = {
   urgent: "Urgent", high: "High", medium: "Med", low: "Low",
 };
 
-export default function AnalyticsPanel({ boardName, boardId }: Props) {
+export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   // activity-stats / leaderboard removed to reduce load; keep only core analytics
   const [loading, setLoading] = useState(true);
@@ -205,10 +206,18 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 md:py-8 no-scrollbar">
+      {onClose && (
+        <div className="md:hidden flex items-center gap-3 -mx-4 px-4 pb-4 mb-2 border-b border-border/60">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors" aria-label="Close analytics">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <span className="text-sm font-semibold text-ink">Analytics</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Analytics</h2>
+          <h2 className="hidden md:block text-xl font-bold text-ink">Analytics</h2>
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
         {lastFetched && (

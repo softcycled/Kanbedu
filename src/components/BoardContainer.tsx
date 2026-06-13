@@ -482,7 +482,7 @@ export default function BoardContainer({
           <ClientErrorBoundary
             fallback={<div className="flex-1 flex items-center justify-center text-muted text-sm">Failed to load analytics. <button onClick={() => setActivePanel("board")} className="ml-3 text-xs underline">Back</button></div>}
           >
-            <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} />
+            <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} onClose={() => setActivePanel("board")} />
           </ClientErrorBoundary>
         )}
         {activePanel === "settings" && (
@@ -501,9 +501,9 @@ export default function BoardContainer({
             onClose={() => setActivePanel("board")}
           />
         )}
-        {activePanel === "profile" && <ProfilePanel />}
+        {activePanel === "profile" && <ProfilePanel onClose={() => setActivePanel("board")} />}
         {activePanel === "admin" && <AdminPanel />}
-        {activePanel === "help" && <HelpPanel />}
+        {activePanel === "help" && <HelpPanel onClose={() => setActivePanel("board")} />}
       </main>
     </div>
   );

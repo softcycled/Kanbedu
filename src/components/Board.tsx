@@ -63,7 +63,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   // View mode state — default to list on mobile after hydration
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (window.matchMedia("(max-width: 768px)").matches) setViewMode("list");
   }, []);
   useEffect(() => { setMobileFilterOpen(false); }, [viewMode]);
