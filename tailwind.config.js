@@ -47,6 +47,7 @@ module.exports = {
         "slide-up": "slideUp 0.2s cubic-bezier(0.34,1.3,0.64,1)",
         "slide-in-right": "slideInRight 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         "nudge": "nudge 0.75s ease-in-out",
+        "fill-bar": "fillBar 4s linear forwards",
       },
       keyframes: {
         modalIn: {
@@ -70,6 +71,10 @@ module.exports = {
           "30%":  { transform: "translateX(9px)" },
           "65%":  { transform: "translateX(-5px)" },
           "100%": { transform: "translateX(0)" },
+        },
+        fillBar: {
+          "0%":   { width: "0%" },
+          "100%": { width: "100%" },
         },
       },
     },

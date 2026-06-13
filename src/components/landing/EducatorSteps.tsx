@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import PriorityIcon from "../PriorityIcon";
 
 // ── Visual mockups — match the real app's design language ─────────────────────
@@ -305,9 +305,9 @@ const STEPS = [
 
 export default function EducatorSteps() {
   const [active, setActive] = useState(0);
-  const [manual, setManual] = useState(false);
   const [visible, setVisible] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -320,11 +320,16 @@ export default function EducatorSteps() {
     return () => observer.disconnect();
   }, []);
 
+  const startCycle = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => setActive((p) => (p + 1) % STEPS.length), 4000);
+  }, []);
+
   useEffect(() => {
-    if (!visible || manual) return;
-    const id = setInterval(() => setActive((p) => (p + 1) % STEPS.length), 4000);
-    return () => clearInterval(id);
-  }, [visible, manual]);
+    if (!visible) return;
+    startCycle();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [visible, startCycle]);
 
   return (
     <div ref={rootRef} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
@@ -333,8 +338,8 @@ export default function EducatorSteps() {
         {STEPS.map((step, i) => (
           <button
             key={step.num}
-            onClick={() => { setActive(i); setManual(true); }}
-            className="w-full flex items-start gap-4 p-4 rounded-xl text-left transition-all duration-200"
+            onClick={() => { setActive(i); startCycle(); }}
+            className="relative overflow-hidden w-full flex items-start gap-4 p-4 rounded-xl text-left transition-all duration-200"
             style={{
               background: active === i ? "rgb(var(--c-column-bg))" : "transparent",
               border: `1px solid ${active === i ? "rgb(var(--c-border))" : "transparent"}`,
@@ -370,6 +375,12 @@ export default function EducatorSteps() {
                 {step.body}
               </p>
             </div>
+            {active === i && (
+              <span
+                key={active}
+                className="absolute bottom-0 left-0 h-0.5 rounded-full bg-accent animate-fill-bar"
+              />
+            )}
           </button>
         ))}
       </div>
