@@ -533,7 +533,7 @@ export default function ProfilePanel() {
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
       {/* ── Left nav ── */}
-      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 pl-14 pr-3 md:px-3 no-scrollbar flex md:block items-center gap-1">
+      <nav className="w-full md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border h-auto md:h-full overflow-x-auto md:overflow-y-auto py-4 md:py-7 px-3 no-scrollbar flex md:block items-center gap-1">
         <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Settings</p>
         <ul className="flex md:block space-y-0 md:space-y-0.5 gap-1">
           {NAV_ITEMS.map((item) => (
@@ -555,7 +555,7 @@ export default function ProfilePanel() {
       </nav>
 
       {/* ── Right content ── */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-10 pt-6 pb-32 md:py-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 md:px-10 pt-6 pb-8 md:py-8 no-scrollbar">
 
         {/* Account */}
         {activeTab === "account" && (

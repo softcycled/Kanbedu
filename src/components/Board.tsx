@@ -62,6 +62,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   // View mode state — default to list on mobile after hydration
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   useEffect(() => {
     if (window.matchMedia("(max-width: 768px)").matches) setViewMode("list");
   }, []);
@@ -891,72 +892,129 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
 
   return (
     <>
-      {/* Header row: board name left, filters right */}
-      <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 pl-[4.5rem] pr-4 md:px-10 pt-6 pb-5 border-b border-border/60">
-        {headerTitle ?? (
-          <h1 className="hidden sm:block text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
-        )}
-        {/* When the task side panel is open, hide the filter bar and view toggle visually but
-            keep them in the layout so the header height stays stable (no upward shift). */}
-        <div className={`flex items-center gap-2 sm:gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
-            <FilterBar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              selectedAssignees={selectedAssignees}
-              setSelectedAssignees={setSelectedAssignees}
-              selectedTags={selectedTags}
-              setSelectedTags={setSelectedTags}
-              selectedPriorities={selectedPriorities}
-              setSelectedPriorities={setSelectedPriorities}
-              members={boardMembers}
-              tags={allBoardTags}
-              totalTasks={tasks.length}
-              filteredTasksCount={filteredTasks.length}
+      {/* ── Mobile header ── */}
+      <div className="md:hidden flex-shrink-0 flex items-center gap-2 px-4 pt-4 pb-3.5 border-b border-border/60">
+        <div className="flex-1 min-w-0">
+          {headerTitle ?? (
+            <h1 className="text-base font-bold tracking-tight text-ink truncate">{boardName || "Board"}</h1>
+          )}
+        </div>
+        <div className={`flex items-center gap-1.5 flex-shrink-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
+          {/* View mode toggle */}
+          <div ref={toggleRef} className="relative flex items-center gap-0.5 px-0.5 py-0.5 bg-column-bg rounded-lg border border-border/30">
+            <div
+              aria-hidden
+              style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
+              className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
             />
-            {/* View mode toggle (animated slider) */}
-            <div ref={toggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
-          {/* Sliding indicator */}
-          <div
-            aria-hidden
-            style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
-            className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
-          />
+            <button
+              ref={boardBtnRef}
+              onClick={() => setViewMode("board")}
+              aria-label="Board view"
+              className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "board" ? "text-ink/90" : "text-muted/70"}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
+                <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
+              </svg>
+            </button>
+            <button
+              ref={listBtnRef}
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70"}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              </svg>
+            </button>
+          </div>
+          {/* Search / filter icon */}
           <button
-            ref={boardBtnRef}
-            onClick={() => setViewMode("board")}
-            title="Board view"
-            aria-label="Board view"
-            className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
-              viewMode === "board"
-                ? "text-ink/90"
-                : "text-muted/70 hover:text-ink/80"
+            onClick={() => setMobileFilterOpen((v) => !v)}
+            aria-label="Search and filter"
+            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
+              mobileFilterOpen ? "bg-ink/8 border-border text-ink" : "border-transparent text-muted hover:text-ink"
             }`}
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.3px)', transformOrigin: 'center center' }}>
-              <rect x="1" y="1" width="5" height="5" rx="1"/>
-              <rect x="8" y="1" width="5" height="5" rx="1"/>
-              <rect x="1" y="8" width="5" height="5" rx="1"/>
-              <rect x="8" y="8" width="5" height="5" rx="1"/>
-            </svg>
-          </button>
-          <button
-            ref={listBtnRef}
-            onClick={() => setViewMode("list")}
-            title="List view"
-            aria-label="List view"
-            className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
-              viewMode === "list"
-                ? "text-ink/90"
-                : "text-muted/70 hover:text-ink/80"
-            }`}
-          >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: 'translateY(0.2px)', transformOrigin: 'center center' }}>
-              <line x1="1" y1="3" x2="13" y2="3"/>
-              <line x1="1" y1="7" x2="13" y2="7"/>
-              <line x1="1" y1="11" x2="13" y2="11"/>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </button>
         </div>
+        {headerTrailing}
+      </div>
+
+      {/* Mobile filter bar (expands below header) */}
+      {mobileFilterOpen && (
+        <div className="md:hidden px-4 pb-3 pt-2 border-b border-border/60">
+          <FilterBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedAssignees={selectedAssignees}
+            setSelectedAssignees={setSelectedAssignees}
+            selectedTags={selectedTags}
+            setSelectedTags={setSelectedTags}
+            selectedPriorities={selectedPriorities}
+            setSelectedPriorities={setSelectedPriorities}
+            members={boardMembers}
+            tags={allBoardTags}
+            totalTasks={tasks.length}
+            filteredTasksCount={filteredTasks.length}
+          />
+        </div>
+      )}
+
+      {/* ── Desktop header ── */}
+      <div className="hidden md:flex flex-shrink-0 items-center gap-4 px-10 pt-6 pb-5 border-b border-border/60">
+        {headerTitle ?? (
+          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+        )}
+        {/* When task side-panel is open, hide controls but keep height stable */}
+        <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
+          <FilterBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedAssignees={selectedAssignees}
+            setSelectedAssignees={setSelectedAssignees}
+            selectedTags={selectedTags}
+            setSelectedTags={setSelectedTags}
+            selectedPriorities={selectedPriorities}
+            setSelectedPriorities={setSelectedPriorities}
+            members={boardMembers}
+            tags={allBoardTags}
+            totalTasks={tasks.length}
+            filteredTasksCount={filteredTasks.length}
+          />
+          {/* View mode toggle (animated slider) */}
+          <div className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
+            <div
+              aria-hidden
+              style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
+              className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
+            />
+            <button
+              onClick={() => setViewMode("board")}
+              title="Board view"
+              aria-label="Board view"
+              className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "board" ? "text-ink/90" : "text-muted/70 hover:text-ink/80"}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: "translateY(0.3px)" }}>
+                <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
+                <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              title="List view"
+              aria-label="List view"
+              className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70 hover:text-ink/80"}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: "translateY(0.2px)" }}>
+                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              </svg>
+            </button>
+          </div>
         </div>
         {headerTrailing}
       </div>
@@ -985,7 +1043,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={sortedColumns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-              <div className="flex gap-7 min-h-full pb-8 pl-[4.5rem] pr-6 md:px-10 pt-6">
+              <div className="flex gap-7 min-h-full pb-8 px-4 md:px-10 pt-6">
             {isLoading ? (
               // Render simple skeleton columns while loading
               Array.from({ length: Math.max(1, columns.length || 3) }).map((_, i) => (

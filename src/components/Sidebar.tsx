@@ -95,16 +95,6 @@ function IconPlus() {
   );
 }
 
-function IconBoard() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="2" width="4" height="12" rx="1" />
-      <rect x="6.5" y="2" width="4" height="8" rx="1" />
-      <rect x="12" y="2" width="3" height="5" rx="1" />
-    </svg>
-  );
-}
-
 function IconHelp() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -272,6 +262,39 @@ export default function Sidebar({
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedClasses, setShowArchivedClasses] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileOpenRef = useRef(false);
+  useEffect(() => { mobileOpenRef.current = mobileOpen; }, [mobileOpen]);
+
+  // Swipe right from left edge to open; swipe left to close
+  useEffect(() => {
+    const EDGE = 40;
+    const THRESHOLD = 50;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const onStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = startX < EDGE || mobileOpenRef.current;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dy) > Math.abs(dx)) return;
+      if (dx > THRESHOLD && !mobileOpenRef.current) setMobileOpen(true);
+      if (dx < -THRESHOLD && mobileOpenRef.current) setMobileOpen(false);
+    };
+
+    document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchend", onEnd);
+    };
+  }, []);
 
   const router = useRouter();
   const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
@@ -439,11 +462,6 @@ export default function Sidebar({
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
     { id: "help", label: "Help", icon: <IconHelp /> },
-  ];
-
-  const mobileNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
-    { id: "board", label: "Board", icon: <IconBoard /> },
-    ...desktopNavItems,
   ];
 
   const sidebarContent = (
@@ -719,43 +737,16 @@ export default function Sidebar({
         {sidebarContent}
       </aside>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal">
-            {sidebarContent}
-          </aside>
-        </div>
-      )}
-
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-40 md:hidden p-2 rounded-xl bg-card-bg border border-border shadow-card text-ink"
-        aria-label="Open menu"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
-
-      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-paper border-t border-border/70 safe-area-bottom">
-        <div className="flex items-center justify-around py-1.5">
-          {mobileNavItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                activePanel === item.id && !activeClassId ? "text-ink" : "text-muted"
-              }`}
-            >
-              {item.icon}
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      {/* Mobile overlay — always mounted, slides in/out with CSS */}
+      <div className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setMobileOpen(false)}
+        />
+        <aside className={`absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal transition-transform duration-250 ease-out ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          {sidebarContent}
+        </aside>
+      </div>
       <ConfirmModal
         isOpen={confirmSignOut}
         title="Sign out"

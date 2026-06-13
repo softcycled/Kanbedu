@@ -445,7 +445,7 @@ export default function BoardContainer({
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activeClass && (
-          <div className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col">
             <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} />
           </div>
         )}
@@ -463,7 +463,7 @@ export default function BoardContainer({
                 </button>
               </div>
             )}
-            <div className="flex-1 pb-16 md:pb-0 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden flex flex-col">
               <BoardComp
                 key={activeBoardId}
                 boardId={activeBoardId}
@@ -498,6 +498,7 @@ export default function BoardContainer({
               .map((c) => ({ classId: c.id, className: c.name, groupName: c.groupName ?? null, boardId: c.boardId! }))}
             onSwitchToBoard={(boardId) => { handleBoardSwitch(boardId); setActivePanel("board"); }}
             onLeaveClass={handleLeaveClass}
+            onClose={() => setActivePanel("board")}
           />
         )}
         {activePanel === "profile" && <ProfilePanel />}

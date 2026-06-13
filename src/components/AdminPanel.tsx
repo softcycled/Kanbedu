@@ -101,7 +101,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-16 pb-32 md:py-8 no-scrollbar">
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 md:py-8 no-scrollbar">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
         <div>
           <h2 className="text-xl font-bold text-ink">Admin Dashboard</h2>

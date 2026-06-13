@@ -39,6 +39,7 @@ interface Props {
   classBoards?: ClassBoardSummary[];
   onSwitchToBoard?: (boardId: string) => void;
   onLeaveClass?: (classId: string) => Promise<boolean>;
+  onClose?: () => void;
 }
 
 export default function SettingsPanel({
@@ -51,7 +52,10 @@ export default function SettingsPanel({
   classBoards = [],
   onSwitchToBoard,
   onLeaveClass,
+  onClose,
 }: Props) {
+  // Mobile drill-down: "list" shows the board list, "detail" shows the selected board
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
 
@@ -238,57 +242,99 @@ export default function SettingsPanel({
 
   if (!board && !selectedClassBoard) return null;
 
+  const boardListItems = (
+    <>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Your Boards</p>
+      {boards.map((b) => (
+        <button
+          key={b.id}
+          onClick={() => { setSelectedBoardId(b.id); setSelectedClassBoardId(null); setMobileView("detail"); }}
+          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+            selectedBoardId === b.id && !selectedClassBoardId
+              ? "bg-ink/8 text-ink font-medium"
+              : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+          }`}
+        >
+          <div className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: "#4A90A4" }}>
+            {b.name.charAt(0).toUpperCase()}
+          </div>
+          <span className="truncate">{b.name}</span>
+        </button>
+      ))}
+      {classBoards.length > 0 && (
+        <>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mt-5 mb-3">Class Boards</p>
+          {classBoards.map((c) => (
+            <button
+              key={c.classId}
+              onClick={() => { setSelectedClassBoardId(c.boardId); setMobileView("detail"); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                selectedClassBoardId === c.boardId
+                  ? "bg-ink/8 text-ink font-medium"
+                  : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+              }`}
+            >
+              <div className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: "#6B7A8D" }}>
+                {(c.groupName || c.className).charAt(0).toUpperCase()}
+              </div>
+              <span className="truncate">{c.groupName || c.className}</span>
+            </button>
+          ))}
+        </>
+      )}
+    </>
+  );
+
+  const selectedName = selectedClassBoard
+    ? (selectedClassBoard.groupName || selectedClassBoard.className)
+    : board?.name ?? "";
+
   return (
     <>
-      <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
-        <div className="flex flex-col md:flex-row min-h-0">
-          {/* Board list sidebar */}
-          <div className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 py-4 md:py-7 pl-14 pr-2 md:px-2">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-3">Your Boards</p>
-            {boards.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => { setSelectedBoardId(b.id); setSelectedClassBoardId(null); }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                  selectedBoardId === b.id && !selectedClassBoardId
-                    ? "bg-ink/8 text-ink font-medium"
-                    : "text-ink/70 hover:bg-ink/5 hover:text-ink"
-                }`}
-              >
-                <div
-                  className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                  style={{ backgroundColor: "#4A90A4" }}
-                >
-                  {b.name.charAt(0).toUpperCase()}
-                </div>
-                <span className="truncate">{b.name}</span>
-              </button>
-            ))}
+      <div className="flex-1 overflow-y-auto pb-8 md:pb-12">
 
-            {classBoards.length > 0 && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mt-5 mb-3">Class Boards</p>
-                {classBoards.map((c) => (
-                  <button
-                    key={c.classId}
-                    onClick={() => setSelectedClassBoardId(c.boardId)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                      selectedClassBoardId === c.boardId
-                        ? "bg-ink/8 text-ink font-medium"
-                        : "text-ink/70 hover:bg-ink/5 hover:text-ink"
-                    }`}
-                  >
-                    <div
-                      className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ backgroundColor: "#6B7A8D" }}
-                    >
-                      {(c.groupName || c.className).charAt(0).toUpperCase()}
-                    </div>
-                    <span className="truncate">{c.groupName || c.className}</span>
-                  </button>
-                ))}
-              </>
-            )}
+        {/* ── Mobile: list view ── */}
+        {mobileView === "list" && (
+          <div className="md:hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+              <span className="text-sm font-semibold text-ink">Boards</span>
+              {onClose && (
+                <button onClick={onClose} className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors" aria-label="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="px-3 pt-4">
+              {boardListItems}
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile: detail view ── */}
+        {mobileView === "detail" && (
+          <div className="md:hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
+              <button
+                onClick={() => setMobileView("list")}
+                className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+                aria-label="Back to boards list"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
+              <span className="text-sm font-semibold text-ink truncate">{selectedName}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Desktop: side-by-side layout ── */}
+        <div className={`flex flex-col md:flex-row min-h-0 ${mobileView === "list" ? "hidden md:flex" : "flex"}`}>
+          {/* Desktop board list sidebar */}
+          <div className="md:w-52 flex-shrink-0 md:border-r border-border/60 md:py-7 md:px-2 hidden md:block">
+            {boardListItems}
           </div>
 
           {/* Class board detail — read-only view when a class board is selected */}
@@ -683,6 +729,7 @@ export default function SettingsPanel({
             </section>
           </div>
           )}
+        </div>
         </div>
       </div>
 

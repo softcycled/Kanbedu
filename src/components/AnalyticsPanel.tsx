@@ -204,10 +204,10 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
   const { summary, columns, assignees } = data;
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-32 md:py-8 no-scrollbar">
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 md:py-8 no-scrollbar">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-        <div className="pl-14 md:pl-0">
+        <div>
           <h2 className="text-xl font-bold text-ink">Analytics</h2>
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
@@ -273,9 +273,10 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
           const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
           const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
           return (
-            <div className="flex flex-col lg:flex-row items-stretch gap-0 w-full">
+            <div className="overflow-x-auto -mx-1 px-1 pb-1">
+            <div className="flex flex-row items-stretch gap-0 w-full min-w-max lg:min-w-0">
               {columns.map((col, i) => (
-                <div key={col.id} className="flex flex-col lg:flex-row items-stretch min-w-0" style={{ flex: "1 1 0" }}>
+                <div key={col.id} className="flex flex-row items-stretch min-w-[220px] lg:min-w-0" style={{ flex: "1 1 0" }}>
                   {/* Column card */}
                   <div className={`w-full rounded-xl border p-4 flex flex-col gap-3 h-full ${
                     col.isBottleneck
@@ -375,14 +376,15 @@ export default function AnalyticsPanel({ boardName, boardId }: Props) {
 
                   {/* Arrow between columns */}
                   {i < columns.length - 1 && (
-                    <div className="flex items-center justify-center py-2 lg:py-0 px-0 lg:px-2 flex-shrink-0">
-                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40 rotate-90 lg:rotate-0">
+                    <div className="flex items-center justify-center px-2 flex-shrink-0">
+                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40">
                         <path d="M0 8 H16 M10 2 L18 8 L10 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
                   )}
                 </div>
               ))}
+            </div>
             </div>
           );
         })()}
