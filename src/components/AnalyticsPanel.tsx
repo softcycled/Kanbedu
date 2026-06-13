@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Skeleton from "./Skeleton";
+import { isOverdue as isDeadlineOverdue } from "@/lib/utils";
 
 interface Props {
   boardName: string;
@@ -464,8 +465,7 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
                 {filteredTasks.length === 0 ? (
                   <tr><td colSpan={8} className="px-4 py-8 text-center text-muted text-sm">No tasks match this filter.</td></tr>
                 ) : filteredTasks.map((t) => {
-                  const now = Date.now();
-                  const isOverdue = t.deadline && new Date(t.deadline).getTime() < now && !t.columnIsDone;
+                  const overdue = !t.columnIsDone && isDeadlineOverdue(t.deadline);
                   const isStagnant = !t.columnIsDone && t.currentPhaseMs > 3 * MS_DAY;
                   return (
                     <tr key={t.id} className={`hover:bg-border/30 transition-colors ${t.columnIsDone ? "opacity-60" : ""}`}>
@@ -484,8 +484,8 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
                         {formatDuration(t.currentPhaseMs)}
                       </td>
                       <td className="px-4 py-3 text-right text-xs font-mono text-muted">{formatDuration(t.totalAgeMs)}</td>
-                      <td className={`px-4 py-3 text-xs ${isOverdue ? "text-red-500 font-medium" : "text-muted"}`}>
-                        {formatDate(t.deadline)}{isOverdue ? " ⚠" : ""}
+                      <td className={`px-4 py-3 text-xs ${overdue ? "text-red-500 font-medium" : "text-muted"}`}>
+                        {formatDate(t.deadline)}{overdue ? " ⚠" : ""}
                       </td>
                       <td className="px-4 py-3 text-right text-xs text-muted">{t.commentCount > 0 ? t.commentCount : "—"}</td>
                     </tr>

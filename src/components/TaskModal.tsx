@@ -8,10 +8,11 @@ import {
   isOverdue,
   timeInColumn,
   formatDateForInput,
+  formatTimeForInput,
+  combineDateTimeToISO,
   formatDateTime,
   formatTimeAgo,
   formatDeadlineLabel,
-  dateInputToISOString,
 } from "@/lib/utils";
 import useBoardResources from "@/hooks/useBoardResources";
 import { LABEL_PALETTE } from "@/lib/labelPalette";
@@ -75,6 +76,7 @@ export default function TaskModal({
   const [columnDropdownOpen, setColumnDropdownOpen] = useState(false);
   const columnDropdownRef = useRef<HTMLDivElement>(null);
   const [deadline, setDeadline] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
@@ -154,10 +156,11 @@ export default function TaskModal({
   const debouncedDescription = useDebounce(description, 600);
   const debouncedAssigneeIds = useDebounce(assigneeIds.join(","), 600);
   const debouncedDeadline = useDebounce(deadline, 600);
+  const debouncedDeadlineTime = useDebounce(deadlineTime, 600);
   const [optimisticTagIds, setOptimisticTagIds] = useState<string[] | null>(null);
 
   const prevTask = useRef<string | null>(null);
-  const originalTask = useRef<{ description?: string; assigneeIds?: string; deadline?: string } | null>(null);
+  const originalTask = useRef<{ description?: string; assigneeIds?: string; deadline?: string | null } | null>(null);
   const isMounted = useRef(false);
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
@@ -195,12 +198,15 @@ export default function TaskModal({
         : [];
       setAssigneeIds(taskAssigneeIds);
       setColumnId(task.column ?? "");
-      setDeadline(formatDateForInput(task.deadline));
+      const initialDeadlineDate = formatDateForInput(task.deadline);
+      const initialDeadlineTime = formatTimeForInput(task.deadline);
+      setDeadline(initialDeadlineDate);
+      setDeadlineTime(initialDeadlineTime);
 
       originalTask.current = {
         description: task.description ?? "",
         assigneeIds: taskAssigneeIds.join(","),
-        deadline: formatDateForInput(task.deadline),
+        deadline: combineDateTimeToISO(initialDeadlineDate, initialDeadlineTime),
       };
 
       // sync comments/activities on first load for this task
@@ -587,15 +593,13 @@ export default function TaskModal({
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    const deadlineValue = debouncedDeadline ? dateInputToISOString(debouncedDeadline) : null;
-    const originalDeadline = originalTask.current?.deadline 
-      ? dateInputToISOString(originalTask.current.deadline)
-      : null;
+    const deadlineValue = combineDateTimeToISO(debouncedDeadline, debouncedDeadlineTime);
+    const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       void handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDeadline]);
+  }, [debouncedDeadline, debouncedDeadlineTime]);
 
   // Flush any pending debounced updates before closing
   const flushUpdates = useCallback(() => {
@@ -608,10 +612,8 @@ export default function TaskModal({
     if (assigneeIds.join(",") !== (originalTask.current?.assigneeIds ?? "")) {
       (updates as any).assigneeIds = assigneeIds;
     }
-    const deadlineValue = deadline ? dateInputToISOString(deadline) : null;
-    const originalDeadline = originalTask.current?.deadline 
-      ? dateInputToISOString(originalTask.current.deadline)
-      : null;
+    const deadlineValue = combineDateTimeToISO(deadline, deadlineTime);
+    const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       updates.deadline = deadlineValue;
     }
@@ -620,7 +622,7 @@ export default function TaskModal({
     if (Object.keys(updates).length > 0) {
       void handleUpdateWithFeedback(task.id, updates);
     }
-  }, [task, description, assigneeIds, deadline, handleUpdateWithFeedback]);
+  }, [task, description, assigneeIds, deadline, deadlineTime, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(() => {
     setConfirmDelete(false);
@@ -841,8 +843,8 @@ export default function TaskModal({
   if (!task) return null;
 
   const overdue = isOverdue(task.deadline, task.completedAt);
-  // derive semantic deadline info from the local `deadline` input (shows unsaved edits)
-  const deadlineInfo = formatDeadlineLabel(deadline ? dateInputToISOString(deadline) : null, task.completedAt);
+  // derive semantic deadline info from the local date/time inputs (shows unsaved edits)
+  const deadlineInfo = formatDeadlineLabel(combineDateTimeToISO(deadline, deadlineTime), task.completedAt);
 
   // decide whether to show a muted 'future' status: show only for deadlines within the next 7 days
   let showDeadlineStatus = false;
@@ -1062,13 +1064,35 @@ export default function TaskModal({
             <input
               type="date"
               value={deadline}
-              onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+              onChange={(e) => {
+                userHasEdited.current = true;
+                const v = e.target.value;
+                setDeadline(v);
+                // A time without a date is meaningless; clear it when the date is removed.
+                if (!v) setDeadlineTime("");
+              }}
               className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
             />
             {deadline && (
+              <input
+                type="time"
+                value={deadlineTime}
+                onChange={(e) => { userHasEdited.current = true; setDeadlineTime(e.target.value); }}
+                aria-label="Deadline time (optional)"
+                title="Optional time of day"
+                className="px-1.5 py-1 bg-transparent text-sm text-muted rounded-md hover:bg-column-bg hover:text-ink focus:bg-column-bg focus:text-ink focus:outline-none transition-colors"
+              />
+            )}
+            {deadline && (
               <button
                 type="button"
-                onClick={() => { userHasEdited.current = true; setDeadline(""); }}
+                onClick={() => {
+                  userHasEdited.current = true;
+                  setDeadline("");
+                  setDeadlineTime("");
+                  // Fire immediately so removal never depends on the debounce/close flush.
+                  void handleUpdateWithFeedback(task.id, { deadline: null } as Partial<Task>);
+                }}
                 title="Remove deadline"
                 aria-label="Remove deadline"
                 className="w-4 h-4 rounded-full flex items-center justify-center bg-muted/20 hover:bg-muted/40 text-muted hover:text-ink transition-colors flex-shrink-0 self-center ml-1"
@@ -1688,7 +1712,12 @@ export default function TaskModal({
                         ref={metaDeadlineInputRef}
                         type="date"
                         value={deadline}
-                        onChange={(e) => { userHasEdited.current = true; setDeadline(e.target.value); }}
+                        onChange={(e) => {
+                          userHasEdited.current = true;
+                          const v = e.target.value;
+                          setDeadline(v);
+                          if (!v) setDeadlineTime("");
+                        }}
                         className="sr-only"
                         aria-hidden="true"
                         tabIndex={-1}
