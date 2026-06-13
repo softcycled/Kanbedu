@@ -621,7 +621,7 @@ export default function Sidebar({
 
       <div data-account-section="" className="relative border-t border-border/60 py-3">
         {accountOpen && account && (
-          <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20 overflow-hidden">
+          <div className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl border border-border bg-card-bg shadow-modal py-1.5 z-20 overflow-hidden">
 
             {popupView === "menu" && (
               <>
@@ -650,7 +650,7 @@ export default function Sidebar({
 
                 <button
                   onClick={() => { setAccountOpen(false); setConfirmSignOut(true); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-ink/5 transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink/80 hover:text-red-500 hover:bg-red-500/8 transition-colors"
                 >
                   <IconSignOut />
                   Sign out
