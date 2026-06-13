@@ -126,6 +126,7 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("priority");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [mounted, setMounted] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -141,6 +142,7 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   }, [boardId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, []);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -318,7 +320,7 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
                         <div className="mt-1.5 h-1.5 w-full bg-border rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${col.isBottleneck ? "bg-orange-400" : "bg-blue-400"}`}
-                            style={{ width: `${Math.max(4, Math.round((col.currentTaskCount / maxTasks) * 100))}%` }}
+                            style={{ width: mounted ? `${Math.max(4, Math.round((col.currentTaskCount / maxTasks) * 100))}%` : "0%", transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}
                           />
                         </div>
                       )}

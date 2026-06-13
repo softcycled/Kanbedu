@@ -58,6 +58,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   // silent = background refresh (live realtime updates) that must not flash the
   // full-screen loading/error states over already-rendered cards.
@@ -78,6 +79,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, []);
 
   // Coalesce bursts of board events (a student dragging several tasks) into one
   // refetch ~0.7s after activity settles.
@@ -167,7 +169,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
             </div>
 
             <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
-              <div className={`h-full rounded-full ${g.needsAttention ? "bg-orange-400" : "bg-blue-400"}`} style={{ width: `${g.percent}%` }} />
+              <div className={`h-full rounded-full ${g.needsAttention ? "bg-orange-400" : "bg-blue-400"}`} style={{ width: mounted ? `${g.percent}%` : "0%", transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }} />
             </div>
 
             <p className="mt-2 text-xs text-muted">{g.done} of {g.total} tasks done</p>

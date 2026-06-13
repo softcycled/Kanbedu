@@ -214,7 +214,14 @@ const MONITOR_GROUPS = [
   { name: "Group 4", done: 5, total: 9,  pct: 56, cols: [{ l: "To Do", n: 2 }, { l: "In Progress", n: 2 }, { l: "Done", n: 5 }], colors: ["#7C3AED", "#059669"], attention: false },
 ];
 
-function MonitorVisual() {
+function MonitorVisual({ isActive }: { isActive?: boolean }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!isActive) { setReady(false); return; }
+    const t = setTimeout(() => setReady(true), 100);
+    return () => clearTimeout(t);
+  }, [isActive]);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-3">
@@ -243,7 +250,7 @@ function MonitorVisual() {
             <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
               <div
                 className={`h-full rounded-full ${g.attention ? "bg-orange-400" : "bg-blue-400"}`}
-                style={{ width: `${g.pct}%` }}
+                style={{ width: ready ? `${g.pct}%` : "0%", transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}
               />
             </div>
             <p className="mt-2 text-xs text-muted">{g.done} of {g.total} tasks done</p>
@@ -396,7 +403,7 @@ export default function EducatorSteps() {
               pointerEvents: active === i ? "auto" : "none",
             }}
           >
-            <step.Visual />
+            {step.num === "04" ? <MonitorVisual isActive={active === i} /> : <step.Visual />}
           </div>
         ))}
       </div>
