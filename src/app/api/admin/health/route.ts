@@ -6,36 +6,28 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const t0 = performance.now();
     const session = await getSession();
-    const sessionMs = Math.round(performance.now() - t0);
-
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const t1 = performance.now();
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { isAdmin: true },
     });
-    const adminMs = Math.round(performance.now() - t1);
 
     if (!user?.isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const t2 = performance.now();
+    const start = performance.now();
     await prisma.$queryRaw`SELECT 1`;
-    const pingMs = Math.round(performance.now() - t2);
-
-    console.log(`[health] session=${sessionMs}ms isAdmin=${adminMs}ms ping=${pingMs}ms`);
+    const latency = Math.round(performance.now() - start);
 
     return NextResponse.json({
       status: "healthy",
       database: "connected",
-      latency: `${pingMs}ms`,
-      detail: { sessionMs, adminMs, pingMs },
+      latency: `${latency}ms`,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
