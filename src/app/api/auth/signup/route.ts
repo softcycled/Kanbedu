@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ id: user.id, email: user.email, name: user.name, handle: user.handle });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "An account with this email or username already exists." }, { status: 409 });
+    }
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
