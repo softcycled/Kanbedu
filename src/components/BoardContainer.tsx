@@ -168,6 +168,15 @@ export default function BoardContainer({
   const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
 
+    if (payload?.updates) {
+      const updates = payload.updates as { id: string; order: number }[];
+      setTasks((prev) => prev.map((t) => {
+        const u = updates.find((u) => u.id === t.id);
+        return u ? { ...t, order: u.order } : t;
+      }));
+      return;
+    }
+
     if (payload?.task) {
       const t = payload.task;
       setTasks((prev) => {
