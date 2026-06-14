@@ -169,9 +169,14 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       <section className="border-t border-border/60 pt-6">
         <h3 className="text-sm font-semibold text-ink mb-3">Archive &amp; Delete</h3>
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={toggleArchive} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">
-            {isArchived ? "Unarchive class" : "Archive class"}
-          </button>
+          <div className="relative group">
+            <button disabled className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink/40 bg-card-bg cursor-not-allowed">
+              {isArchived ? "Unarchive class" : "Archive class"}
+            </button>
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md text-[11px] bg-ink text-on-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              Coming soon
+            </span>
+          </div>
           <button onClick={() => setConfirmDelete(true)} className="px-4 py-2 rounded-xl text-sm font-medium border border-red-300 text-red-600 bg-card-bg hover:bg-red-50 transition-colors">
             Delete class
           </button>
