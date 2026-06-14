@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
+    <div className="force-light min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" className="text-ink no-underline">kanbedu</a></h1>
@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
           {sent ? (
             <div className="text-center space-y-4">
               <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto bg-green-500/10">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-green-600 dark:text-green-400" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-green-600" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 10l4 4 8-8" />
                 </svg>
               </div>

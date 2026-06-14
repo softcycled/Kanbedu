@@ -12,7 +12,7 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.unknown) : "";
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
+    <div className="force-light min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold tracking-tight">
@@ -26,7 +26,7 @@ function DoneContent({ searchParams }: { searchParams: { error?: string } }) {
           {success ? (
             <>
               <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-500/10">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-green-600 dark:text-green-400" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-green-600" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="4 10 8 14 16 6" />
                 </svg>
               </div>

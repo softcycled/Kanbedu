@@ -24,7 +24,7 @@ function CheckEmailContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
+    <div className="force-light min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold tracking-tight">
@@ -35,7 +35,7 @@ function CheckEmailContent() {
 
         <div className="rounded-2xl p-6 text-center space-y-4 bg-card-bg border border-border shadow-card">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto bg-amber-500/10">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-amber-600 dark:text-amber-500" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-amber-600" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2"/>
               <path d="M2 7l10 7 10-7"/>
             </svg>
@@ -53,7 +53,7 @@ function CheckEmailContent() {
 
           <div className="pt-1 border-t border-border">
             {sent ? (
-              <p className="text-xs text-green-600 dark:text-green-400">Email resent. Check your inbox.</p>
+              <p className="text-xs text-green-600">Email resent. Check your inbox.</p>
             ) : error ? (
               <p className="text-xs text-red-500">{error}</p>
             ) : (

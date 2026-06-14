@@ -97,7 +97,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
+    <div className="force-light min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -147,7 +147,7 @@ function LoginContent() {
                   </div>
                   {handle && (
                     <p className={`text-xs mt-1.5 ${
-                      handleStatus === "available" ? "text-green-600 dark:text-green-400"
+                      handleStatus === "available" ? "text-green-600"
                         : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
                         : "text-muted"
                     }`}>
@@ -263,7 +263,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-paper text-ink">Loading...</div>}>
+    <Suspense fallback={<div className="force-light min-h-screen flex items-center justify-center bg-paper text-ink">Loading...</div>}>
       <LoginContent />
     </Suspense>
   );

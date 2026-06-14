@@ -37,6 +37,29 @@
   --shadow-modal:      0 24px 64px rgba(26,24,20,0.18), 0 8px 24px rgba(26,24,20,0.10);
 }
 
+/* ── Force-light wrapper — pages that are intentionally always light ── */
+/* Overrides the .dark cascade for any subtree that needs permanent light mode. */
+/* dark: Tailwind variants inside must also be removed — they key off <html>.dark */
+.force-light {
+  --c-paper:      247 245 240;
+  --c-ink:        28  25  23;
+  --c-muted:      120 113 108;
+  --c-accent:     37  99  235;
+  --c-accent-lt:  239 246 255;
+  --c-primary:    28  25  23;
+  --c-on-primary: 255 255 255;
+  --c-column-bg:  239 237 232;
+  --c-card-bg:    253 252 250;
+  --c-surface:    244 242 237;
+  --c-panel-bg:   243 241 237;
+  --c-border:     226 222 216;
+  --shadow-card:       0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04);
+  --shadow-card-hover: 0 8px 24px rgba(26,24,20,0.10), 0 3px 8px rgba(26,24,20,0.06);
+  --shadow-modal:      0 24px 64px rgba(26,24,20,0.18), 0 8px 24px rgba(26,24,20,0.10);
+  color: rgb(var(--c-ink));
+  background-color: rgb(var(--c-paper));
+}
+
 /* ── Dark theme tokens ────────────────────────────────────────── */
 .dark {
   --c-paper:      22  20  18;   /* #161412 warm near-black */

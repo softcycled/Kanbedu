@@ -16,7 +16,7 @@ export default function ResendButton() {
   };
 
   if (state === "sent") {
-    return <p className="text-sm text-green-600 dark:text-green-400">Email sent. Check your inbox.</p>;
+    return <p className="text-sm text-green-600">Email sent. Check your inbox.</p>;
   }
 
   return (
