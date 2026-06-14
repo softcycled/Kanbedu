@@ -16,15 +16,14 @@ export default function ResendButton() {
   };
 
   if (state === "sent") {
-    return <p className="text-sm" style={{ color: "#16A34A" }}>Email sent. Check your inbox.</p>;
+    return <p className="text-sm text-green-600 dark:text-green-400">Email sent. Check your inbox.</p>;
   }
 
   return (
     <button
       onClick={handleResend}
       disabled={state === "sending"}
-      className="text-sm underline underline-offset-2 disabled:opacity-50 transition-opacity"
-      style={{ color: "#78716C" }}
+      className="text-sm text-muted underline underline-offset-2 disabled:opacity-50 transition-opacity"
     >
       {state === "sending" ? "Sending…" : state === "error" ? "Failed. Try again" : "Resend verification email"}
     </button>

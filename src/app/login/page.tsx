@@ -97,35 +97,25 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold tracking-tight">
-            <a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a>
+            <a href="/landing" className="text-ink no-underline">kanbedu</a>
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#78716C" }}>
+          <p className="text-sm mt-1 text-muted">
             {mode === "login" ? "Sign in to your account" : "Create a new account"}
           </p>
         </div>
 
         {/* Form card */}
-        <div
-          className="rounded-2xl p-6"
-          style={{
-            backgroundColor: "#FDFCFA",
-            border: "1px solid #E2DED8",
-            boxShadow: "0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04)",
-          }}
-        >
+        <div className="rounded-2xl p-6 bg-card-bg border border-border shadow-card">
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <>
                 <div>
-                  <label
-                    className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                    style={{ color: "#78716C" }}
-                  >
+                  <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                     Name
                   </label>
                   <input
@@ -134,28 +124,15 @@ function LoginContent() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
                     autoComplete="name"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
-                    style={{
-                      backgroundColor: "#EFEDE8",
-                      color: "#1C1917",
-                      border: "1px solid transparent",
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
-                    onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
                   />
                 </div>
                 <div>
-                  <label
-                    className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                    style={{ color: "#78716C" }}
-                  >
+                  <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                     Username
                   </label>
                   <div className="relative">
-                    <span
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium select-none"
-                      style={{ color: "#78716C" }}
-                    >
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium select-none text-muted">
                       @
                     </span>
                     <input
@@ -165,22 +142,15 @@ function LoginContent() {
                       placeholder="yourhandle"
                       autoComplete="off"
                       maxLength={30}
-                      className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
-                      style={{
-                        backgroundColor: "#EFEDE8",
-                        color: "#1C1917",
-                        border: "1px solid transparent",
-                      }}
-                      onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
-                      onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                      className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
                     />
                   </div>
                   {handle && (
-                    <p className="text-xs mt-1.5" style={{
-                      color: handleStatus === "available" ? "#22C55E"
-                        : handleStatus === "taken" || handleStatus === "invalid" ? "#E8613A"
-                        : "#78716C"
-                    }}>
+                    <p className={`text-xs mt-1.5 ${
+                      handleStatus === "available" ? "text-green-600 dark:text-green-400"
+                        : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
+                        : "text-muted"
+                    }`}>
                       {handleStatus === "available" ? `@${handle} is available`
                         : handleStatus === "taken" ? "That username is already taken"
                         : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
@@ -192,10 +162,7 @@ function LoginContent() {
             )}
 
             <div>
-              <label
-                className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                style={{ color: "#78716C" }}
-              >
+              <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                 Email
               </label>
               <input
@@ -206,30 +173,17 @@ function LoginContent() {
                 required
                 autoComplete="email"
                 autoFocus={mode === "login"}
-                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
-                style={{
-                  backgroundColor: "#EFEDE8",
-                  color: "#1C1917",
-                  border: "1px solid transparent",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
-                onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label
-                  className="block text-xs font-semibold uppercase tracking-widest"
-                  style={{ color: "#78716C" }}
-                >
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted">
                   Password
                 </label>
                 {mode === "login" && (
-                  <a href="/forgot-password" className="text-xs transition-colors" style={{ color: "#78716C" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-                  >
+                  <a href="/forgot-password" className="text-xs transition-colors text-muted hover:text-ink">
                     Forgot password?
                   </a>
                 )}
@@ -242,23 +196,12 @@ function LoginContent() {
                 required
                 minLength={mode === "signup" ? 8 : undefined}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors"
-                style={{
-                  backgroundColor: "#EFEDE8",
-                  color: "#1C1917",
-                  border: "1px solid transparent",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#E2DED8")}
-                onBlur={(e) => (e.target.style.borderColor = "transparent")}
+                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
               />
             </div>
 
             {error && (
-              <div
-                role="alert"
-                className="text-xs font-medium px-3 py-2 rounded-lg"
-                style={{ backgroundColor: "#FDF0EB", color: "#E8613A" }}
-              >
+              <div role="alert" className="text-xs font-medium px-3 py-2 rounded-lg bg-red-500/10 text-red-500">
                 {error}
               </div>
             )}
@@ -266,13 +209,7 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: "#1C1917",
-                color: "#F7F5F0",
-              }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = "#1C1917CC"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#1C1917"; }}
+              className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-primary text-on-primary hover:bg-primary/90"
             >
               {loading
                 ? "Please wait..."
@@ -282,13 +219,13 @@ function LoginContent() {
             </button>
 
             {mode === "signup" && (
-              <p className="text-center text-[11px] leading-relaxed" style={{ color: "#78716C" }}>
+              <p className="text-center text-[11px] leading-relaxed text-muted">
                 By creating an account, you agree to the{" "}
-                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "#1C1917", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
                   Terms of Service
                 </a>{" "}
                 and{" "}
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#1C1917", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
                   Privacy Policy
                 </a>.
               </p>
@@ -298,13 +235,7 @@ function LoginContent() {
 
         {/* Toggle mode */}
         <div className="text-center mt-5">
-          <button
-            onClick={toggleMode}
-            className="text-xs transition-colors"
-            style={{ color: "#78716C" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-          >
+          <button onClick={toggleMode} className="text-xs transition-colors text-muted hover:text-ink">
             {mode === "login"
               ? "Don't have an account? Create one"
               : "Already have an account? Sign in"}
@@ -313,24 +244,15 @@ function LoginContent() {
 
         {/* Legal footer */}
         <div className="flex items-center justify-center gap-4 mt-8 flex-wrap">
-          <a href="/terms" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-          >
+          <a href="/terms" className="text-[11px] transition-colors text-muted hover:text-ink">
             Terms of Service
           </a>
-          <span style={{ color: "#78716C" }} className="text-[11px]">·</span>
-          <a href="/privacy" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-          >
+          <span className="text-[11px] text-muted">·</span>
+          <a href="/privacy" className="text-[11px] transition-colors text-muted hover:text-ink">
             Privacy Policy
           </a>
-          <span style={{ color: "#78716C" }} className="text-[11px]">·</span>
-          <a href="mailto:support@kanbedu.com" className="text-[11px] transition-colors" style={{ color: "#78716C" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#1C1917")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#78716C")}
-          >
+          <span className="text-[11px] text-muted">·</span>
+          <a href="mailto:support@kanbedu.com" className="text-[11px] transition-colors text-muted hover:text-ink">
             Contact
           </a>
         </div>
@@ -341,7 +263,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F7F5F0]">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-paper text-ink">Loading...</div>}>
       <LoginContent />
     </Suspense>
   );

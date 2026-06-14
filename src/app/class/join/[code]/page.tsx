@@ -60,45 +60,40 @@ export default function ClassJoinPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#F7F5F0" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" style={{ color: "#1C1917", textDecoration: "none" }}>kanbedu</a></h1>
-          <p className="text-sm mt-1" style={{ color: "#78716C" }}>Class invitation</p>
+          <h1 className="text-2xl font-bold tracking-tight"><a href="/landing" className="text-ink no-underline">kanbedu</a></h1>
+          <p className="text-sm mt-1 text-muted">Class invitation</p>
         </div>
 
-        <div
-          className="rounded-2xl p-6 text-center"
-          style={{ backgroundColor: "#FDFCFA", border: "1px solid #E2DED8", boxShadow: "0 2px 8px rgba(26,24,20,0.06), 0 1px 3px rgba(26,24,20,0.04)" }}
-        >
-          {status === "loading" && <p className="text-sm" style={{ color: "#78716C" }}>Checking invite…</p>}
+        <div className="rounded-2xl p-6 text-center bg-card-bg border border-border shadow-card">
+          {status === "loading" && <p className="text-sm text-muted">Checking invite…</p>}
 
           {status === "ready" && (
             <>
-              <p className="text-sm mb-1" style={{ color: "#78716C" }}>You have been invited to join</p>
-              <p className="text-lg font-bold" style={{ color: "#1C1917" }}>{className}</p>
-              {term && <p className="text-xs mb-5" style={{ color: "#78716C" }}>{term}</p>}
+              <p className="text-sm mb-1 text-muted">You have been invited to join</p>
+              <p className="text-lg font-bold text-ink">{className}</p>
+              {term && <p className="text-xs mb-5 text-muted">{term}</p>}
               <button
                 onClick={handleJoin}
-                className="w-full mt-4 py-2.5 text-sm font-medium rounded-xl transition-colors"
-                style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}
+                className="w-full mt-4 py-2.5 text-sm font-medium rounded-xl transition-colors bg-primary text-on-primary hover:bg-primary/90"
               >
                 Join class
               </button>
             </>
           )}
 
-          {status === "joining" && <p className="text-sm" style={{ color: "#78716C" }}>Joining…</p>}
+          {status === "joining" && <p className="text-sm text-muted">Joining…</p>}
 
-          {status === "done" && <p className="text-sm font-medium" style={{ color: "#1C1917" }}>{message}</p>}
+          {status === "done" && <p className="text-sm font-medium text-ink">{message}</p>}
 
           {status === "error" && (
             <>
-              <p className="text-sm font-medium mb-5" style={{ color: "#E8613A" }}>{message}</p>
+              <p className="text-sm font-medium mb-5 text-red-500">{message}</p>
               <button
                 onClick={() => router.push(classId ? `/class/${classId}` : "/")}
-                className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors"
-                style={{ backgroundColor: "#1C1917", color: "#F7F5F0" }}
+                className="w-full py-2.5 text-sm font-medium rounded-xl transition-colors bg-primary text-on-primary hover:bg-primary/90"
               >
                 Go to dashboard
               </button>
