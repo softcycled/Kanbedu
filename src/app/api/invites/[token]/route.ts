@@ -20,7 +20,7 @@ export async function POST(
 
     const invite = await prisma.boardInvite.findUnique({
       where: { token },
-      include: { board: true },
+      include: { board: { select: { name: true } } },
     });
 
     if (!invite) {

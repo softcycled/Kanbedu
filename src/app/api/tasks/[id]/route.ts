@@ -119,44 +119,42 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // If activities or comments were requested, fetch them using targeted queries.
-  let activities: any[] = [];
-  let activitiesMs = 0;
-  let comments: any[] = [];
-  let commentsMs = 0;
+  // Fetch activities, comments, and name overrides in parallel.
+  const extrasStart = Date.now();
+  const [activities, comments, nameOverrides] = await Promise.all([
+    wantActivities
+      ? prisma.taskActivity.findMany({
+          where: { taskId: id },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            createdAt: true,
+            userId: true,
+            user: { select: { id: true, name: true, color: true, handle: true } },
+          },
+        })
+      : Promise.resolve([] as any[]),
+    wantComments
+      ? prisma.comment.findMany({
+          where: { taskId: id },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+        })
+      : Promise.resolve([] as any[]),
+    getBoardNameOverrides(taskAuth.columnRel.boardId),
+  ]);
+  const extrasMs = Date.now() - extrasStart;
 
-  if (wantActivities) {
-    const activitiesStart = Date.now();
-    // fetch only the small set of fields the UI renders; include minimal user info
-    activities = await prisma.taskActivity.findMany({
-      where: { taskId: id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        type: true,
-        content: true,
-        createdAt: true,
-        userId: true,
-        user: { select: { id: true, name: true, color: true, handle: true } },
-      },
-    });
-    activitiesMs = Date.now() - activitiesStart;
-    task.activities = activities;
-  }
+  if (wantActivities) (task as any).activities = activities;
+  if (wantComments) (task as any).comments = comments;
 
-  if (wantComments) {
-    const commentsStart = Date.now();
-    comments = await prisma.comment.findMany({ where: { taskId: id }, orderBy: { createdAt: "asc" } , select: { id: true, content: true, author: true, createdAt: true, taskId: true } });
-    commentsMs = Date.now() - commentsStart;
-    task.comments = comments;
-  }
-
-  const queryMs = taskQueryMs + activitiesMs + commentsMs;
+  const queryMs = taskQueryMs + extrasMs;
 
   // Flatten assignee junction rows to plain user objects, then overlay
   // educator-set roster names (class group boards) on every name we return.
-  const nameOverrides = await getBoardNameOverrides(taskAuth.columnRel.boardId);
   {
     const t = task as any;
     t.assignees = (t.assignees ?? []).map((a: any) => ({
@@ -218,23 +216,19 @@ export async function PATCH(
   const newAssigneeIds: string[] | null = assigneeSetChanged
     ? [...new Set(body.assigneeIds ?? (body.assigneeId ? [body.assigneeId] : []))]
     : null;
-  if (newAssigneeIds && newAssigneeIds.length > 0) {
-    const assigneeMembers = await prisma.boardMember.findMany({
-      where: { userId: { in: newAssigneeIds }, boardId },
-      select: { userId: true },
-    });
-    if (assigneeMembers.length !== newAssigneeIds.length) {
-      return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
-    }
+  const [assigneeMembers, validTags] = await Promise.all([
+    newAssigneeIds && newAssigneeIds.length > 0
+      ? prisma.boardMember.findMany({ where: { userId: { in: newAssigneeIds }, boardId }, select: { userId: true } })
+      : Promise.resolve(null),
+    body.tagIds?.length
+      ? prisma.tag.findMany({ where: { id: { in: body.tagIds }, boardId }, select: { id: true } })
+      : Promise.resolve(null),
+  ]);
+  if (assigneeMembers !== null && assigneeMembers.length !== newAssigneeIds!.length) {
+    return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
   }
-  if (body.tagIds?.length) {
-    const validTags = await prisma.tag.findMany({
-      where: { id: { in: body.tagIds }, boardId },
-      select: { id: true },
-    });
-    if (validTags.length !== body.tagIds.length) {
-      return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
-    }
+  if (validTags !== null && validTags.length !== body.tagIds!.length) {
+    return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
   }
 
   const totalStart = Date.now();

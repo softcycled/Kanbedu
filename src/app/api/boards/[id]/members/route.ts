@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { transferOwnershipSchema, removeMemberSchema, parseBody } from "@/lib/validations";
@@ -7,22 +8,19 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // Remove a board member and clean up their task assignments on that board.
 async function removeMemberAndCleanAssignees(boardId: string, userId: string) {
   await prisma.$transaction(async (tx) => {
-    const affected = await tx.taskAssignee.findMany({
-      where: { userId, task: { columnRel: { boardId } } },
-      select: { taskId: true },
-    });
-
-    if (affected.length > 0) {
-      const taskIds = affected.map((a) => a.taskId);
-      await tx.taskAssignee.deleteMany({ where: { userId, taskId: { in: taskIds } } });
-      for (const { taskId } of affected) {
-        const next = await tx.taskAssignee.findFirst({
-          where: { taskId },
-          orderBy: { assignedAt: "asc" },
-          select: { userId: true },
-        });
-        await tx.task.update({ where: { id: taskId }, data: { assigneeId: next?.userId ?? null } });
-      }
+    const cols = await tx.column.findMany({ where: { boardId }, select: { id: true } });
+    if (cols.length > 0) {
+      const colIds = cols.map((c) => c.id);
+      await tx.taskAssignee.deleteMany({
+        where: { userId, task: { column: { in: colIds } } },
+      });
+      // Re-mirror assigneeId to the next remaining assignee (or null) in a single pass.
+      await tx.$executeRaw`
+        UPDATE "Task" t SET "assigneeId" = (
+          SELECT ta."userId" FROM "TaskAssignee" ta
+          WHERE ta."taskId" = t."id" ORDER BY ta."assignedAt" ASC LIMIT 1
+        )
+        WHERE t."column" IN (${Prisma.join(colIds)}) AND t."assigneeId" = ${userId}`;
     }
 
     await tx.boardMember.delete({ where: { userId_boardId: { userId, boardId } } });
