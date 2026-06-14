@@ -657,7 +657,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             <button
               onClick={handleImport}
               disabled={!importFile || importing}
-              className="text-xs px-3 py-1.5 rounded-lg bg-ink text-card-bg disabled:opacity-40 hover:bg-ink/80 transition-colors"
+              className="text-xs px-3 py-1.5 rounded-lg bg-primary text-on-primary disabled:opacity-40 hover:bg-primary/90 transition-colors"
             >
               {importing ? "Importing…" : "Import"}
             </button>
@@ -836,7 +836,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               <button
                 onClick={createGroup}
                 disabled={busy || !newGroupName.trim()}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 + Add group
               </button>

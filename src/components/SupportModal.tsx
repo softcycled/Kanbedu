@@ -133,7 +133,7 @@ export default function SupportModal({ isOpen, onClose }: Props) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-ink text-paper py-3 rounded-xl font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
+                  className="w-full bg-primary text-on-primary py-3 rounded-xl font-bold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>

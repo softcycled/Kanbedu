@@ -4,19 +4,8 @@ import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Task, ColumnData, BoardMemberData } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
+import { getPriorityConfig, PRIORITY_ORDER } from "@/lib/priority";
 import Avatar from "./Avatar";
-
-const PRIORITY_CONFIG: Record<
-  string,
-  { label: string; dot: string; badge: string; text: string }
-> = {
-  low:    { label: "Low",    dot: "bg-blue-500",   badge: "bg-blue-500/10",   text: "text-blue-500 dark:text-blue-400" },
-  medium: { label: "Med",    dot: "bg-yellow-500", badge: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-300" },
-  high:   { label: "High",   dot: "bg-orange-500", badge: "bg-orange-500/10", text: "text-orange-500 dark:text-orange-400" },
-  urgent: { label: "URGENT", dot: "bg-red-500",    badge: "bg-red-500/10",    text: "text-red-500 dark:text-red-400" },
-};
-
-const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 // ──  Deadline sorting helper ────────────────────────────────
 
@@ -232,7 +221,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
           <button
             onClick={handleSubmit}
             disabled={!newTitle.trim() || isSaving}
-            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-30 transition-opacity"
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-30 transition-colors"
           >
             {isSaving ? "Adding…" : "Add"}
           </button>
@@ -350,7 +339,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
   }, [tooltipOpen]);
 
   const p = task.priority ?? "medium";
-  const pCfg = PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
+  const pCfg = getPriorityConfig(p);
   const colColor = columnEntry
     ? COLUMN_PALETTE[columnEntry.paletteIdx % COLUMN_PALETTE.length]
     : COLUMN_PALETTE[0];
@@ -381,7 +370,7 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
       </span>
 
       {/* Priority badge — desktop only */}
-      <span className={`hidden md:inline-flex w-16 flex-shrink-0 items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${pCfg.badge} ${pCfg.text}`}>
+      <span className={`hidden md:inline-flex w-16 flex-shrink-0 items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${pCfg.badge}`}>
         <span className={`w-1.5 h-1.5 flex-shrink-0 rounded-full ${pCfg.dot}`} />
         {pCfg.label}
       </span>

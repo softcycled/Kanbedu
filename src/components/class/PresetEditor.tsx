@@ -175,7 +175,7 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
           <button
             onClick={save}
             disabled={saving || columns.length === 0}
-            className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save preset"}
           </button>

@@ -101,7 +101,7 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
             <h2 className="text-lg font-semibold text-ink">Create or join a class</h2>
             <p className="text-xs text-muted mt-1">Start a class as an educator, or join one your teacher shared.</p>
             <div className="mt-6 grid gap-3">
-              <button onClick={() => setMode("create")} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity">Create class</button>
+              <button onClick={() => setMode("create")} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors">Create class</button>
               <button onClick={() => setMode("join")} className="w-full px-4 py-3 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">Join class</button>
             </div>
           </div>

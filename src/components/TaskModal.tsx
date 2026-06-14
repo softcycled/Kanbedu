@@ -1982,7 +1982,7 @@ export default function TaskModal({
               <button
                 onClick={handleAddComment}
                 disabled={!commentInput.trim()}
-                className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
+                className="px-4 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-20 transition-colors flex-shrink-0 shadow-sm"
               >
                 Post
               </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Skeleton from "./Skeleton";
+import { getPriorityConfig, PRIORITY_ORDER } from "@/lib/priority";
 
 interface Props {
   boardName: string;
@@ -101,22 +102,6 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: "bg-red-500/10 text-red-500",
-  high: "bg-orange-500/10 text-orange-500",
-  medium: "bg-yellow-500/10 text-yellow-600",
-  low: "bg-blue-500/10 text-blue-500",
-};
-const PRIORITY_DOT: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-400",
-  medium: "bg-yellow-400",
-  low: "bg-green-400",
-};
-const PRIORITY_LABEL: Record<string, string> = {
-  urgent: "Urgent", high: "High", medium: "Med", low: "Low",
-};
 
 export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -474,10 +459,12 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
                       </td>
                       <td className="px-4 py-3 text-muted text-xs">{t.assignee || <span className="italic">none</span>}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${PRIORITY_COLOR[t.priority] ?? ""}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[t.priority] ?? ""}`} />
-                          {PRIORITY_LABEL[t.priority] ?? t.priority}
-                        </span>
+                        {(() => { const pc = getPriorityConfig(t.priority); return (
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${pc.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${pc.dot}`} />
+                            {pc.label}
+                          </span>
+                        ); })()}
                       </td>
                       <td className={`px-4 py-3 text-xs ${t.columnIsDone ? "text-green-600 font-bold" : "text-muted"}`}>{t.columnLabel}</td>
                       <td className={`px-4 py-3 text-right text-xs font-mono ${isStagnant ? "text-red-500 font-semibold" : "text-muted"}`}>

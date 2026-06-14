@@ -652,7 +652,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       {saved ? "Saved" : saving ? "Saving…" : "Save"}
                     </button>
@@ -676,11 +676,11 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       />
                     </div>
                     {handleValue && handleValue !== profile?.handle && (
-                      <p className="text-xs mb-2" style={{
-                        color: handleStatus === "available" ? "#22C55E"
-                          : handleStatus === "taken" || handleStatus === "invalid" ? "#E8613A"
-                          : "var(--color-muted)"
-                      }}>
+                      <p className={`text-xs mb-2 ${
+                        handleStatus === "available" ? "text-green-600 dark:text-green-400"
+                          : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
+                          : "text-muted"
+                      }`}>
                         {handleStatus === "available" ? `@${handleValue} is available`
                           : handleStatus === "taken" ? "That username is already taken"
                           : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
@@ -691,7 +691,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                     <button
                       onClick={handleSaveHandle}
                       disabled={handleSaving || handleValue === profile?.handle || (handleStatus !== "available")}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       {handleSaved ? "Saved" : handleSaving ? "Saving…" : "Save username"}
                     </button>
@@ -741,7 +741,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       <button
                         onClick={handlePasswordChange}
                         disabled={pwSaving}
-                        className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                        className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                       >
                         {pwSaved ? "Password updated!" : pwSaving ? "Updating…" : "Update password"}
                       </button>

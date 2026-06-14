@@ -105,7 +105,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         <p className="text-xs text-muted mb-2">Share this link or QR code. Students join the lobby, then you sort them into groups.</p>
         <div className="flex items-center gap-2 mb-3">
           <input readOnly value={joinUrl} className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-border bg-column-bg text-ink/80 outline-none" />
-          <button onClick={copyInvite} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity">
+          <button onClick={copyInvite} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors">
             {copyMsg ? "Copied" : "Copy"}
           </button>
           <button onClick={() => setShowQR((v) => !v)} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-card-bg text-ink hover:bg-column-bg transition-colors">
@@ -133,7 +133,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
             <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="e.g. Fall 2026" disabled={isArchived} className="mt-1 w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30 disabled:opacity-60" />
           </label>
           <div className="flex items-center gap-3 pt-1">
-            <button onClick={saveDetails} disabled={isArchived} className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50">Save</button>
+            <button onClick={saveDetails} disabled={isArchived} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50">Save</button>
             {isArchived ? (
               <span className="text-xs text-muted">Unarchive below to edit details.</span>
             ) : (
@@ -158,7 +158,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
               Also copy the current roster into the same groups
             </label>
             <div className="flex items-center gap-2 pt-1">
-              <button onClick={doClone} disabled={cloning} className="px-4 py-2 rounded-xl text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50">{cloning ? "Cloning…" : "Create clone"}</button>
+              <button onClick={doClone} disabled={cloning} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50">{cloning ? "Cloning…" : "Create clone"}</button>
               <button onClick={() => setCloneOpen(false)} className="px-3 py-2 rounded-xl text-sm text-muted hover:text-ink transition-colors">Cancel</button>
             </div>
           </div>

@@ -154,7 +154,7 @@ function SupportTab() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-ink text-paper py-2.5 rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors disabled:opacity-50"
+          className="w-full bg-primary text-on-primary py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {isSubmitting ? "Sending…" : "Submit report"}
         </button>
