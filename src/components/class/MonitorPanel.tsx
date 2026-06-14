@@ -79,7 +79,13 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, []);
+  // Trigger bar animation only after loading finishes, not on a fixed timeout.
+  // Bars paint at 0% on the first frame, then transition to real widths.
+  useEffect(() => {
+    if (loading) return;
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [loading]);
 
   // Coalesce bursts of board events (a student dragging several tasks) into one
   // refetch ~0.7s after activity settles.

@@ -127,7 +127,13 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   }, [boardId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, []);
+  // Trigger bar animation only after data loads, not on a fixed timeout.
+  // Bars paint at 0% on the first frame, then transition to real widths.
+  useEffect(() => {
+    if (loading || !data) return;
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [loading, data]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
