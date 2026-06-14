@@ -34,3 +34,4 @@ jobs:
         NEXT_PUBLIC_APP_URL: "http://localhost:3000"
         DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/mock"
         JWT_SECRET: "mock-secret-for-ci-builds-only"
+        KANBEDU_JWT_SECRET: "mock-secret-for-ci-builds-only"
