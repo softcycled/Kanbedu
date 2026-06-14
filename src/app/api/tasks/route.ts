@@ -36,24 +36,35 @@ export async function PUT(req: Request) {
   const taskIds = result.data.map((t) => t.id);
   const validTasks = await prisma.task.findMany({
     where: { id: { in: taskIds }, columnRel: { boardId: { in: boardIds } } },
-    select: { id: true },
+    select: { id: true, columnRel: { select: { boardId: true } } },
   });
   const validTaskIds = new Set(validTasks.map((t) => t.id));
+  const taskBoardMap = new Map(validTasks.map((t) => [t.id, t.columnRel.boardId]));
+
+  const validUpdates = result.data.filter(({ id }) => validTaskIds.has(id));
 
   await prisma.$transaction(
-    result.data
-      .filter(({ id }) => validTaskIds.has(id))
-      .map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
+    validUpdates.map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
   );
 
-  // Broadcast refresh to all affected boards
+  // Group updates by board and broadcast surgical reorder payload to each
+  const updatesByBoard = new Map<string, { id: string; order: number }[]>();
+  for (const { id, order } of validUpdates) {
+    const boardId = taskBoardMap.get(id)!;
+    const arr = updatesByBoard.get(boardId) ?? [];
+    arr.push({ id, order });
+    updatesByBoard.set(boardId, arr);
+  }
   const affectedBoards = await prisma.board.findMany({
-    where: { id: { in: boardIds } },
-    select: { realtimeSecret: true },
+    where: { id: { in: [...updatesByBoard.keys()] } },
+    select: { id: true, realtimeSecret: true },
   });
-  affectedBoards.forEach((board) => {
-    if (board.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-  });
+  for (const board of affectedBoards) {
+    const updates = updatesByBoard.get(board.id) ?? [];
+    if (board.realtimeSecret && updates.length > 0) {
+      broadcastToBoard(board.realtimeSecret, { type: "task:reorder", updates });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
