@@ -223,7 +223,7 @@ function SortableClassItem({
         ) : isEducator ? (
           <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
         ) : !cls.boardId ? (
-          <span className="ml-auto text-[9px] uppercase tracking-wide text-amber-500/80 flex-shrink-0 pl-1">waiting</span>
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">waiting</span>
         ) : null}
       </button>
       <button
