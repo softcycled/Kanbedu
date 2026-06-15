@@ -66,14 +66,18 @@ export async function POST(request: NextRequest) {
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    const member = await isMemberOfBoard(session.userId, data.boardId);
-    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-    // Get max order for this board
-    const maxOrder = await prisma.column.aggregate({
-      where: { boardId: data.boardId },
-      _max: { order: true },
-    });
+    // Fetch membership + realtimeSecret + max column order in parallel.
+    const [boardAuth, maxOrder] = await Promise.all([
+      prisma.board.findUnique({
+        where: { id: data.boardId },
+        select: {
+          realtimeSecret: true,
+          members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+        },
+      }),
+      prisma.column.aggregate({ where: { boardId: data.boardId }, _max: { order: true } }),
+    ]);
+    if ((boardAuth?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const newOrder = (maxOrder._max.order || 0) + 1;
 
@@ -82,11 +86,7 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      const broadcastBoard = await prisma.board.findUnique({
-        where: { id: data.boardId },
-        select: { realtimeSecret: true },
-      });
-      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+      if (boardAuth?.realtimeSecret) await broadcastToBoard(boardAuth.realtimeSecret);
     } catch (err) {
       console.error("Broadcast failed:", err);
     }
@@ -130,8 +130,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     const boardId = boardIds[0];
-    const allowed = await isMemberOfBoard(session.userId, boardId);
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Fetch membership + realtimeSecret in one query to avoid two separate round-trips.
+    const boardAuth = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: {
+        realtimeSecret: true,
+        members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+      },
+    });
+    if ((boardAuth?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const updated = await prisma.$transaction(
       data.columns.map((col: any) =>
@@ -143,11 +151,7 @@ export async function PATCH(request: NextRequest) {
     );
 
     try {
-      const broadcastBoard = await prisma.board.findUnique({
-        where: { id: boardId },
-        select: { realtimeSecret: true },
-      });
-      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+      if (boardAuth?.realtimeSecret) await broadcastToBoard(boardAuth.realtimeSecret);
     } catch (err) {
       console.error("Broadcast failed:", err);
     }

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { createCommentSchema, parseBody, parseJsonBody } from "@/lib/validations";
-import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { getSession, getVerifiedSession } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -22,13 +22,28 @@ export async function POST(req: Request) {
   const rl = await checkRateLimit(session.userId, "comments_create", 30, 15);
   if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-  // Ensure the user is a member of the board that contains the task
-  const taskRow = await prisma.task.findUnique({ where: { id: data.taskId }, select: { columnRel: { select: { boardId: true } } } });
+  // Fetch task auth (boardId + membership + realtimeSecret) and current user in parallel.
+  const [taskRow, user] = await Promise.all([
+    prisma.task.findUnique({
+      where: { id: data.taskId },
+      select: {
+        columnRel: {
+          select: {
+            boardId: true,
+            board: {
+              select: {
+                realtimeSecret: true,
+                members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, handle: true, email: true } }),
+  ]);
   if (!taskRow || !taskRow.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  const allowed = await isMemberOfBoard(session.userId, taskRow.columnRel.boardId);
-  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, handle: true, email: true } });
+  if ((taskRow.columnRel.board?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const author = user?.handle
     ? `@${user.handle}`
@@ -73,11 +88,8 @@ export async function POST(req: Request) {
   })();
 
   try {
-    const broadcastBoard = await prisma.board.findUnique({
-      where: { id: taskRow.columnRel.boardId },
-      select: { realtimeSecret: true },
-    });
-    if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    const realtimeSecret = taskRow.columnRel.board?.realtimeSecret;
+    if (realtimeSecret) await broadcastToBoard(realtimeSecret);
   } catch (err) {
     console.error("Broadcast failed:", err);
   }

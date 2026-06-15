@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { updateTaskSchema, parseBody, parseJsonBody } from "@/lib/validations";
-import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { getSession, getVerifiedSession } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -44,14 +44,28 @@ export async function GET(
 
   // Authorization: ensure the requesting user is a member of the task's board
   const authStart = Date.now();
-  const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
+  const taskAuth = await prisma.task.findUnique({
+    where: { id: id },
+    select: {
+      columnRel: {
+        select: {
+          boardId: true,
+          board: {
+            select: {
+              members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+            },
+          },
+        },
+      },
+    },
+  });
   const authMs = Date.now() - authStart;
   if (!taskAuth || !taskAuth.columnRel) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 404 });
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
   if (!allowed) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 403 });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -203,10 +217,25 @@ export async function PATCH(
   const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
   if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-  // Authorize: ensure the user is a member of the board this task belongs to
-  const taskAuth = await prisma.task.findUnique({ where: { id }, select: { columnRel: { select: { boardId: true } } } });
+  // Authorize: fetch boardId + membership + realtimeSecret in one query.
+  const taskAuth = await prisma.task.findUnique({
+    where: { id },
+    select: {
+      columnRel: {
+        select: {
+          boardId: true,
+          board: {
+            select: {
+              realtimeSecret: true,
+              members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+            },
+          },
+        },
+      },
+    },
+  });
   if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Validate that any assignee/tags are scoped to this task's board — prevents
@@ -304,8 +333,8 @@ export async function PATCH(
         if (destCol.boardId !== taskAuth.columnRel.boardId) {
           return NextResponse.json({ error: "Destination column must belong to the same board." }, { status: 400 });
         }
-        const destAllowed = await isMemberOfBoard(session.userId, destCol.boardId);
-        if (!destAllowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        // No separate membership check needed: destCol.boardId is the same board as taskAuth,
+        // and membership was already verified in the combined auth query above.
       } catch (err) {
         console.error("Failed to validate destination column membership:", err);
         return NextResponse.json({ error: "Failed to validate destination" }, { status: 500 });
@@ -597,14 +626,11 @@ export async function PATCH(
     console.info(`[perf] PATCH /api/tasks/${id}`, { totalMs, connectMs, findMs, updateMs, serializeMs, timestamp: new Date().toISOString() });
   }
 
-  // Broadcast the update securely before returning so it is not lost on Vercel serverless.
+  // Broadcast using the realtimeSecret already fetched in the initial auth query.
   try {
-    const broadcastBoard = await prisma.board.findUnique({
-      where: { id: taskAuth.columnRel.boardId },
-      select: { realtimeSecret: true },
-    });
-    if (broadcastBoard?.realtimeSecret) {
-      await broadcastToBoard(broadcastBoard.realtimeSecret, { type: "task:update", task: response });
+    const realtimeSecret = taskAuth.columnRel.board?.realtimeSecret;
+    if (realtimeSecret) {
+      await broadcastToBoard(realtimeSecret, { type: "task:update", task: response });
     }
   } catch (err) {
     console.error("Broadcast failed:", err);
@@ -625,24 +651,34 @@ export async function DELETE(
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    // Ensure the task exists and belongs to a board the user can access
-    const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
+    // Ensure the task exists and belongs to a board the user can access.
+    const taskAuth = await prisma.task.findUnique({
+      where: { id: id },
+      select: {
+        columnRel: {
+          select: {
+            boardId: true,
+            board: {
+              select: {
+                realtimeSecret: true,
+                members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    });
     if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if ((taskAuth.columnRel.board?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     await prisma.notification.deleteMany({ where: { taskId: id } });
     await prisma.task.delete({ where: { id: id } });
 
-    // Broadcast the deletion before returning so it is not lost on Vercel serverless.
+    // Broadcast the deletion using the realtimeSecret already fetched in the auth query.
     try {
-      const broadcastBoard = await prisma.board.findUnique({
-        where: { id: taskAuth.columnRel.boardId },
-        select: { realtimeSecret: true },
-      });
-      if (broadcastBoard?.realtimeSecret) {
-        await broadcastToBoard(broadcastBoard.realtimeSecret, { type: "task:delete", taskId: id });
+      const realtimeSecret = taskAuth.columnRel.board?.realtimeSecret;
+      if (realtimeSecret) {
+        await broadcastToBoard(realtimeSecret, { type: "task:delete", taskId: id });
       }
     } catch (err) {
       console.error("Broadcast failed:", err);

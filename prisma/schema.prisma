@@ -50,6 +50,7 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+  @@index([taskId])
 }
 
 // Browser push endpoint per user/device (Web Push / VAPID).
@@ -98,6 +99,7 @@ model BoardMember {
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, boardId])
+  @@index([boardId])
 }
 
 model BoardInvite {

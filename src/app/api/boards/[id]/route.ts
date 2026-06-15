@@ -77,12 +77,15 @@ export async function DELETE(
     const columnIds = columns.map((c) => c.id);
 
     if (columnIds.length > 0) {
-      await prisma.comment.deleteMany({
-        where: { task: { column: { in: columnIds } } },
-      });
-      await prisma.notification.deleteMany({
-        where: { task: { column: { in: columnIds } } },
-      });
+      // Fetch task IDs so we can clean up Notification rows (no task relation on Notification model).
+      const taskIds = (
+        await prisma.task.findMany({ where: { column: { in: columnIds } }, select: { id: true } })
+      ).map((t) => t.id);
+
+      await prisma.comment.deleteMany({ where: { task: { column: { in: columnIds } } } });
+      if (taskIds.length > 0) {
+        await prisma.notification.deleteMany({ where: { taskId: { in: taskIds } } });
+      }
       await prisma.task.deleteMany({ where: { column: { in: columnIds } } });
       await prisma.column.deleteMany({ where: { boardId: id } });
     }

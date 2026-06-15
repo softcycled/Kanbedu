@@ -174,10 +174,14 @@ export async function POST(req: Request) {
   // Profile start
   const start = Date.now();
 
-  // Find last order in column and destination column (parallel)
+  // Find last order in column and destination column (parallel).
+  // Include realtimeSecret here to avoid an extra board lookup when broadcasting.
   const [lastTask, destinationColumn] = await Promise.all([
     prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
-    prisma.column.findUnique({ where: { id: data.column } }),
+    prisma.column.findUnique({
+      where: { id: data.column },
+      include: { board: { select: { realtimeSecret: true } } },
+    }),
   ]);
 
   // Validate destination column and membership
@@ -288,15 +292,11 @@ export async function POST(req: Request) {
     console.info(`[perf] POST /api/tasks total ${Date.now() - start}ms`);
   }
 
-  // Broadcast task creation securely using the board's realtimeSecret.
-  // Awaited before returning so the broadcast is not lost on Vercel serverless.
+  // Broadcast task creation using the realtimeSecret already fetched with the column.
   try {
-    const broadcastBoard = await prisma.board.findUnique({
-      where: { id: destinationColumn.boardId },
-      select: { realtimeSecret: true },
-    });
-    if (broadcastBoard?.realtimeSecret) {
-      await broadcastToBoard(broadcastBoard.realtimeSecret, { type: "task:create", task: responseTask });
+    const realtimeSecret = (destinationColumn as any).board?.realtimeSecret;
+    if (realtimeSecret) {
+      await broadcastToBoard(realtimeSecret, { type: "task:create", task: responseTask });
     }
   } catch (err) {
     console.error("Broadcast failed:", err);
