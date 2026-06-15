@@ -22,6 +22,11 @@ export default function InvitePage() {
           return;
         }
         const data = await res.json();
+        if (res.status === 403 && data.code === "EMAIL_NOT_VERIFIED") {
+          setMessage("Please verify your email before accepting this invitation.");
+          setStatus("error");
+          return;
+        }
         if (!res.ok) {
           setMessage(data.error || "Invalid invite.");
           setStatus("error");
@@ -42,6 +47,11 @@ export default function InvitePage() {
     try {
       const res = await fetch(`/api/invites/${token}`, { method: "POST" });
       const data = await res.json();
+      if (res.status === 403 && data.code === "EMAIL_NOT_VERIFIED") {
+        setMessage("Please verify your email before accepting this invitation.");
+        setStatus("error");
+        return;
+      }
       if (!res.ok) {
         setMessage(data.error || "Failed to join.");
         setStatus("error");

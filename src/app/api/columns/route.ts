@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const allowed = await isMemberOfBoard(session.userId, boardId);
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const columns = await prisma.column.findMany({
+    let columns = await prisma.column.findMany({
       where: { boardId },
       orderBy: { order: "asc" },
     });
@@ -31,13 +31,12 @@ export async function GET(request: NextRequest) {
         { label: "Done", order: 2, isDone: true, boardId },
       ];
 
-      await prisma.column.createMany({ data: defaultColumns });
-      const created = await prisma.column.findMany({
-        where: { boardId },
-        orderBy: { order: "asc" },
+      columns = await prisma.$transaction(async (tx) => {
+        const recheck = await tx.column.findMany({ where: { boardId }, orderBy: { order: "asc" } });
+        if (recheck.length > 0) return recheck; // another request already seeded
+        await tx.column.createMany({ data: defaultColumns });
+        return tx.column.findMany({ where: { boardId }, orderBy: { order: "asc" } });
       });
-
-      return NextResponse.json(created);
     }
 
     return NextResponse.json(columns);

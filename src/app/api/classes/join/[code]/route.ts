@@ -82,32 +82,34 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
       groupBoardId = group?.boardId ?? null;
     }
 
-    await prisma.classMember.create({
-      data: {
-        userId: session.userId,
-        classId: cls.id,
-        role: "student",
-        ...(rosterEntry ? { displayName: rosterEntry.name } : {}),
-        ...(groupId ? { groupId } : {}),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.classMember.create({
+        data: {
+          userId: session.userId,
+          classId: cls.id,
+          role: "student",
+          ...(rosterEntry ? { displayName: rosterEntry.name } : {}),
+          ...(groupId ? { groupId } : {}),
+        },
+      });
+
+      // Grant board access so the student can load their group's board immediately.
+      if (groupBoardId) {
+        await tx.boardMember.upsert({
+          where: { userId_boardId: { userId: session.userId, boardId: groupBoardId } },
+          update: {},
+          create: { userId: session.userId, boardId: groupBoardId, role: "member" },
+        });
+      }
+
+      // Mark the roster entry as claimed
+      if (rosterEntry) {
+        await tx.classRosterEntry.update({
+          where: { classId_email: { classId: cls.id, email: normalizedEmail } },
+          data: { claimedBy: session.userId },
+        });
+      }
     });
-
-    // Grant board access so the student can load their group's board immediately.
-    if (groupBoardId) {
-      await prisma.boardMember.upsert({
-        where: { userId_boardId: { userId: session.userId, boardId: groupBoardId } },
-        update: {},
-        create: { userId: session.userId, boardId: groupBoardId, role: "member" },
-      });
-    }
-
-    // Mark the roster entry as claimed
-    if (rosterEntry) {
-      await prisma.classRosterEntry.update({
-        where: { classId_email: { classId: cls.id, email: normalizedEmail } },
-        data: { claimedBy: session.userId },
-      });
-    }
 
     return NextResponse.json({ message: "You have joined the class.", classId: cls.id, name: cls.name });
   } catch (error) {
