@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession } from "@/lib/auth";
+import { getSessionFull } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 // GET: validate a class join code without joining. Returns the class name.
@@ -32,8 +32,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   try {
-    const session = await getVerifiedSession();
+    const session = await getSessionFull();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    if (!session.emailVerified) {
+      return NextResponse.json({ error: "Please verify your email to join a class.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
+    }
 
     const limit = await checkRateLimit(session.userId, "class-join", 30, 60);
     if (!limit.allowed) {

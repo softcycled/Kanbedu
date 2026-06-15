@@ -71,6 +71,10 @@ export async function getVerifiedSession(): Promise<{ userId: string } | null> {
   return { userId: s.userId };
 }
 
+export async function getSessionFull(): Promise<{ userId: string; emailVerified: boolean } | null> {
+  return resolveSession();
+}
+
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, "", {

@@ -17,6 +17,11 @@ export async function POST(req: Request) {
     }
 
     const raw = await req.json();
+    const nextRaw: unknown = typeof raw === "object" && raw !== null ? (raw as any).next : undefined;
+    const next =
+      typeof nextRaw === "string" && nextRaw.startsWith("/") && !nextRaw.startsWith("//")
+        ? nextRaw
+        : undefined;
     const result = parseBody(signupSchema, raw);
     if (!result.data) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
       const record = await prisma.emailVerification.create({
         data: { userId: user.id, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
       });
-      await sendVerificationEmail(user.email, record.token);
+      await sendVerificationEmail(user.email, record.token, next);
     } catch (err) {
       console.error("Failed to send verification email:", err);
     }

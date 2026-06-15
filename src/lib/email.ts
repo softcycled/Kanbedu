@@ -79,8 +79,10 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   await sendEmail(to, "Reset your Kanbedu password", emailLayout(content));
 }
 
-export async function sendVerificationEmail(to: string, token: string): Promise<void> {
-  const verifyUrl = `${BASE_URL}/verify-email/${token}`;
+export async function sendVerificationEmail(to: string, token: string, next?: string): Promise<void> {
+  const verifyUrl = next
+    ? `${BASE_URL}/verify-email/${token}?next=${encodeURIComponent(next)}`
+    : `${BASE_URL}/verify-email/${token}`;
 
   const content = `
     <h1 style="font-size:18px;font-weight:700;color:#1C1917;margin:0 0 8px">Confirm your email</h1>

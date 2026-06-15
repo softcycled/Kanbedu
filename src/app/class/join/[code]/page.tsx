@@ -1,39 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function ClassJoinPage() {
+function ClassJoinContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const code = params.code as string;
+  const autoJoin = searchParams.get("auto") === "1";
 
   const [className, setClassName] = useState("");
   const [term, setTerm] = useState<string | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "joining" | "done" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "verify-email" | "joining" | "done" | "error">("loading");
   const [message, setMessage] = useState("");
   const [classId, setClassId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch(`/api/classes/join/${code}`);
-        const data = await res.json();
-        if (!res.ok) {
-          setMessage(data.error || "Invalid class code.");
-          setStatus("error");
-          return;
-        }
-        setClassName(data.name);
-        setTerm(data.term ?? null);
-        setStatus("ready");
-      } catch {
-        setMessage("Network error. Please try again.");
-        setStatus("error");
-      }
-    };
-    check();
-  }, [code]);
+  const autoFired = useRef(false);
 
   const handleJoin = async () => {
     setStatus("joining");
@@ -42,6 +25,10 @@ export default function ClassJoinPage() {
       const data = await res.json();
       if (res.status === 401) {
         router.push(`/login?next=/class/join/${encodeURIComponent(code)}`);
+        return;
+      }
+      if (res.status === 403 && data.code === "EMAIL_NOT_VERIFIED") {
+        setStatus("verify-email");
         return;
       }
       if (!res.ok) {
@@ -58,6 +45,47 @@ export default function ClassJoinPage() {
       setStatus("error");
     }
   };
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/classes/join/${code}`);
+        const data = await res.json();
+        if (!res.ok) {
+          setMessage(data.error || "Invalid class code.");
+          setStatus("error");
+          return;
+        }
+        setClassName(data.name);
+        setTerm(data.term ?? null);
+        if (autoJoin && !autoFired.current) {
+          autoFired.current = true;
+          // Trigger join automatically — user just verified their email
+          setStatus("joining");
+          const joinRes = await fetch(`/api/classes/join/${code}`, { method: "POST" });
+          const joinData = await joinRes.json();
+          if (joinRes.ok) {
+            setMessage(joinData.message);
+            setClassId(joinData.classId);
+            setStatus("done");
+            setTimeout(() => router.push(`/class/${joinData.classId}`), 1200);
+          } else if (joinRes.status === 403 && joinData.code === "EMAIL_NOT_VERIFIED") {
+            setStatus("verify-email");
+          } else {
+            setMessage(joinData.error || "Failed to join.");
+            setStatus("error");
+          }
+        } else {
+          setStatus("ready");
+        }
+      } catch {
+        setMessage("Network error. Please try again.");
+        setStatus("error");
+      }
+    };
+    check();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   return (
     <div className="force-light min-h-screen flex items-center justify-center px-4 bg-paper">
@@ -88,6 +116,22 @@ export default function ClassJoinPage() {
 
           {status === "done" && <p className="text-sm font-medium text-ink">{message}</p>}
 
+          {status === "verify-email" && (
+            <>
+              <p className="text-sm font-medium mb-1 text-ink">Check your inbox</p>
+              <p className="text-xs mb-5 text-muted">
+                Please verify your email to join <strong>{className || "this class"}</strong>.
+                We sent you a verification link when you signed up.
+              </p>
+              <a
+                href="/check-email"
+                className="block w-full py-2.5 text-sm font-medium rounded-xl text-center transition-colors bg-primary text-on-primary hover:bg-primary/90"
+              >
+                Resend verification email
+              </a>
+            </>
+          )}
+
           {status === "error" && (
             <>
               <p className="text-sm font-medium mb-5 text-red-500">{message}</p>
@@ -102,5 +146,13 @@ export default function ClassJoinPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ClassJoinPage() {
+  return (
+    <Suspense fallback={<div className="force-light min-h-screen flex items-center justify-center bg-paper text-ink">Loading…</div>}>
+      <ClassJoinContent />
+    </Suspense>
   );
 }

@@ -59,7 +59,7 @@ function LoginContent() {
 
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
     const body: Record<string, string> = { email, password };
-    if (mode === "signup") { body.name = name; body.handle = handle; }
+    if (mode === "signup") { body.name = name; body.handle = handle; if (next) body.next = next; }
 
     try {
       const res = await fetch(endpoint, {
