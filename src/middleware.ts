@@ -49,32 +49,34 @@ export async function middleware(req: NextRequest) {
     return loginRedirect();
   }
 
-  // CSRF Protection for API Mutations
-  const CSRF_COOKIE_NAME = "csrf-token";
-  const CSRF_HEADER_NAME = "x-csrf-token";
-
+  // Origin/Referer check for API mutations (CSRF protection)
   if (isApiRoute && isMutation) {
-    const csrfCookie = req.cookies.get(CSRF_COOKIE_NAME)?.value;
-    const csrfHeader = req.headers.get(CSRF_HEADER_NAME);
+    const host = req.headers.get("host") ?? "";
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const selfOrigin = host ? `${proto}://${host}` : null;
 
-    if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-      return NextResponse.json({ error: "CSRF Validation Failed" }, { status: 403 });
+    const normalizeOrigin = (url: string) => {
+      try { return new URL(url).origin; } catch { return url.replace(/\/+$/, ""); }
+    };
+
+    const allowed = new Set(
+      [process.env.NEXT_PUBLIC_APP_URL, selfOrigin]
+        .filter(Boolean)
+        .map((u) => normalizeOrigin(u as string))
+    );
+
+    const origin = req.headers.get("origin");
+    let candidate = origin;
+    if (!candidate) {
+      const referer = req.headers.get("referer");
+      if (referer) { try { candidate = new URL(referer).origin; } catch {} }
+    }
+    if (!candidate || !allowed.has(normalizeOrigin(candidate))) {
+      return NextResponse.json({ error: "Cross-origin request blocked" }, { status: 403 });
     }
   }
 
-  const res = NextResponse.next();
-
-  // Ensure every client gets a CSRF token for future mutations
-  if (!req.cookies.has(CSRF_COOKIE_NAME)) {
-    res.cookies.set(CSRF_COOKIE_NAME, crypto.randomUUID(), {
-      httpOnly: false, // Client needs to read this to attach to headers
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
-  }
-
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getVerifiedSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: accept an invite (add user to board)
@@ -10,7 +10,7 @@ export async function POST(
 ) {
   const { token } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
@@ -67,7 +67,7 @@ export async function GET(
 ) {
   const { token } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }

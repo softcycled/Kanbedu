@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getVerifiedSession } from "@/lib/auth";
 
 export async function GET() {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [notifications, unreadCount] = await Promise.all([
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));

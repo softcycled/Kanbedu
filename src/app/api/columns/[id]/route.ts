@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getSession, getVerifiedSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -99,12 +99,15 @@ export async function PATCH(
       data: updateData,
     });
 
-    prisma.board.findUnique({
-      where: { id: columnInfo.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: columnInfo.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(column);
   } catch (error) {
@@ -123,7 +126,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -219,18 +222,21 @@ export async function DELETE(
       });
     }
 
-    prisma.board.findUnique({
-      where: { id: col.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: col.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(deletedCol);
   } catch (error) {
     console.error("Failed to delete column:", error);
     return NextResponse.json(
-      { error: "Failed to delete column", details: String(error) },
+      { error: "Failed to delete column" },
       { status: 500 }
     );
   }

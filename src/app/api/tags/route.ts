@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTagSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is signed in and member of the board
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);

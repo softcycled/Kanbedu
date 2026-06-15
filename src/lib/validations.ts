@@ -263,3 +263,18 @@ export function parseBody<T>(schema: z.ZodSchema<T>, data: unknown): { data: T; 
   const message = (result.error as z.ZodError<unknown>).issues.map((e) => e.message).join(" ");
   return { error: message };
 }
+
+export async function parseJsonBody(
+  req: Request
+): Promise<{ data: unknown; error?: never } | { data?: never; error: Response }> {
+  try {
+    return { data: await req.json() };
+  } catch {
+    return {
+      error: new Response(JSON.stringify({ error: "Invalid or empty request body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  }
+}

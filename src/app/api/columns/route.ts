@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET columns (scoped by boardId)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is signed in and is a member of the board
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -82,12 +82,15 @@ export async function POST(request: NextRequest) {
       data: { label: data.label, order: newOrder, boardId: data.boardId, color: data.color ?? null },
     });
 
-    prisma.board.findUnique({
-      where: { id: data.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: data.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(column, { status: 201 });
   } catch (error) {
@@ -110,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is signed in and is a member of the affected board
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -140,12 +143,15 @@ export async function PATCH(request: NextRequest) {
       )
     );
 
-    prisma.board.findUnique({
-      where: { id: boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

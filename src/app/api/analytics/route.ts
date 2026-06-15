@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getBoardNameOverrides } from "@/lib/classNames";
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const rl = await checkRateLimit(session.userId, "analytics_read", 60, 15);

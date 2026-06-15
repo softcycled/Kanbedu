@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { updateTaskSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { updateTaskSchema, parseBody, parseJsonBody } from "@/lib/validations";
+import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -35,7 +35,7 @@ export async function GET(
   const connectMs = Date.now() - connectStart;
 
   const sessionStart = Date.now();
-  const session = await getSession();
+  const session = await getVerifiedSession();
   const sessionMs = Date.now() - sessionStart;
   if (!session) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, status: 401 });
@@ -186,14 +186,16 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const raw = await req.json();
+  const parsed = await parseJsonBody(req);
+  if (parsed.error) return parsed.error;
+  const raw = parsed.data;
   const result = parseBody(updateTaskSchema, raw);
   if (!result.data) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
   const body = result.data;
   const { id } = await params;
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -591,16 +593,18 @@ export async function PATCH(
     console.info(`[perf] PATCH /api/tasks/${id}`, { totalMs, connectMs, findMs, updateMs, serializeMs, timestamp: new Date().toISOString() });
   }
 
-  // Fetch the board's cryptographic channel secret to broadcast the update securely
-  // We do this asynchronously so it doesn't block the API response
-  prisma.board.findUnique({
-    where: { id: taskAuth.columnRel.boardId },
-    select: { realtimeSecret: true }
-  }).then((board) => {
-    if (board?.realtimeSecret) {
-      broadcastToBoard(board.realtimeSecret, { type: "task:update", task: response });
+  // Broadcast the update securely before returning so it is not lost on Vercel serverless.
+  try {
+    const broadcastBoard = await prisma.board.findUnique({
+      where: { id: taskAuth.columnRel.boardId },
+      select: { realtimeSecret: true },
+    });
+    if (broadcastBoard?.realtimeSecret) {
+      await broadcastToBoard(broadcastBoard.realtimeSecret, { type: "task:update", task: response });
     }
-  }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+  }
 
   return new NextResponse(bodyString, { headers: { "Content-Type": "application/json" } });
 }
@@ -611,7 +615,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -626,15 +630,18 @@ export async function DELETE(
 
     await prisma.task.delete({ where: { id: id } });
 
-    // Fetch the board's cryptographic channel secret to broadcast the deletion
-    prisma.board.findUnique({
-      where: { id: taskAuth.columnRel.boardId },
-      select: { realtimeSecret: true }
-    }).then((board) => {
-      if (board?.realtimeSecret) {
-        broadcastToBoard(board.realtimeSecret, { type: "task:delete", taskId: id });
+    // Broadcast the deletion before returning so it is not lost on Vercel serverless.
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: taskAuth.columnRel.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) {
+        await broadcastToBoard(broadcastBoard.realtimeSecret, { type: "task:delete", taskId: id });
       }
-    }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

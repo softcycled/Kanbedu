@@ -1,20 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { createCommentSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { createCommentSchema, parseBody, parseJsonBody } from "@/lib/validations";
+import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
-  const raw = await req.json();
+  const parsed = await parseJsonBody(req);
+  if (parsed.error) return parsed.error;
+  const raw = parsed.data;
   const result = parseBody(createCommentSchema, raw);
   if (!result.data) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
   const data = result.data;
 
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const rl = await checkRateLimit(session.userId, "comments_create", 30, 15);
@@ -70,12 +72,15 @@ export async function POST(req: Request) {
     }
   })();
 
-  prisma.board.findUnique({
-    where: { id: taskRow.columnRel.boardId },
-    select: { realtimeSecret: true },
-  }).then((board) => {
-    if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-  }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+  try {
+    const broadcastBoard = await prisma.board.findUnique({
+      where: { id: taskRow.columnRel.boardId },
+      select: { realtimeSecret: true },
+    });
+    if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+  }
 
   return NextResponse.json(comment);
 }

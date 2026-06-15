@@ -32,10 +32,11 @@ export async function broadcastToBoard(realtimeSecret: string, payload?: any) {
 
   // Use httpSend (explicit REST delivery) — server-side Next.js functions have no
   // persistent WebSocket, so send() was silently falling back to REST anyway.
-  supa
-    .channel(`board-${realtimeSecret}`)
-    .httpSend("refresh", payload || { timestamp: new Date().toISOString() })
-    .catch((err) => {
-      console.error("Failed to broadcast realtime event:", err);
-    });
+  try {
+    await supa
+      .channel(`board-${realtimeSecret}`)
+      .httpSend("refresh", payload || { timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error("Failed to broadcast realtime event:", err);
+  }
 }

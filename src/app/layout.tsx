@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/Toasts";
-import CsrfPatch from "@/components/CsrfPatch";
 
 export const metadata: Metadata = {
   title: "Kanbedu",
@@ -24,7 +23,6 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-paper text-ink">
-        <CsrfPatch />
         <ThemeProvider>
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
