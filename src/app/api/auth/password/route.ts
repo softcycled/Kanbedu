@@ -43,6 +43,7 @@ export async function PATCH(req: Request) {
 
   const hashed = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: session.userId }, data: { password: hashed, passwordChangedAt: new Date() } as any });
+  await prisma.pushSubscription.deleteMany({ where: { userId: session.userId } });
 
   return NextResponse.json({ ok: true });
 }

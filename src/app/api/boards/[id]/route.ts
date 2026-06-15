@@ -80,6 +80,9 @@ export async function DELETE(
       await prisma.comment.deleteMany({
         where: { task: { column: { in: columnIds } } },
       });
+      await prisma.notification.deleteMany({
+        where: { task: { column: { in: columnIds } } },
+      });
       await prisma.task.deleteMany({ where: { column: { in: columnIds } } });
       await prisma.column.deleteMany({ where: { boardId: id } });
     }

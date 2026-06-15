@@ -33,7 +33,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         preset: true,
         groups: { orderBy: { order: "asc" } },
-        members: true,
+        members: {
+          select: {
+            userId: true,
+            role: true,
+            groupId: true,
+            displayName: true,
+          },
+        },
       },
     });
     if (!source) return NextResponse.json({ error: "Class not found." }, { status: 404 });
@@ -81,7 +88,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               }
               const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;
               await tx.classMember.create({
-                data: { userId: m.userId, classId: cls.id, role: m.role, groupId: mapped?.groupId ?? null },
+                data: {
+                  userId: m.userId,
+                  classId: cls.id,
+                  role: m.role,
+                  groupId: mapped?.groupId ?? null,
+                  displayName: m.displayName ?? null,
+                },
               });
               if (mapped) {
                 await tx.boardMember.upsert({
@@ -92,6 +105,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               }
             })
         );
+
+        // Clone roster entries so the educator's import data carries forward.
+        // claimedBy is reset — students must re-join the new class.
+        const sourceRosterEntries = await tx.classRosterEntry.findMany({
+          where: { classId: id },
+        });
+        if (sourceRosterEntries.length > 0) {
+          await tx.classRosterEntry.createMany({
+            data: sourceRosterEntries.map((e) => ({
+              classId: cls.id,
+              email: e.email,
+              name: e.name,
+              groupName: e.groupName,
+              claimedBy: null,
+            })),
+          });
+        }
       }
 
       return cls;

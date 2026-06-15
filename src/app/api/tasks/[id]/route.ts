@@ -369,6 +369,10 @@ export async function PATCH(
     });
     if (isGroupBoard) updateData.movedByNonAssignee = true;
   }
+  // Clear the flag when the actual assignee moves the task themselves.
+  if (columnActuallyChanged && currentAssigneeIds.includes(session.userId)) {
+    updateData.movedByNonAssignee = false;
+  }
   // Clear the flag when the assignee set is changed — new assignees start clean.
   if (assigneeSetChanged) {
     updateData.movedByNonAssignee = false;
@@ -628,6 +632,7 @@ export async function DELETE(
     const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+    await prisma.notification.deleteMany({ where: { taskId: id } });
     await prisma.task.delete({ where: { id: id } });
 
     // Broadcast the deletion before returning so it is not lost on Vercel serverless.

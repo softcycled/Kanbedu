@@ -681,8 +681,8 @@ export default function TaskModal({
     if (!trimmed || !task) return;
     // optimistic UI: add a local comment and activity immediately
     setCommentInput("");
-    const localId = `local-comment-${Date.now()}`;
-    const localActId = `local-act-comment-${Date.now()}`;
+    const localId = `local-comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const localActId = `local-act-comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const optimistic: Comment = { id: localId, content: trimmed, author: commentAuthor.trim() || "Anonymous", createdAt: new Date().toISOString(), taskId: task.id };
     setComments((prev) => [...prev, optimistic]);
     setActivities((prev) => [

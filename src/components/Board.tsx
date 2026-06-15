@@ -558,7 +558,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       // Done column is pinned to the end — never draggable.
       if (draggedColumn.isDone) return;
 
-      const overTask = tasks.find((t) => t.id === overId);
+      const overTask = tasksRef.current.find((t) => t.id === overId);
       const overColumnId = overTask ? overTask.column : overId;
       if (!sortedColumns.find((c) => c.id === overColumnId)) return;
 
@@ -588,18 +588,18 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
 
     // Handle task dragging
-    const task = tasks.find((t) => t.id === activeId);
+    const task = tasksRef.current.find((t) => t.id === activeId);
     if (!task) return;
 
     // Determine destination column
-    const overTask = tasks.find((t) => t.id === overId);
+    const overTask = tasksRef.current.find((t) => t.id === overId);
     const destColumn: string | undefined = overTask
       ? overTask.column
       : columns.find((c) => c.id === overId)?.id;
     if (!destColumn) return;
 
     // Reorder within column
-    const columnTasks = tasks
+    const columnTasks = tasksRef.current
       .filter((t) => t.column === destColumn)
       .sort((a, b) => a.order - b.order);
 

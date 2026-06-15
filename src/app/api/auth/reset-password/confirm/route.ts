@@ -39,6 +39,7 @@ export async function POST(req: Request) {
   await prisma.$transaction([
     prisma.user.update({ where: { id: record.userId }, data: { password: hashed, passwordChangedAt: new Date() } as any }),
     prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
+    prisma.pushSubscription.deleteMany({ where: { userId: record.userId } }),
   ]);
 
   return NextResponse.json({ success: true });

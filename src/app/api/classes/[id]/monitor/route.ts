@@ -49,6 +49,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const now = Date.now();
     const stallMs = STALL_DAYS * 24 * 60 * 60 * 1000;
 
+    function endOfDay(d: Date): number {
+      const r = new Date(d);
+      r.setUTCHours(23, 59, 59, 999);
+      return r.getTime();
+    }
+
     const result = groups.map((g) => {
       const columns = g.board.columns;
       const doneColumnIds = new Set(columns.filter((c) => c.isDone).map((c) => c.id));
@@ -68,7 +74,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           continue;
         }
         // Not in a done column: candidate for help signals.
-        if (t.deadline && t.deadline.getTime() < now) overdue++;
+        if (t.deadline && endOfDay(t.deadline) < now) overdue++;
         const neverMoved = t.columnUpdatedAt.getTime() === t.createdAt.getTime();
         if (!neverMoved && now - t.columnUpdatedAt.getTime() > stallMs) stalled++;
       }
