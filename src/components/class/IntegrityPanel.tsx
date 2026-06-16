@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
+import { findGroupSuggestion } from "@/lib/groupSearch";
 
 interface FlaggedTask {
   id: string;
@@ -189,6 +190,14 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
       sortOrder === "flagCount" ? b.flagged.length - a.flagged.length : a.name.localeCompare(b.name)
     );
 
+  const groupSuggestion = groupSearch.trim()
+    ? findGroupSuggestion(
+        flaggedGroups.map((g) => g.name),
+        groupSearch,
+        new Set(displayGroups.map((g) => g.name))
+      )
+    : null;
+
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-4xl">
       {/* Live subscriptions: re-check integrity when any group board changes. */}
@@ -268,6 +277,15 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
               </button>
             </div>
           </div>
+
+          {groupSuggestion && (
+            <button
+              onClick={() => setGroupSearch(groupSuggestion)}
+              className="block mb-4 text-xs text-muted hover:text-ink transition-colors"
+            >
+              Did you mean <span className="font-medium underline">{groupSuggestion}</span>?
+            </button>
+          )}
 
           {displayGroups.length === 0 ? (
             <p className="text-sm text-muted py-4">No groups match this filter.</p>

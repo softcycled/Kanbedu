@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
 import SharedAvatar from "../Avatar";
+import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
 
 interface MonitorMember {
   id: string;
@@ -165,9 +166,22 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
 
       {(() => {
         const visible = search.trim()
-          ? groups.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
+          ? groups.filter((g) => matchesGroupName(g.name, search))
           : groups;
-        return visible.length === 0 ? (
+        const suggestion = search.trim()
+          ? findGroupSuggestion(groups.map((g) => g.name), search, new Set(visible.map((g) => g.name)))
+          : null;
+        return (
+        <>
+        {suggestion && (
+          <button
+            onClick={() => setSearch(suggestion)}
+            className="block mb-4 text-xs text-muted hover:text-ink transition-colors"
+          >
+            Did you mean <span className="font-medium underline">{suggestion}</span>?
+          </button>
+        )}
+        {visible.length === 0 ? (
           <p className="text-sm text-muted">No groups match &ldquo;{search}&rdquo;.</p>
         ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -232,6 +246,8 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
           </button>
           ))}
         </div>
+        )}
+        </>
         );
       })()}
     </div>
