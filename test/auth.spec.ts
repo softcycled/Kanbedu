@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock auth and prisma before importing route handlers
+// Mock auth and prisma before importing route handlers.
+// getSession and getVerifiedSession share one mock fn: routes actually call
+// getVerifiedSession exclusively, but tests below only ever set
+// `auth.getSession`'s mock — aliasing keeps those calls meaningful instead of
+// silently controlling a function nothing reads.
+const mockGetSession = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/auth', () => ({
-  getSession: vi.fn(),
+  getSession: mockGetSession,
+  getVerifiedSession: mockGetSession,
   isMemberOfBoard: vi.fn(),
 }));
 
@@ -21,6 +27,7 @@ vi.mock('@/lib/prisma', () => ({
       findFirst: vi.fn(),
       updateMany: vi.fn(),
       create: vi.fn(),
+      aggregate: vi.fn().mockResolvedValue({ _max: { order: null } }),
     },
     boardMember: {
       findMany: vi.fn(),
@@ -153,8 +160,10 @@ describe('Authorization - integration (light)', () => {
 
   it('PATCH /api/tasks/[id] moving to a dest column in another board returns 400', async () => {
     (auth.getSession as any).mockResolvedValue({ userId: 'u1' });
-    // First call: taskAuth check
-    (prisma.task.findUnique as any).mockResolvedValueOnce({ columnRel: { boardId: 'b1' } });
+    // First call: taskAuth check — membership is read inline from
+    // columnRel.board.members (combined-query auth), not a separate
+    // isMemberOfBoard() call, so the mock must include it directly.
+    (prisma.task.findUnique as any).mockResolvedValueOnce({ columnRel: { boardId: 'b1', board: { members: [{ id: 'm1' }] } } });
     // Second call: fetch current
     (prisma.task.findUnique as any).mockResolvedValueOnce({ id: 't1', title: 't', description: '', column: 'c1', assigneeId: null, assignees: [], priority: null, order: 0, completedAt: null, tags: [] });
     // dest column belongs to a different board

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 jobs:
   build:
@@ -25,6 +25,9 @@ jobs:
     - name: Generate Prisma Client
       run: npx prisma generate
       
+    - name: Run tests
+      run: npx vitest run
+
     - name: Build Project (Typecheck)
       run: npx next build
       env:
