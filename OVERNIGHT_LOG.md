@@ -109,3 +109,42 @@ handled correctly, so no change was needed for them.
 No further safe issues found this pass. Areas still worth a future look: the two
 largest files (`TaskModal.tsx`, `Board.tsx`) in depth, and the class clone/import
 flows flagged in Session 1's recommendations.
+
+---
+
+## 2026-06-16 — Session 3
+
+Reviewed the roster CSV-import and class-join flows end to end, the core task
+create/update/delete API, the board/list views and filter bar, the
+notification bell, toasts, and the shared date/deadline helpers. Read the real
+code and traced data through it. Most of the app is in good shape after the
+first two sessions; this pass found two stale-comment issues (fixed) and one
+genuine display inconsistency (left as a recommendation because it's a
+judgment call about what "overdue" should mean).
+
+### Fixed
+
+1. **Corrected two out-of-date code comments that described behaviour the app
+   no longer does.** Nothing was broken for users — these are notes inside the
+   code that had drifted from what the code actually does, which can mislead
+   whoever edits these areas next. One described the roster-import step as
+   enrolling students and sorting them into groups on the spot (it doesn't —
+   that happens later, when each student joins with the class link); the other
+   said joining a class always drops you in the "lobby" with no group (in fact,
+   if your email was on the imported roster with a group, you're placed straight
+   into that group). Also removed one unused line of code in the import handler.
+   No behaviour changed; type-check clean and 31/31 tests pass.
+   *Tech: `api/classes/[id]/import` header docstring + dead `groupId` (commit d4ce4cc); `api/classes/join/[code]` POST docstring (commit 0b12fa1).*
+
+### Recommendations (not implemented — need a human decision)
+
+- **A task due "today" shows up as "Overdue" on its card and in the side panel.**
+  Deadlines are saved as the start (midnight) of the chosen day, and the card's
+  deadline label treats anything past that instant as overdue — so from about
+  12:01am on the due date, a task due *that same day* already reads "Overdue by
+  Xh" in red. Meanwhile the small "Overdue" pill at the top of the task panel
+  uses a different rule (a task isn't overdue until the whole day has passed),
+  so the same open task can show contradictory signals. The two need to agree;
+  the open question is whether a deadline means "due at the start of the day" or
+  "due by end of day", which is a product call — hence flagged, not changed.
+  *Tech: `lib/utils.ts` — `formatDeadlineLabel` uses `diffMs < 0`; `isOverdue` uses date-only comparison. Both used together in `TaskModal.tsx` (lines 853/855) and on `TaskCard`/`ListView`.*
