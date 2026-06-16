@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
+import SearchIcon from "../SearchIcon";
 import { findGroupSuggestion } from "@/lib/groupSearch";
 
 interface FlaggedTask {
@@ -262,13 +263,18 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
               ))}
             </div>
             <div className="ml-auto flex items-center gap-3">
-              <input
-                type="text"
-                value={groupSearch}
-                onChange={(e) => setGroupSearch(e.target.value)}
-                placeholder="Search groups…"
-                className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
-              />
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                  <SearchIcon />
+                </div>
+                <input
+                  type="text"
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  placeholder="Search groups…"
+                  className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
+                />
+              </div>
               <button
                 onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}
                 className="text-[11px] text-muted hover:text-ink transition-colors whitespace-nowrap"

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
 import SharedAvatar from "../Avatar";
+import SearchIcon from "../SearchIcon";
 import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
 
 interface MonitorMember {
@@ -150,13 +151,18 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search groups…"
-            className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
-          />
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+              <SearchIcon />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search groups…"
+              className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
+            />
+          </div>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Live
