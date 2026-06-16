@@ -312,36 +312,27 @@ function AppearanceTab() {
   );
 }
 
-// ── Name Input Component (Performance Fix) ──────────────────────
-function NameInput({ 
-  value, 
-  onChange, 
-  onSave, 
-  saving 
-}: { 
-  value: string; 
-  onChange: (val: string) => void; 
-  onSave: () => void; 
+// ── Name Input Component ────────────────────────────────────────
+// Controlled directly by the parent's `name` state so that the Save button
+// and Enter key always persist the latest typed value. (A previous debounced
+// local-state version could save a stale name when the user typed and saved
+// within the debounce window.)
+function NameInput({
+  value,
+  onChange,
+  onSave,
+  saving
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onSave: () => void;
   saving: boolean;
 }) {
-  const [localValue, setLocalValue] = useState(value);
-  
-  // Sync if external value changes (e.g. from fetch)
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  // Debounce the upward change to avoid lag during rapid typing
-  useEffect(() => {
-    const timeout = setTimeout(() => onChange(localValue), 300);
-    return () => clearTimeout(timeout);
-  }, [localValue, onChange]);
-
   return (
     <input
       type="text"
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => e.key === "Enter" && onSave()}
       disabled={saving}
       placeholder="Your name"
