@@ -68,11 +68,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   }, []);
   useEffect(() => { setMobileFilterOpen(false); }, [viewMode]);
 
-  // Toggle slider refs/state for animated highlight
+  // Toggle slider refs/state for animated highlight. Mobile and desktop render
+  // separate toggle instances (one is always display:none), so each needs its
+  // own refs/position — sharing one set measures whichever is hidden as 0x0.
   const toggleRef = useRef<HTMLDivElement | null>(null);
   const boardBtnRef = useRef<HTMLButtonElement | null>(null);
   const listBtnRef = useRef<HTMLButtonElement | null>(null);
   const [sliderPos, setSliderPos] = useState({ left: 0, width: 0 });
+  const desktopToggleRef = useRef<HTMLDivElement | null>(null);
+  const desktopBoardBtnRef = useRef<HTMLButtonElement | null>(null);
+  const desktopListBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [desktopSliderPos, setDesktopSliderPos] = useState({ left: 0, width: 0 });
 
   // use shared board resources (members, tags) to avoid duplicate fetches
   const { members: boardMembers, tags: allBoardTags } = useBoardResources(boardId);
@@ -149,17 +155,23 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     [tasksByColumn]
   );
 
-  // Position the toggle slider under the active button and update on resize/view change
+  // Position each toggle's slider under its own active button and update on
+  // resize/view change. Mobile and desktop are measured independently since
+  // only one is ever visible at a given viewport width.
   useLayoutEffect(() => {
-    const update = () => {
-      const container = toggleRef.current;
-      const target = viewMode === "board" ? boardBtnRef.current : listBtnRef.current;
+    const measure = (
+      container: HTMLDivElement | null,
+      target: HTMLButtonElement | null,
+      setPos: (pos: { left: number; width: number }) => void
+    ) => {
       if (!container || !target) return;
       const cRect = container.getBoundingClientRect();
       const tRect = target.getBoundingClientRect();
-      const left = Math.round(tRect.left - cRect.left);
-      const width = Math.round(tRect.width);
-      setSliderPos({ left, width });
+      setPos({ left: Math.round(tRect.left - cRect.left), width: Math.round(tRect.width) });
+    };
+    const update = () => {
+      measure(toggleRef.current, viewMode === "board" ? boardBtnRef.current : listBtnRef.current, setSliderPos);
+      measure(desktopToggleRef.current, viewMode === "board" ? desktopBoardBtnRef.current : desktopListBtnRef.current, setDesktopSliderPos);
     };
     update();
     window.addEventListener("resize", update);
@@ -988,13 +1000,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             filteredTasksCount={filteredTasks.length}
           />
           {/* View mode toggle (animated slider) */}
-          <div className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
+          <div ref={desktopToggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
             <div
               aria-hidden
-              style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
+              style={{ left: `${desktopSliderPos.left}px`, width: `${desktopSliderPos.width}px` }}
               className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
             />
             <button
+              ref={desktopBoardBtnRef}
               onClick={() => setViewMode("board")}
               title="Board view"
               aria-label="Board view"
@@ -1006,6 +1019,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               </svg>
             </button>
             <button
+              ref={desktopListBtnRef}
               onClick={() => setViewMode("list")}
               title="List view"
               aria-label="List view"
