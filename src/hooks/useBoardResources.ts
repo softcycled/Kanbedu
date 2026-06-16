@@ -86,14 +86,18 @@ export function useBoardResources(boardId: string | null) {
       if (!membersCache.has(id)) {
         setLoadingMembers(true);
         const m = await fetchMembersForBoard(id).catch(() => []);
-        if (!cancelled) setMembers(m);
-        setLoadingMembers(false);
+        if (!cancelled) {
+          setMembers(m);
+          setLoadingMembers(false);
+        }
       }
       if (!tagsCache.has(id)) {
         setLoadingTags(true);
         const t = await fetchTagsForBoard(id).catch(() => []);
-        if (!cancelled) setTags(t);
-        setLoadingTags(false);
+        if (!cancelled) {
+          setTags(t);
+          setLoadingTags(false);
+        }
       }
     })();
 

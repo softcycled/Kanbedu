@@ -541,7 +541,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
       return updated;
     });
-  }, [tasks, columns, sortedColumns, onTasksChange]);
+  }, [tasks, columns, onTasksChange]);
 
   const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
     setActiveTask(null);
