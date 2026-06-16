@@ -175,15 +175,6 @@ export default function AdminPanel() {
                   >
                     <option value="open">Open</option>
                     <option value="in-progress">In Progress</option>
-              <ConfirmModal
-                isOpen={confirmDeleteReportId !== null}
-                title="Delete report?"
-                message="Are you sure you want to permanently delete this report?"
-                confirmLabel="Delete"
-                danger={true}
-                onClose={() => setConfirmDeleteReportId(null)}
-                onConfirm={performDeleteReport}
-              />
                     <option value="resolved">Resolved</option>
                   </select>
                   
@@ -215,6 +206,16 @@ export default function AdminPanel() {
           ))
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmDeleteReportId !== null}
+        title="Delete report?"
+        message="Are you sure you want to permanently delete this report?"
+        confirmLabel="Delete"
+        danger={true}
+        onClose={() => setConfirmDeleteReportId(null)}
+        onConfirm={performDeleteReport}
+      />
     </div>
   );
 }
