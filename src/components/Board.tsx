@@ -1135,7 +1135,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         task={selectedTask}
         boardId={boardId}
         boardMembers={boardMembers}
-        columns={columns}
+        columns={sortedColumns}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}

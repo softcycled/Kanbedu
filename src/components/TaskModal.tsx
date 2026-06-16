@@ -18,13 +18,13 @@ import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
 import MarkdownText from "./MarkdownText";
 import MarkdownToolbar from "./MarkdownToolbar";
-import { getColumnPalette } from "@/lib/columnPalette";
+import { resolveColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 import Avatar from "./Avatar";
 import { useToasts } from "@/components/Toasts";
 
-const getColumnDot = (index: number) =>
-  index < 0 ? "bg-muted" : getColumnPalette(index).dot;
+const getColumnDot = (color: string | null | undefined, index: number) =>
+  index < 0 ? "bg-muted" : resolveColumnPalette(color, index).dot;
 
 interface Props {
   task: Task | null;
@@ -965,7 +965,7 @@ export default function TaskModal({
             onClick={() => setColumnDropdownOpen((v) => !v)}
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.find((c) => c.id === columnId)?.color, columns.findIndex((c) => c.id === columnId))}`} />
             <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
           </button>
           {columnDropdownOpen && (
@@ -984,7 +984,7 @@ export default function TaskModal({
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
                   >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
                     <span className="truncate">{c.label}</span>
                     {isSelected && (
                       <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1517,6 +1517,7 @@ export default function TaskModal({
                 .filter((mm): mm is NonNullable<typeof mm> => !!mm);
               const hasDeadline = !!deadline && deadlineInfo.severity !== "none";
               const colIdx = columns.findIndex((c) => c.id === columnId);
+              const colColor = columns.find((c) => c.id === columnId)?.color;
               const colLabel = columns.find((c) => c.id === columnId)?.label;
               const itemClass = "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:bg-column-bg transition-colors cursor-pointer";
               return (
@@ -1531,7 +1532,7 @@ export default function TaskModal({
                         onClick={() => setOpenMetaProp((cur) => cur === "phase" ? null : "phase")}
                         className={`${itemClass} text-ink`}
                       >
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colIdx)}`} />
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colColor, colIdx)}`} />
                         <span>{colLabel}</span>
                       </button>
                       {openMetaProp === "phase" && (
@@ -1550,7 +1551,7 @@ export default function TaskModal({
                                 }}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
                               >
-                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
                                 <span className="truncate">{c.label}</span>
                                 {isSelected && (
                                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
