@@ -27,8 +27,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   }
 }
 
-// POST: join a class as a student. Lands the caller in the lobby (no group);
-// the educator sorts them into a group afterwards.
+// POST: join a class as a student. If the caller's email matches a roster
+// entry with a group, they're placed in that group (and granted its board);
+// otherwise they land in the lobby for the educator to sort later.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   try {
