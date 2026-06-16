@@ -39,6 +39,9 @@ interface Props {
   classId: string;
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
   onFlagCount?: (n: number) => void;
+  // Bumped by the parent whenever Roster creates/deletes a group, so Integrity
+  // picks up the change without requiring a full page reload.
+  reloadSignal?: number;
 }
 
 const MS_DAY = 86_400_000;
@@ -88,7 +91,7 @@ function FlagChip({
 // Educator integrity overview across every group board in the class. One screen,
 // grouped by team — surfaces tasks that look completed dishonestly so a teacher
 // can check students are using the board properly. Not a ranking, not full stats.
-export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Props) {
+export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, reloadSignal }: Props) {
   const [data, setData] = useState<IntegrityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +118,15 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
+  // Roster created/deleted a group — refetch without flashing the loading state.
+  // Skip the first run so we don't double-fetch alongside the mount effect above.
+  const skipFirstReload = useRef(true);
+  useEffect(() => {
+    if (reloadSignal === undefined) return;
+    if (skipFirstReload.current) { skipFirstReload.current = false; return; }
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadSignal]);
 
   // Coalesce bursts of board activity into a single refetch.
   const reloadTimer = useRef<number | null>(null);

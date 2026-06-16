@@ -64,6 +64,9 @@ export default function ClassWorkspace(props: Props) {
   // first visit — switching back is instant with no re-fetch.
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
+  // Bumped whenever Roster creates/deletes a group, so Monitor and Integrity
+  // (which stay mounted across tab switches) refetch instead of showing stale data.
+  const [groupsVersion, setGroupsVersion] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -164,13 +167,21 @@ export default function ClassWorkspace(props: Props) {
       )}
 
       <div className={tab === "monitor" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
+        {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
       </div>
       <div className={tab === "integrity" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
+        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
       </div>
       <div className={tab === "roster" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("roster") && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}
+        {visitedTabs.has("roster") && (
+          <RosterPanel
+            classId={classId}
+            ownerId={ownerId}
+            onOpenBoard={openGroupBoard}
+            onChanged={() => setGroupsVersion((v) => v + 1)}
+            readOnly={archived}
+          />
+        )}
       </div>
       <div className={tab === "preset" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
         {visitedTabs.has("preset") && <PresetEditor classId={classId} readOnly={archived} />}

@@ -29,6 +29,9 @@ interface MonitorGroup {
 interface Props {
   classId: string;
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
+  // Bumped by the parent whenever Roster creates/deletes a group, so Monitor
+  // picks up the change without requiring a full page reload.
+  reloadSignal?: number;
 }
 
 function Avatar({ member }: { member: MonitorMember }) {
@@ -52,7 +55,7 @@ function Avatar({ member }: { member: MonitorMember }) {
 
 // Educator overview. Each card shows a group's OWN progress — intentionally no
 // leaderboard or cross-group ranking. Attention cues are framed as help signals.
-export default function MonitorPanel({ classId, onOpenBoard }: Props) {
+export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Props) {
   const [groups, setGroups] = useState<MonitorGroup[]>([]);
   const [stallDays, setStallDays] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,15 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
+  // Roster created/deleted a group — refetch without flashing the loading state.
+  // Skip the first run so we don't double-fetch alongside the mount effect above.
+  const skipFirstReload = useRef(true);
+  useEffect(() => {
+    if (reloadSignal === undefined) return;
+    if (skipFirstReload.current) { skipFirstReload.current = false; return; }
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadSignal]);
   // Trigger bar animation only after loading finishes, not on a fixed timeout.
   // Bars paint at 0% on the first frame, then transition to real widths.
   useEffect(() => {

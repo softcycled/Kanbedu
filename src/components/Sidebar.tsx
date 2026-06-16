@@ -494,7 +494,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="sidebar-boards" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
               {boards.map((board) => (
                 <SortableBoardItem
@@ -532,7 +532,7 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(studentClasses)}>
+              <DndContext id="sidebar-student-classes" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(studentClasses)}>
                 <SortableContext items={studentClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                   {studentClasses.map((c) => (
                     <SortableClassItem
@@ -576,7 +576,7 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(educatorClasses)}>
+              <DndContext id="sidebar-educator-classes" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(educatorClasses)}>
                 <SortableContext items={educatorClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                   {educatorClasses.map((c) => (
                     <SortableClassItem
