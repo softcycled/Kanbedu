@@ -192,30 +192,32 @@ function RosterDropdown({
       {open && (
         <div
           role="listbox"
-          className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[8rem] max-h-60 overflow-y-auto bg-card-bg border border-border rounded-xl shadow-modal p-1`}
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[8rem] bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden`}
         >
-          {options.map((o) => {
-            const isSelected = o.value === value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => { onPick(o.value); setOpen(false); }}
-                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors ${
-                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                }`}
-              >
-                <span className="truncate">{o.label}</span>
-                {isSelected && (
-                  <svg className="flex-shrink-0 text-accent" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
+          <div className="pb-1 max-h-60 overflow-y-auto no-scrollbar">
+            {options.map((o) => {
+              const isSelected = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => { onPick(o.value); setOpen(false); }}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                    isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                  }`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isSelected && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                      <path d="M2 6l3 3 5-5" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
