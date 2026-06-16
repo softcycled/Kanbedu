@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createTaskSchema, parseBody, parseJsonBody } from "@/lib/validations";
-import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { getBoardNameOverrides } from "@/lib/classNames";

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
-import { getSession, getVerifiedSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { parseCSV } from "@/lib/csvParser";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";

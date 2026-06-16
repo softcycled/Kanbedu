@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getBoardNameOverrides } from "@/lib/classNames";
 

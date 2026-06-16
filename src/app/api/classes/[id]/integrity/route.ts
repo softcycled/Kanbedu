@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession, getClassRole } from "@/lib/auth";
+import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { getClassNameOverrides } from "@/lib/classNames";
 
 // Integrity detection thresholds — kept in sync with the per-board analytics
