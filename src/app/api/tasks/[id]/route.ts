@@ -224,6 +224,7 @@ export async function PATCH(
       columnRel: {
         select: {
           boardId: true,
+          isDone: true,
           board: {
             select: {
               realtimeSecret: true,
@@ -328,13 +329,21 @@ export async function PATCH(
     if (current.column !== body.column) {
       // Verify destination column exists and belongs to a board the user can access
       try {
-        const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true } });
+        const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true, isDone: true } });
         if (!destCol) return NextResponse.json({ error: "Destination column not found" }, { status: 400 });
         if (destCol.boardId !== taskAuth.columnRel.boardId) {
           return NextResponse.json({ error: "Destination column must belong to the same board." }, { status: 400 });
         }
         // No separate membership check needed: destCol.boardId is the same board as taskAuth,
         // and membership was already verified in the combined auth query above.
+
+        // Set completedAt synchronously so the PATCH response reflects the correct value immediately.
+        const currentIsDone = taskAuth.columnRel.isDone ?? false;
+        if (destCol.isDone && !currentIsDone) {
+          updateData.completedAt = new Date();
+        } else if (!destCol.isDone && currentIsDone) {
+          updateData.completedAt = null;
+        }
       } catch (err) {
         console.error("Failed to validate destination column membership:", err);
         return NextResponse.json({ error: "Failed to validate destination" }, { status: 500 });
@@ -362,13 +371,11 @@ export async function PATCH(
           ]);
 
           const destinationIsDone = toCol?.isDone ?? false;
-          const currentIsDone = fromCol?.isDone ?? false;
+          const wasInDone = fromCol?.isDone ?? false;
 
-          if (destinationIsDone && !currentIsDone) {
-            await prisma.task.update({ where: { id }, data: { completedAt: now } });
+          if (destinationIsDone && !wasInDone) {
             void recordActivity(id, session.userId, "COMPLETE", `Completed in ${toCol?.label}`);
-          } else if (!destinationIsDone && currentIsDone) {
-            await prisma.task.update({ where: { id }, data: { completedAt: null } });
+          } else if (!destinationIsDone && wasInDone) {
             void recordActivity(id, session.userId, "REOPEN", `Reopened and moved to ${toCol?.label}`);
           } else {
             void recordActivity(id, session.userId, "MOVE", `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`);

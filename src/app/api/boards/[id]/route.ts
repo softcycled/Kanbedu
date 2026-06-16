@@ -62,11 +62,21 @@ export async function DELETE(
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: id } },
-    });
+    const [membership, groupBoard] = await Promise.all([
+      prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: session.userId, boardId: id } },
+      }),
+      prisma.group.findUnique({ where: { boardId: id }, select: { classId: true } }),
+    ]);
     if (!membership || membership.role !== "owner") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (groupBoard) {
+      const { getClassRole } = await import("@/lib/auth");
+      const classRole = await getClassRole(session.userId, groupBoard.classId);
+      if (classRole !== "educator" && classRole !== "ta") {
+        return NextResponse.json({ error: "Class group boards can only be deleted by an educator." }, { status: 403 });
+      }
     }
 
     const columns = await prisma.column.findMany({

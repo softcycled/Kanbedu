@@ -113,11 +113,17 @@ export async function POST(
     }
     const { toUserId } = parsed.data;
 
-    const requester = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: session.userId, boardId: id } },
-    });
+    const [requester, isGroupBoard] = await Promise.all([
+      prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: session.userId, boardId: id } },
+      }),
+      prisma.group.findUnique({ where: { boardId: id }, select: { id: true } }),
+    ]);
     if (!requester || requester.role !== "owner") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (isGroupBoard) {
+      return NextResponse.json({ error: "Ownership cannot be transferred on a class group board." }, { status: 403 });
     }
 
     if (toUserId === session.userId) {

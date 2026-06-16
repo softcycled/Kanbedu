@@ -109,6 +109,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const result = parseBody(updateClassSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
 
+    if (result.data.archived !== undefined && role !== "educator") {
+      return NextResponse.json({ error: "Only the class owner can archive or unarchive a class." }, { status: 403 });
+    }
+
     // Archived classes are read-only: detail edits (name/term) are rejected
     // unless the same request also unarchives. Toggling archived is always OK.
     const editingDetails = result.data.name !== undefined || result.data.term !== undefined;

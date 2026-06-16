@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { createTagSchema, parseBody } from "@/lib/validations";
 import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
@@ -66,6 +67,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(tag, { status: 201 });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "A tag with that name already exists on this board." }, { status: 409 });
+    }
     console.error("Failed to create tag:", error);
     return NextResponse.json(
       { error: "Failed to create tag" },

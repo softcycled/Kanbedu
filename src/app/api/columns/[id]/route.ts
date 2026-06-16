@@ -216,12 +216,14 @@ export async function DELETE(
       if (col.isDone && !otherDone) {
         return NextResponse.json({ error: "Cannot delete the only 'Done' column. Mark another column as done before deleting this one." }, { status: 400 });
       }
-      // Delete tasks (and their cascaded relations) then the column, all in one transaction
-      const [, deleted] = await prisma.$transaction([
+      // Collect task IDs to clean up orphaned Notification rows (Notification has no cascade from Task).
+      const taskIds = (await prisma.task.findMany({ where: { column: id }, select: { id: true } })).map((t) => t.id);
+      const results = await prisma.$transaction([
+        prisma.notification.deleteMany({ where: { taskId: { in: taskIds } } }),
         prisma.task.deleteMany({ where: { column: id } }),
         prisma.column.delete({ where: { id } }),
       ]);
-      deletedCol = deleted;
+      deletedCol = results[2];
     }
 
     try {

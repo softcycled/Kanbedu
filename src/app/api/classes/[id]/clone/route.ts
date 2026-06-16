@@ -79,32 +79,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       if (result.data.copyRoster) {
-        await Promise.all(
-          source.members
-            .filter((m) => m.userId !== session.userId)
-            .map(async (m) => {
-              if (m.role === "educator") {
-                return tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "ta" } });
-              }
-              const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;
-              await tx.classMember.create({
-                data: {
-                  userId: m.userId,
-                  classId: cls.id,
-                  role: m.role,
-                  groupId: mapped?.groupId ?? null,
-                  displayName: m.displayName ?? null,
-                },
-              });
-              if (mapped) {
-                await tx.boardMember.upsert({
-                  where: { userId_boardId: { userId: m.userId, boardId: mapped.boardId } },
-                  update: {},
-                  create: { userId: m.userId, boardId: mapped.boardId, role: "member" },
-                });
-              }
-            })
-        );
+        for (const m of source.members.filter((m) => m.userId !== session.userId)) {
+          if (m.role === "educator") {
+            await tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "ta" } });
+            continue;
+          }
+          const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;
+          await tx.classMember.create({
+            data: {
+              userId: m.userId,
+              classId: cls.id,
+              role: m.role,
+              groupId: mapped?.groupId ?? null,
+              displayName: m.displayName ?? null,
+            },
+          });
+          if (mapped) {
+            await tx.boardMember.upsert({
+              where: { userId_boardId: { userId: m.userId, boardId: mapped.boardId } },
+              update: {},
+              create: { userId: m.userId, boardId: mapped.boardId, role: "member" },
+            });
+          }
+        }
 
         // Clone roster entries so the educator's import data carries forward.
         // claimedBy is reset — students must re-join the new class.
