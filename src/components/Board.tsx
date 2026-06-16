@@ -87,6 +87,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const tasksRef = useRef(tasks);
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
 
+  // Captures a dragged task's column/order at drag start. handleDragOver
+  // optimistically rewrites the task's column mid-drag, so by drag end the
+  // task's own column is the destination — we need this to revert on failure.
+  const dragOriginRef = useRef<{ column: string; order: number } | null>(null);
+
   const toasts = useToasts();
 
   const sensors = useSensors(
@@ -510,6 +515,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const task = tasks.find((t) => t.id === active.id);
     if (task) {
+      dragOriginRef.current = { column: task.column, order: task.order };
       setActiveTask(task);
       return;
     }
@@ -679,10 +685,15 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         }).catch((err) => console.error("Failed to bulk update task order:", err));
       }
     } else {
-      // Revert optimistic move — restore original column and order
+      // Revert optimistic move — restore the column/order captured at drag
+      // start. task.column here is the destination (handleDragOver already
+      // rewrote it mid-drag), so we must use the saved origin instead.
+      const origin = dragOriginRef.current;
       onTasksChange((prev) =>
         prev.map((t) =>
-          t.id === activeId ? { ...t, column: task.column, order: task.order } : t
+          t.id === activeId
+            ? { ...t, column: origin?.column ?? task.column, order: origin?.order ?? task.order }
+            : t
         )
       );
     }
