@@ -74,3 +74,38 @@ libs, and the analytics computations — good targets for the next session.
   descriptions/comments (e.g. `__main__` shows underlined). Whether to change
   markdown handling here is a formatting judgment call, so left for a human.
   *Tech: `MarkdownText.tsx` `__...__` underline rule.*
+
+---
+
+## 2026-06-16 — Session 2
+
+Reviewed the areas Session 1 left for later: the notification/realtime plumbing
+(push notifications, live board refresh), the analytics number-crunching, the
+class/educator screens, the bug-report/admin endpoints, and the shared
+date/time and CSV helpers. Read the actual code rather than guessing, and
+double-checked several suspected problems — most turned out to be already
+handled correctly, so no change was needed for them.
+
+### Fixed
+
+1. **Tidied up leftover dead code across the server endpoints.** About 30 of the
+   app's backend files were importing an old, no-longer-used helper that was
+   replaced a while ago by a newer one. Nothing was broken for users — this is
+   pure housekeeping that makes the code less confusing for whoever works on it
+   next. No behaviour changed; type-check and the full test suite still pass.
+   *Tech: removed unused `getSession` imports (codebase migrated to `getVerifiedSession`) from 30 API route files. tsc clean, 31/31 tests. Commit ce3072c.*
+
+### Checked and found fine (no action needed)
+
+- Push-notification sign-up/teardown, the live-update hook, and the service
+  worker all handle missing config and dropped connections gracefully.
+- The analytics dashboard's percentages and durations are guarded against
+  divide-by-zero / missing-data, so they won't show "NaN" or crash.
+- The task list's row-rendering optimisation does correctly refresh when a
+  task's assignees change (an earlier suspicion was a false alarm).
+- Comment notifications reach all assignees (the assignee list is always kept
+  in sync when a task is created), so no one is silently missed.
+
+No further safe issues found this pass. Areas still worth a future look: the two
+largest files (`TaskModal.tsx`, `Board.tsx`) in depth, and the class clone/import
+flows flagged in Session 1's recommendations.
