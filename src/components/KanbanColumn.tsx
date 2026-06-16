@@ -125,6 +125,13 @@ function KanbanColumn({
                 </svg>
                 <p className="text-xs text-muted/60 text-center leading-relaxed">Finished tasks<br/>will land here</p>
               </>
+            ) : columnIndex === 0 ? (
+              <>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
+                  <path d="M10 4v12M4 10h12" strokeLinecap="round"/>
+                </svg>
+                <p className="text-xs text-muted/60 text-center leading-relaxed">Add your first task<br/>to get started</p>
+              </>
             ) : (
               <>
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
