@@ -78,8 +78,13 @@ export const COLUMN_PALETTE: ColumnPaletteEntry[] = [
 export const COLUMN_COLOR_NAMES: string[] = COLUMN_PALETTE.map((p) => p.name);
 
 // Palette by position — the default when a column has no explicit color.
+// Normalizes the index so out-of-range or negative positions (e.g. a column
+// that isn't found in the current list yields findIndex === -1) still resolve
+// to a real entry instead of `undefined`, honoring the non-null return type.
 export function getColumnPalette(index: number): ColumnPaletteEntry {
-  return COLUMN_PALETTE[index % COLUMN_PALETTE.length];
+  const n = COLUMN_PALETTE.length;
+  const safeIndex = Number.isInteger(index) ? ((index % n) + n) % n : 0;
+  return COLUMN_PALETTE[safeIndex];
 }
 
 // Palette by explicit color name, or null when the name is unknown/unset.
