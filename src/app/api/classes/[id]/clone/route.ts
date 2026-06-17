@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (result.data.copyRoster) {
         for (const m of source.members.filter((m) => m.userId !== session.userId)) {
           if (m.role === "educator") {
-            await tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "ta" } });
+            await tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "educator" } });
             continue;
           }
           const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;

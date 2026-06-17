@@ -105,41 +105,29 @@ export function formatDeadlineLabel(deadline: Date | string | null, completedAt?
 
   const now = new Date();
   const d = new Date(deadline);
-  const diffMs = d.getTime() - now.getTime();
 
-  // Past (overdue)
-  if (diffMs < 0) {
-    const absMs = Math.abs(diffMs);
-    const days = Math.floor(absMs / 86_400_000);
-    if (days >= 1) {
-      return { label: `Overdue by ${days}d`, severity: "overdue" };
-    }
-    const hours = Math.ceil(absMs / 3_600_000);
-    return { label: `Overdue by ${hours}h`, severity: "overdue" };
-  }
-
-  // Normalize to date boundaries for 'tomorrow' detection
+  // Use date-only comparison (consistent with isOverdue) — a task is not
+  // overdue until the deadline day has fully passed.
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const startOfDeadlineDay = new Date(d);
   startOfDeadlineDay.setHours(0, 0, 0, 0);
   const daysUntil = Math.round((startOfDeadlineDay.getTime() - startOfToday.getTime()) / 86_400_000);
 
-  // Due today
+  // Past (overdue) — deadline day has fully passed
+  if (daysUntil < 0) {
+    const days = Math.abs(daysUntil);
+    return { label: `Overdue by ${days}d`, severity: "overdue" };
+  }
+
+  // Due today — still valid all day
   if (daysUntil === 0) {
-    const hours = Math.ceil(diffMs / 3_600_000);
-    return { label: `Due in ${hours}h`, severity: "due-soon" };
+    return { label: "Due today", severity: "due-soon" };
   }
 
   // Due tomorrow
   if (daysUntil === 1) {
     return { label: "Due tomorrow", severity: "due-soon" };
-  }
-
-  // Near future (within 48h window but not tomorrow due to date boundaries)
-  if (diffMs <= 48 * 3_600_000) {
-    const hours = Math.ceil(diffMs / 3_600_000);
-    return { label: `Due in ${hours}h`, severity: "due-soon" };
   }
 
   // Within a week show days
