@@ -40,7 +40,7 @@ export default function ReliabilityUpdatePage() {
           </p>
 
           <p>
-            The <strong className="text-ink font-semibold">group search</strong> in Monitor and Integrity now suggests the right group when your search doesn&apos;t match exactly. Typing &ldquo;4&rdquo; will point you to &ldquo;Group 4&rdquo; if that&apos;s what exists.
+            The <strong className="text-ink font-semibold">group search</strong>{" "}in Monitor and Integrity now suggests the right group when your search doesn&apos;t match exactly. Typing &ldquo;4&rdquo; will point you to &ldquo;Group 4&rdquo; if that&apos;s what exists.
           </p>
 
           <p>
