@@ -11,7 +11,7 @@ export default function ReliabilityUpdatePage() {
     <div className="min-h-screen bg-paper text-ink" style={{ fontFamily: "var(--font-geist-sans)" }}>
       <header className="border-b border-border">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/landing" className="text-sm font-semibold text-ink hover:text-accent transition-colors">
+          <Link href="/" className="text-sm font-semibold text-ink hover:text-accent transition-colors">
             Kanbedu
           </Link>
         </div>
