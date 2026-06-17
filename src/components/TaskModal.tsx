@@ -245,9 +245,10 @@ export default function TaskModal({
 
       const lastIncomingCommentId = incomingComments.length ? incomingComments[incomingComments.length - 1].id : null;
       const lastLocalCommentId = comments.length ? comments[comments.length - 1].id : null;
+      const hasPendingOptimistic = comments.some((c) => c.id.startsWith("local-"));
       if ((!comments || comments.length === 0) && incomingComments.length > 0) {
         setComments(incomingComments);
-      } else if (lastIncomingCommentId && lastIncomingCommentId !== lastLocalCommentId) {
+      } else if (lastIncomingCommentId && lastIncomingCommentId !== lastLocalCommentId && !hasPendingOptimistic) {
         setComments(incomingComments);
       }
 
