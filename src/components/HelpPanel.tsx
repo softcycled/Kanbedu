@@ -7,6 +7,11 @@ type Tab = "support" | "changelog";
 
 const CHANGELOG: { date: string; title: string; description: string }[] = [
   {
+    date: "Jun 13, 2026",
+    title: "Class Invites",
+    description: "Educators can now invite people to a class by email. Invitees receive a link, verify their email, and land directly in the class.",
+  },
+  {
     date: "Jun 8, 2026",
     title: "Mobile Support",
     description: "Navigation and settings panels are now fully usable on mobile. The sidebar hamburger, settings layout, and danger zone all behave correctly on small screens.",
