@@ -789,6 +789,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                   {interactive ? (
                     <label className="group/rename flex items-center gap-1 min-w-0 flex-1">
                       <input
+                        key={g.name}
                         defaultValue={g.name}
                         onBlur={(e) => { if (e.target.value.trim() !== g.name) renameGroup(g.id, e.target.value); }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
