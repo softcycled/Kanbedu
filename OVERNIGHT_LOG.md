@@ -344,3 +344,58 @@ judgment calls from earlier sessions remain (the "due today shows Overdue"
 deadline wording, the class-clone roster role mapping, the markdown bold/italic
 toggle and double-underscore underline, and the two login/email-verification
 flow items in Session 6) — all need a human decision and were left alone.
+
+---
+
+## 2026-06-17 — Session 8
+
+Read line-by-line several files earlier passes hadn't dug into: the account/
+settings screens (board settings, profile & preferences), the notifications
+bell, the create/join-class dialog, the page header, the description diff
+viewer, the admin bug-report endpoints, the task-history and database-health
+endpoints, the per-board analytics number-crunching, and the colour-palette
+helpers. Also ran a focused sweep over the marketing/landing pages, toasts,
+and small shared helpers. Most of the app is in good shape after seven prior
+passes; found and fixed one genuine reliability gap.
+
+### Fixed
+
+1. **Hardened a shared colour helper so an odd internal state can't crash a
+   screen.** A small utility that picks a column's default colour by its
+   position could hand back "nothing" if it was ever asked for a colour using
+   an invalid position (which happens, for example, when a task's column isn't
+   in the currently-loaded list). One screen already worked around this by
+   hand; another relied on it never happening. I made the helper itself always
+   return a real colour, so no screen can blank out or crash from this. Nothing
+   changes for users in normal use — this just removes a hidden trip-wire.
+   *Tech: `lib/columnPalette.ts` `getColumnPalette(index)` is typed non-null but
+   returned `undefined` for a negative/out-of-range index (`COLUMN_PALETTE[-1]`),
+   which would throw on the following `.dot`/`.bg` access. `TaskModal` guarded
+   `index < 0` locally; the `Board` drag-overlay did not. Normalised the modulo
+   (`((index % n) + n) % n`) and defaulted non-integers to 0. tsc clean, 31/31
+   tests. Commit e2494cf.*
+
+### Checked and found fine (no action needed)
+
+- Board settings panel (rename, invite-link, transfer/remove/leave/delete) —
+  confirm dialogs close correctly and permission gating is consistent.
+- Profile & settings screen, notifications bell (polling + mark-read), the
+  create/join-class dialog, the diff viewer, and the admin report PATCH/DELETE
+  endpoints all guard their inputs and clean up listeners/timers sensibly.
+- The class-integrity and per-board analytics endpoints guard every average
+  against divide-by-zero, freeze done-task ages/cycle-times, and keep
+  completed + in-progress = total.
+- Landing pages, toasts, skeletons, CSV/group-search/avatar/label helpers all
+  clean (agent-assisted sweep).
+
+### Recommendations (not implemented — judgment call, ties to existing item)
+
+- **The Analytics screen's "Overdue" number and its "Overdue" task filter use
+  two different rules**, so the count card and the filtered list can disagree
+  for a task due *today*. This is the same underlying question already flagged
+  in Session 3 — does a deadline mean "due at the start of the day" or "due by
+  end of day"? The summary count treats a task as overdue only after the whole
+  day passes; the table's filter treats it as overdue from midnight. Both should
+  use the same rule once that product decision is made.
+  *Tech: `api/analytics` summary uses `endOfDay(deadline) < now`;
+  `AnalyticsPanel.tsx` line 148 filter uses `new Date(deadline) < now`.*
