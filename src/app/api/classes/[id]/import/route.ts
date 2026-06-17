@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { parseCSV } from "@/lib/csvParser";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -10,12 +10,14 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // Required columns: name, email. Optional: group.
 //
 // For each row:
-//   - Upserts a ClassRosterEntry (email-keyed per class).
-//   - If a user account with that email exists: upserts ClassMember with
-//     displayName set from CSV and optionally assigns to the named group.
+//   - Upserts a ClassRosterEntry (email-keyed per class), storing the name and
+//     optional group name. Existing accounts are matched by email for the
+//     summary counts only — students are never auto-enrolled here. Enrollment
+//     (and group assignment) happens when the student joins via the join-code
+//     flow, which reads the roster entry and sets claimedBy.
 //
 // If a "group" column is present, pre-creates any missing groups (with boards)
-// and assigns matched students to their group.
+// so the named group already exists when a matched student later joins.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
@@ -122,7 +124,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     for (const row of validRows) {
       const userId = userByEmail.get(row.email);
-      const groupId = row.groupName ? (groupIdByName.get(row.groupName.toLowerCase()) ?? null) : null;
 
       // Upsert the roster entry only — never auto-enroll existing accounts.
       // claimedBy is set exclusively by the student via the join-code flow.

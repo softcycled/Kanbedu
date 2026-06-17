@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
-import { getSession, getVerifiedSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -195,7 +195,16 @@ export async function DELETE(
         }
       }
 
-      const clearCompleted = deletingColumn?.isDone && !destColumn?.isDone;
+      // Keep completedAt consistent with the destination column's done status,
+      // mirroring the normal task-move path: moving out of a done column clears
+      // completion, moving into a done column marks tasks complete.
+      const clearCompleted = deletingColumn.isDone && !destColumn.isDone;
+      const setCompleted = !deletingColumn.isDone && destColumn.isDone;
+      const completedAtUpdate = clearCompleted
+        ? { completedAt: null }
+        : setCompleted
+          ? { completedAt: new Date() }
+          : {};
 
       // WRAP IN TRANSACTION
       const [_, deleted] = await prisma.$transaction([
@@ -203,7 +212,7 @@ export async function DELETE(
           where: { column: id },
           data: {
             column: moveToColumnId,
-            ...(clearCompleted ? { completedAt: null } : {}),
+            ...completedAtUpdate,
           },
         }),
         prisma.column.delete({

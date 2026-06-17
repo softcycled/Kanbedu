@@ -548,6 +548,16 @@ export default function TaskModal({
     try {
       await onUpdate(id, data);
       if (!isMounted.current) return;
+      // Refresh the saved baseline for the fields we just persisted so later
+      // autosaves and the flush-on-close don't re-send unchanged values
+      // (which would create duplicate description-version history entries and
+      // redundant "Updated the description" activity records).
+      if (originalTask.current) {
+        const d = data as any;
+        if ("description" in d) originalTask.current.description = d.description ?? "";
+        if ("deadline" in d) originalTask.current.deadline = d.deadline ? formatDateForInput(d.deadline) : "";
+        if ("assigneeIds" in d) originalTask.current.assigneeIds = (d.assigneeIds ?? []).join(",");
+      }
       setJustSaved(true);
       if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
       savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);

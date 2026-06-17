@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { createTagSchema, parseBody } from "@/lib/validations";
-import { getSession, getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {

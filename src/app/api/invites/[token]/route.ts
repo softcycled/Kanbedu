@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getSessionFull } from "@/lib/auth";
+import { getSessionFull } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: accept an invite (add user to board)

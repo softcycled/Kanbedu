@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getVerifiedSession, getClassRole } from "@/lib/auth";
+import { getVerifiedSession, getClassRole } from "@/lib/auth";
 
 // A task is "stalled" if it has sat in a non-done column without movement for
 // this many days. Surfaced as a help signal, never as a ranking.

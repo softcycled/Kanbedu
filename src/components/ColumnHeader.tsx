@@ -66,6 +66,14 @@ export default function ColumnHeader({
     }
   }, [isEditing]);
 
+  // Keep the edit buffer in sync with the live label when not actively editing,
+  // so opening the rename box always starts from the current name (e.g. after a
+  // realtime update renamed the column under us). Without this, saving an
+  // unchanged-looking box could revert a concurrent rename.
+  useEffect(() => {
+    if (!isEditing) setEditValue(label);
+  }, [label, isEditing]);
+
   useEffect(() => {
     if (!menuOpen) return;
     const onDown = (e: MouseEvent) => {
