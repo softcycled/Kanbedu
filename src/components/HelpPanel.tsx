@@ -8,8 +8,8 @@ type Tab = "support" | "changelog";
 const CHANGELOG: { date: string; title: string; description: string }[] = [
   {
     date: "Jun 17, 2026",
-    title: "Invites & Reliability",
-    description: "Educators can now invite people to a class by email. Alongside this, a broad wave of reliability improvements landed — notifications, drag-and-drop, deadlines, group search, and the class clone flow all got more consistent.",
+    title: "Reliability Update",
+    description: "A broad wave of fixes across the board — deadlines, drag-and-drop, notifications, group search, and the class clone flow are all more consistent and dependable.",
   },
   {
     date: "Jun 8, 2026",
