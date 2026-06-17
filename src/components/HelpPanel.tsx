@@ -9,7 +9,7 @@ const CHANGELOG: { date: string; title: string; description: string; href?: stri
   {
     date: "Jun 17, 2026",
     title: "Reliability Update",
-    description: "A broad wave of fixes across the board — deadlines, drag-and-drop, notifications, group search, and the class clone flow are all more consistent and dependable.",
+    description: "A broad wave of fixes across the board. Deadlines, drag-and-drop, notifications, group search, and the class clone flow are all more consistent and dependable.",
     href: "/changelog/reliability-update",
   },
   {
