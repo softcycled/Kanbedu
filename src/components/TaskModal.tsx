@@ -1343,7 +1343,7 @@ export default function TaskModal({
           )}
         </div>
 
-        {/* History */}
+        {/* Description History */}
         <div>
           <button
             onClick={() => {
@@ -1359,9 +1359,7 @@ export default function TaskModal({
             >
               <path d="M3 2l4 3-4 3"/>
             </svg>
-            {showHistory
-              ? "Hide history"
-              : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
+            {showHistory ? "Hide description history" : "Show description history"}
           </button>
           {showHistory && (
             <div className="mt-3 space-y-5">

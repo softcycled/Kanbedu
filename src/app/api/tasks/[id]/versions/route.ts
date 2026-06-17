@@ -21,6 +21,7 @@ export async function GET(
   const versions = await prisma.taskDescriptionVersion.findMany({
     where: { taskId: id },
     orderBy: { createdAt: "desc" },
+    take: 5,
     include: {
       user: { select: { id: true, name: true, color: true, handle: true } },
     },
