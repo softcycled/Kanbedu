@@ -434,5 +434,9 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
   String(prev.task.deadline) === String(next.task.deadline) &&
   String(prev.task.completedAt) === String(next.task.completedAt) &&
   prev.columnEntry?.id === next.columnEntry?.id &&
+  // Compare the column's label and palette index too — a rename or reorder keeps
+  // the same id, so without these the phase pill would show a stale name/colour.
+  prev.columnEntry?.label === next.columnEntry?.label &&
+  prev.columnEntry?.paletteIdx === next.columnEntry?.paletteIdx &&
   prev.members.map((m) => m.id).join(",") === next.members.map((m) => m.id).join(",")
 );
