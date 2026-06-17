@@ -299,3 +299,48 @@ them.
   *Tech: `EmailVerificationBanner.tsx` `resend()` sets `sent=true` without
   checking `res.ok`. Fix: only mark sent when `res.ok`; otherwise keep the
   link active (optionally surface a brief error).*
+
+---
+
+## 2026-06-17 — Session 7
+
+Reviewed areas earlier passes hadn't read line-by-line: the boards
+create/rename/delete and reorder endpoints, the group create/rename/delete
+endpoint, the analytics number-crunching endpoint, the comments and invite
+endpoints, the realtime/broadcast plumbing, the shared CSV/preset helpers, and
+the board **List view**. Read the real code and traced it. Most of it is solid;
+found and fixed one genuine display bug.
+
+### Fixed
+
+1. **In the List view, renaming a column left task rows showing the old column
+   name.** When you switch a board to the List layout, each task shows a little
+   "phase" pill with its column's name and colour. If that column was renamed —
+   by you or by a teammate on a shared board — the pills on the already-listed
+   tasks kept showing the *old* name (and colour) until the page was reloaded or
+   the list was rebuilt some other way. The board (card) view never had this
+   problem; only the List view did. Now the pills update immediately to the
+   current column name.
+   *Tech: `ListView.tsx` `TaskRow` is memoised and its comparator only checked
+   `columnEntry.id`, which is unchanged on a rename/reorder, so the row skipped
+   re-rendering. Added `label` and `paletteIdx` to the comparison. tsc clean,
+   31/31 tests. Commit eb66d9b.*
+
+### Checked and found fine (no action needed)
+
+- Boards create/rename/delete/reorder and group create/rename/delete endpoints:
+  membership/owner checks, archived-class guards, and cascade cleanup all correct.
+- The analytics endpoint guards every average against divide-by-zero, freezes
+  done-task ages/phase times correctly, and keeps completed + in-progress = total.
+- Comments and invite endpoints validate membership, expiry, and verified-email
+  state sensibly; comment notifications skip the author and reach all assignees.
+- The realtime hook reconnects on timeout and falls back to polling when Supabase
+  is unconfigured; the server broadcast helper degrades quietly when keys are absent.
+- The board card view (`KanbanColumn`) re-renders correctly on a column rename —
+  the List-view bug above did not affect it.
+
+No further safe issues found this pass beyond the one fixed. The still-open
+judgment calls from earlier sessions remain (the "due today shows Overdue"
+deadline wording, the class-clone roster role mapping, the markdown bold/italic
+toggle and double-underscore underline, and the two login/email-verification
+flow items in Session 6) — all need a human decision and were left alone.
