@@ -267,7 +267,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number; invited: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number; invited: number; inviteFailed: number; inviteCapped: number } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { push } = useToasts();
@@ -666,12 +666,24 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           </div>
           {importError && <p className="text-[11px] text-red-500">{importError}</p>}
           {importResult && (
-            <p className="text-[11px] text-emerald-500">
-              {importResult.total} rows processed, {importResult.matched} matched
-              {importResult.unmatched > 0 && `, ${importResult.unmatched} unmatched (will match when they join)`}
-              {importResult.groupsCreated > 0 && `, ${importResult.groupsCreated} group${importResult.groupsCreated === 1 ? "" : "s"} created`}
-              {importResult.invited > 0 && `, ${importResult.invited} invite email${importResult.invited === 1 ? "" : "s"} sent`}.
-            </p>
+            <>
+              <p className="text-[11px] text-emerald-500">
+                {importResult.total} rows processed, {importResult.matched} matched
+                {importResult.unmatched > 0 && `, ${importResult.unmatched} unmatched (will match when they join)`}
+                {importResult.groupsCreated > 0 && `, ${importResult.groupsCreated} group${importResult.groupsCreated === 1 ? "" : "s"} created`}
+                {importResult.invited > 0 && `, ${importResult.invited} invite email${importResult.invited === 1 ? "" : "s"} sent`}.
+              </p>
+              {importResult.inviteFailed > 0 && (
+                <p className="text-[11px] text-amber-500 mt-0.5">
+                  {importResult.inviteFailed} invite email{importResult.inviteFailed === 1 ? "" : "s"} failed to send. Check that your email service is configured.
+                </p>
+              )}
+              {importResult.inviteCapped > 0 && (
+                <p className="text-[11px] text-amber-500 mt-0.5">
+                  {importResult.inviteCapped} student{importResult.inviteCapped === 1 ? "" : "s"} were added but not emailed (50-email limit per import). Import again to send the remaining invites.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

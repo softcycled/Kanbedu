@@ -5,11 +5,25 @@ the `overnight` branch (never `dev`/`main`), reads this file first to avoid
 repeating work, and appends a dated entry below. Plain English for the founder;
 a short technical line sits under each item.
 
-**Baseline (record for future sessions):** `npx tsc --noEmit` passes clean.
-`npx vitest run` → 31 tests passing, 0 failing (2 files: `markdown.spec.ts`,
-`auth.spec.ts`). Note: the previously-documented 10 failing auth tests appear to
-have already been fixed on `dev` — the auth mock now passes. Keep this 31/0 as
-the bar; if a session sees fewer passing, something regressed.
+## Rules for this file
+
+- **Read before doing anything.** Check what was already reviewed so you don't repeat it.
+- **Write your reasoning.** Before "Fixed" / "Checked and found fine", add a brief
+  "What I read" section (file names, what you were looking for). This creates a
+  reasoning trail for the founder to audit your work.
+- **Cap: keep this file under 150 lines.** When it would exceed that, compress all
+  sessions older than the most recent two into a single "Archive" summary at the
+  bottom. Move the full text of those old sessions to `OVERNIGHT_LOG_ARCHIVE.md`.
+  Never delete — archive. The active log must stay short enough that a fresh context
+  window can read it entirely without truncation.
+- **Update the baseline** at the top whenever test counts change.
+
+## Baseline (keep up to date)
+
+`npx tsc --noEmit` → clean.
+`npx vitest run` → **38 tests passing**, 0 failing (3 files: `markdown.spec.ts`,
+`auth.spec.ts`, `import.spec.ts`). Updated 2026-06-18 after import tests added.
+If a session sees fewer passing, something regressed — do not proceed.
 
 ---
 

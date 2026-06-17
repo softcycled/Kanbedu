@@ -8,6 +8,9 @@ import { sendClassInviteEmail } from "@/lib/email";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const MAX_ROSTER_ROWS = 100;
+// Safety cap: never send more than this many invite emails in a single import.
+// Brevo free tier is 300/day — one large class import could exhaust the daily quota.
+const MAX_INVITE_EMAILS = 50;
 
 // POST: import a CSV roster into a class.
 // Accepts multipart/form-data with a "file" field (.csv).
@@ -163,17 +166,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    // Fire invite emails to newly added students — fire-and-forget, don't block response
+    // Send invite emails to newly added students.
+    // Capped at MAX_INVITE_EMAILS per import to avoid exhausting Brevo's 300/day free-tier limit.
+    // Uses Promise.allSettled (not fire-and-forget) so we can surface failures in the response.
+    let inviteSent = 0;
+    let inviteFailed = 0;
+    let inviteCapped = 0;
+
     if (newlyAdded.length > 0) {
+      const toInvite = newlyAdded.slice(0, MAX_INVITE_EMAILS);
+      inviteCapped = newlyAdded.length - toInvite.length;
       const joinUrl = `${BASE_URL}/class/join/${cls.joinCode}`;
-      void Promise.all(
-        newlyAdded.map(({ email, name }) =>
-          sendClassInviteEmail(email, name, cls.name, joinUrl).catch(console.error)
-        )
+      const results = await Promise.allSettled(
+        toInvite.map(({ email, name }) => sendClassInviteEmail(email, name, cls.name, joinUrl))
       );
+      for (const r of results) {
+        if (r.status === "fulfilled") inviteSent++;
+        else { inviteFailed++; console.error("Invite email failed:", r.reason); }
+      }
     }
 
-    return NextResponse.json({ ok: true, total: validRows.length, matched, unmatched, groupsCreated, invited: newlyAdded.length });
+    return NextResponse.json({
+      ok: true,
+      total: validRows.length,
+      matched,
+      unmatched,
+      groupsCreated,
+      invited: inviteSent,
+      inviteFailed,
+      inviteCapped,
+    });
   } catch (error) {
     console.error("Failed to import roster:", error);
     return NextResponse.json({ error: "Failed to import roster." }, { status: 500 });
