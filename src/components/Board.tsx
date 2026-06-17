@@ -937,7 +937,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               aria-label="Board view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "board" ? "text-ink/90" : "text-muted/70"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ display: "block" }}>
                 <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
                 <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
               </svg>
@@ -948,8 +948,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               aria-label="List view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ display: "block" }}>
+                <line x1="1" y1="2" x2="13" y2="2"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="12" x2="13" y2="12"/>
               </svg>
             </button>
           </div>
@@ -1036,8 +1036,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               aria-label="List view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70 hover:text-ink/80"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ display: "block" }}>
-                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ display: "block" }}>
+                <line x1="1" y1="2" x2="13" y2="2"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="12" x2="13" y2="12"/>
               </svg>
             </button>
           </div>
