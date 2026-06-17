@@ -189,3 +189,35 @@ genuine bug.
   adding italic. Low impact, but the "right" behavior is a design choice, so
   left as a flag.
   *Tech: `MarkdownToolbar.tsx` `wrap()` — the "already wrapped" check uses `endsWith/startsWith(marker)`, so `*` matches inside `**`.*
+
+---
+
+## 2026-06-17 — Session 5
+
+Looked at areas the earlier passes hadn't read line-by-line: the big single-task
+backend endpoint (view/edit/delete a task), the comments, notifications, invite,
+bug-report, and description-history endpoints, the search/filter bar, the list
+view, the educator monitor screen, and the shared date/deadline helpers. Read
+the actual code and traced it through; also double-checked a handful of
+suspected problems flagged during the sweep, and every one turned out to be
+already handled correctly.
+
+### Checked and found fine (no action needed)
+
+- The task view/edit/delete endpoint correctly checks board membership, keeps
+  the "done" date in sync when a card moves columns, validates assignees/tags
+  belong to the board, and notifies newly-added assignees without double-pinging
+  people already on the task.
+- The search/filter bar cleans up its keyboard/click listeners properly (no
+  leak) and the "Clear" button resets both the search box and the results.
+- The list view's row-rendering shortcut does refresh avatars when a task's
+  assignees change (an earlier suspicion was a false alarm).
+- The educator monitor screen reloads the right class's data on live updates.
+- Comments, notifications, invites, the bug-report form, and the description
+  edit-history endpoint all guard their inputs and permissions sensibly.
+
+No further safe issues found this pass. Still-open items remain the judgment
+calls already flagged in earlier sessions (the "due today shows as Overdue"
+deadline wording, the class-clone roster role mapping, the markdown
+bold/italic toggle, and the double-underscore underline) — these need a human
+decision and were intentionally left alone.
