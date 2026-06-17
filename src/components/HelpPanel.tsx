@@ -5,8 +5,22 @@ import Link from "next/link";
 
 type Tab = "support" | "changelog";
 
-// Add entries here when ready for launch
 const CHANGELOG: { date: string; title: string; description: string }[] = [
+  {
+    date: "Jun 17, 2026",
+    title: "Fixes & Polish",
+    description: "Tasks now only show as overdue the day after the deadline — not on the deadline day itself. Cloning a class with co-teachers no longer demotes them. The formatting toolbar no longer mangles text when mixing bold and italic styles.",
+  },
+  {
+    date: "Jun 16, 2026",
+    title: "Group Search & Stability",
+    description: "Monitor and Integrity now suggest the correct group name when your search has no exact match (e.g. typing \"4\" suggests \"Group 4\"). Fixed several visual inconsistencies across the board, sidebar, and view toggle.",
+  },
+  {
+    date: "Jun 13, 2026",
+    title: "Class Invites",
+    description: "Educators can now invite people to a class by email. Invitees receive a link, verify their email, and land directly in the class. A wave of stability fixes also shipped alongside this: drag-and-drop, push notifications, deadline handling, and the class clone flow.",
+  },
   {
     date: "Jun 8, 2026",
     title: "Mobile Support",
