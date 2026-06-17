@@ -22,7 +22,7 @@ export default function ReliabilityUpdatePage() {
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Jun 17, 2026</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-6">Reliability Update</h1>
           <p className="text-base text-muted leading-relaxed">
-            This update does not add anything new. It is a pass through the parts of the app that were working but not quite right, and making them behave the way you would expect.
+            This update doesn't add anything new. It's a pass through the parts of the app that were working but not quite right, making them behave the way you'd expect.
           </p>
         </div>
 
@@ -40,7 +40,7 @@ export default function ReliabilityUpdatePage() {
           </p>
 
           <p>
-            The <strong className="text-ink font-semibold">group search</strong> in Monitor and Integrity now suggests the right group when your search does not match exactly. Typing &ldquo;4&rdquo; will point you to &ldquo;Group 4&rdquo; if that is what exists.
+            The <strong className="text-ink font-semibold">group search</strong> in Monitor and Integrity now suggests the right group when your search doesn&apos;t match exactly. Typing &ldquo;4&rdquo; will point you to &ldquo;Group 4&rdquo; if that&apos;s what exists.
           </p>
 
           <p>
@@ -48,7 +48,7 @@ export default function ReliabilityUpdatePage() {
           </p>
 
           <p>
-            The <strong className="text-ink font-semibold">formatting toolbar</strong> no longer mangles mixed styles. Clicking italic on already-bold text was stripping a character instead of adding italic. That is fixed.
+            The <strong className="text-ink font-semibold">formatting toolbar</strong> no longer mangles mixed styles. Clicking italic on already-bold text was stripping a character instead of adding italic. That's fixed.
           </p>
         </div>
 
