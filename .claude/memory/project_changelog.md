@@ -35,6 +35,20 @@ metadata:
 
 ## Session Log
 
+### 2026-06-18 (automation audit + safeguards)
+- settings.local.json: deny rules added for force-push, prisma migrate, DROP TABLE: `12c8d54`
+- QA credentials removed from committed skill file → `.env.local` (QA_EMAIL/QA_PASSWORD): `12c8d54`
+- CSV import: email cap 50/import, await results, surface inviteFailed + inviteCapped in UI: `12c8d54`
+- /api/health endpoint: DB liveness check for UptimeRobot + post-deploy: `12c8d54`
+- ESLint added (eslint.config.mjs): 0 errors baseline, 98 warnings: `12c8d54`
+- CI: tsc --noEmit + ESLint + overnight branch coverage: `12c8d54`
+- 7 new import tests (auth, 100-row cap, invite counts, failure, 50-email cap): `12c8d54`
+- Memory files copied to .claude/memory/ for git tracking: `12c8d54`
+- OVERNIGHT_LOG: 150-line cap rule, reasoning trail requirement: `12c8d54`
+- docs-local/OPS_RUNBOOK.md: rollback, branch protection, Brevo quota, health check steps
+- branch protection skipped (requires GitHub Pro for private repos — not worth it yet)
+- dev pushed to main (production deploy): `12c8d54`
+
 ### 2026-06-18
 - CSV import now sends invite emails to newly added students (skips re-imports to avoid spam); hard cap of 100 rows per import: `facc362`
 - View toggle icon alignment fixed properly (list lines at y=3.5/7/10.5 matching board squares' visual centers): `fc597b6`
