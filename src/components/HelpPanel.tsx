@@ -7,6 +7,11 @@ type Tab = "support" | "changelog";
 
 const CHANGELOG: { date: string; title: string; description: string; href?: string }[] = [
   {
+    date: "Jun 18, 2026",
+    title: "CSV Import Invites",
+    description: "Importing a roster CSV now sends a class invite email to each newly added student. Re-importing the same file skips anyone already on the roster. Imports are capped at 100 students per file.",
+  },
+  {
     date: "Jun 17, 2026",
     title: "Reliability Update",
     description: "A broad wave of fixes across the board. Deadlines, drag-and-drop, notifications, group search, and the class clone flow are all more consistent and dependable.",
