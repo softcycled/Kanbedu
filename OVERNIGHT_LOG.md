@@ -27,187 +27,6 @@ If a session sees fewer passing, something regressed — do not proceed.
 
 ---
 
-## 2026-06-17 — Session 4
-
-Explored the tag/comment/invite endpoints, the analytics and academic-integrity
-number-crunching, the CSV and group-search helpers, the board-resources data
-hook, the add-task and column-header widgets, the create/join-board dialog and
-invite-link parsing, the notifications endpoint, and the formatting toolbar.
-Found and fixed one genuine bug.
-
-### Fixed
-
-1. **Renaming a column could silently undo a teammate's rename.** On a shared
-   board, if someone else renamed a column while you had the board open, then
-   you clicked that column's title to rename it, the edit box still showed the
-   *old* name. Pressing Enter without retyping pushed that stale name back —
-   quietly reverting your teammate's rename. The edit box now always opens with
-   the column's current name.
-   *Tech: `ColumnHeader.tsx` seeded `editValue` from `label` prop only on mount; added effect to resync when not actively editing. Commit 8152d87.*
-
-### Checked and found fine
-
-- Tag/comment/invite endpoints (membership, expiry, duplicate-name handling).
-- Analytics/integrity guarded against divide-by-zero and missing history.
-- CSV parser, group-name search, board-resource cache, invite-link parsing.
-
-### Recommendation (judgment call)
-
-- **Formatting toolbar's on/off toggle can mangle nested styles** (bold `**` vs
-  italic `*`). (RESOLVED 2026-06-17, commit 94504ce.)
-
----
-
-## 2026-06-17 — Session 5
-
-Read line-by-line: the single-task backend endpoint (view/edit/delete), the
-comments/notifications/invite/bug-report/description-history endpoints, the
-search/filter bar, the list view, the educator monitor screen, and the shared
-date/deadline helpers. Double-checked several suspected problems — all already
-handled correctly.
-
-### Checked and found fine (no action needed)
-
-- Task view/edit/delete endpoint: board-membership checks, keeps the "done" date
-  in sync on column moves, validates assignees/tags belong to the board, and
-  notifies newly-added assignees without double-pinging existing ones.
-- Search/filter bar cleans up its listeners; "Clear" resets search + results.
-- List view's row-rendering shortcut refreshes avatars on assignee change.
-- Monitor screen reloads the right class's data on live updates.
-- Comments, notifications, invites, bug-report, description history all guard
-  their inputs and permissions sensibly.
-
-No further safe issues found this pass. Still-open items remain the judgment
-calls already flagged in earlier sessions (the "due today shows as Overdue"
-deadline wording, the class-clone roster role mapping, the markdown
-bold/italic toggle, and the double-underscore underline) — these need a human
-decision and were intentionally left alone.
-
----
-
-## 2026-06-17 — Session 6
-
-Dug into areas the earlier passes hadn't covered line-by-line: the student and
-educator class workspace screens (group board wrapper, student view, preset
-editor, settings), the sidebar drag-to-reorder behaviour, and a batch of
-shared widgets (add-task box, support modal, roster/monitor/integrity panels,
-theme provider, avatars). Read the real code and traced the tricky bits
-through React's render/effect ordering rather than guessing. Fixed two genuine
-bugs and removed one dead file; double-checked two other suspected bugs and
-confirmed they are NOT real (details below) so future sessions don't re-chase
-them.
-
-### Fixed
-
-1. **Reordering your classes in the sidebar made your other classes disappear.**
-   The sidebar groups classes into separate lists (classes you're a student in,
-   classes you teach, archived ones). Dragging to reorder one list would wipe
-   the *other* lists out of the sidebar until you reloaded the page — they
-   weren't deleted, just hidden. Now reordering one list leaves the others
-   exactly where they were.
-   *Tech: `BoardContainer.handleReorderClasses` rebuilt the whole `classes`
-   state from the dragged subset's ids; now splices the reordered subset back
-   into their existing slots. tsc clean, 31/31 tests. Commit 178e6b0.*
-
-2. **A student switching between two classes could briefly see the wrong
-   class's board.** If a student belonged to two classes (each with its own
-   group board) and clicked from one to the other, the board area could keep
-   showing the previous class's cards and never refresh to the new one. Now the
-   board fully resets when you switch classes.
-   *Tech: `StudentClassView` rendered `GroupBoardView` without a `key`, so on a
-   board-id change its cache-write effect stamped the old board's tasks into the
-   new board's cache and the fetch was then skipped as "fresh". Added
-   `key={boardId}` to force a clean remount. (Educator workspace already
-   remounts it, so only the student path was affected.) tsc clean, 31/31 tests.
-   Commit a05b44f.*
-
-3. **Removed a leftover duplicate support form that nothing used.** There were
-   two copies of the "Support & Feedback" feature in the code; only one is
-   actually wired into the app (in the Help panel). The unused copy was deleted
-   to avoid confusion. Nothing changed for users.
-   *Tech: `SupportModal.tsx` had no imports anywhere; the live form lives in
-   `HelpPanel.tsx` posting to the same `/api/support`. tsc clean. Commit 512116c.*
-
-### Checked and confirmed NOT bugs (so they aren't re-investigated)
-
-- **Add-task box does not create duplicate cards on Enter.** A suspected
-  double-create (Enter saves, the input unmounts, its blur handler fires and
-  saves again) does not actually happen: the blur handler that fires on unmount
-  is the one from the render where saving was already in progress, so the
-  in-flight guard catches it. No change needed.
-- **Roster/monitor/integrity panels, theme provider, avatars, preset editor**
-  all clean up their timers/listeners and handle their edge cases correctly.
-
-### Recommendations (not implemented — need a human decision)
-
-- **Login lockout can trip one attempt too early, and a "check only" can leave a
-  stray record.** The shared rate-limit helper ignores its "don't count this,
-  just check" flag when there's no existing record yet: the very first failed
-  login for an email gets counted twice, so the account can lock after 4 wrong
-  passwords instead of the intended 5. Left alone because it's part of the
-  login/security flow, which is off-limits for unattended changes.
-  *Tech: `lib/rateLimit.ts` — the no-record/expired-record branch always
-  upserts `hits: 1` regardless of the `increment` arg; `api/auth/login`
-  calls it with `increment: false` as a pure check. Fix: when `!increment` and
-  no valid record exists, return allowed without writing.*
-
-- **"Verification email sent!" shows even when the resend actually failed.** The
-  email-verification banner's "Resend email" link reports success without
-  checking whether the request worked — so if the server is down or rate-limits
-  the request, the user is told the email was sent and waits for one that never
-  arrives, with no obvious way to retry. Left as a recommendation because it's
-  part of the email-verification (authentication) flow.
-  *Tech: `EmailVerificationBanner.tsx` `resend()` sets `sent=true` without
-  checking `res.ok`. Fix: only mark sent when `res.ok`; otherwise keep the
-  link active (optionally surface a brief error).*
-
----
-
-## 2026-06-17 — Session 7
-
-Reviewed areas earlier passes hadn't read line-by-line: the boards
-create/rename/delete and reorder endpoints, the group create/rename/delete
-endpoint, the analytics number-crunching endpoint, the comments and invite
-endpoints, the realtime/broadcast plumbing, the shared CSV/preset helpers, and
-the board **List view**. Read the real code and traced it. Most of it is solid;
-found and fixed one genuine display bug.
-
-### Fixed
-
-1. **In the List view, renaming a column left task rows showing the old column
-   name.** When you switch a board to the List layout, each task shows a little
-   "phase" pill with its column's name and colour. If that column was renamed —
-   by you or by a teammate on a shared board — the pills on the already-listed
-   tasks kept showing the *old* name (and colour) until the page was reloaded or
-   the list was rebuilt some other way. The board (card) view never had this
-   problem; only the List view did. Now the pills update immediately to the
-   current column name.
-   *Tech: `ListView.tsx` `TaskRow` is memoised and its comparator only checked
-   `columnEntry.id`, which is unchanged on a rename/reorder, so the row skipped
-   re-rendering. Added `label` and `paletteIdx` to the comparison. tsc clean,
-   31/31 tests. Commit eb66d9b.*
-
-### Checked and found fine (no action needed)
-
-- Boards create/rename/delete/reorder and group create/rename/delete endpoints:
-  membership/owner checks, archived-class guards, and cascade cleanup all correct.
-- The analytics endpoint guards every average against divide-by-zero, freezes
-  done-task ages/phase times correctly, and keeps completed + in-progress = total.
-- Comments and invite endpoints validate membership, expiry, and verified-email
-  state sensibly; comment notifications skip the author and reach all assignees.
-- The realtime hook reconnects on timeout and falls back to polling when Supabase
-  is unconfigured; the server broadcast helper degrades quietly when keys are absent.
-- The board card view (`KanbanColumn`) re-renders correctly on a column rename —
-  the List-view bug above did not affect it.
-
-No further safe issues found this pass beyond the one fixed. The still-open
-judgment calls from earlier sessions remain (the "due today shows Overdue"
-deadline wording, the class-clone roster role mapping, the markdown bold/italic
-toggle and double-underscore underline, and the two login/email-verification
-flow items in Session 6) — all need a human decision and were left alone.
-
----
-
 ## 2026-06-17 — Session 8
 
 Read line-by-line several files earlier passes hadn't dug into: the account/
@@ -326,10 +145,19 @@ helpers.
 
 ## Archive
 
-Full text of Sessions 1–3 moved to `OVERNIGHT_LOG_ARCHIVE.md` to keep this file
-short. Summary of what those sessions fixed (all merged to dev): column-delete
-done-state, failed drag-and-drop snap-back, display-name save race, admin
-confirm-dialog placement, duplicate description save on modal close, ~30 dead
-`getSession` imports, two stale docstrings. Recommendations they raised
-(class-clone roster roles, comment flicker, `__dunder__` underline, "due today"
-overdue wording) were all later resolved on dev — see project changelog.
+Full text of Sessions 1–7 moved to `OVERNIGHT_LOG_ARCHIVE.md` to keep this file
+short. What those sessions fixed (all merged): column-delete done-state, failed
+drag-and-drop snap-back, display-name save race, admin confirm-dialog placement,
+duplicate description save on modal close, ~30 dead `getSession` imports, two
+stale docstrings, column rename stale-value, sidebar class-reorder hiding other
+sections, student wrong-board on class switch, orphaned `SupportModal` removed,
+List-view phase-pill not refreshing on column rename.
+
+Still-open recommendations from archived sessions (need a human decision, all
+auth/email-adjacent so left untouched overnight):
+- **Login lockout counts the first failed attempt twice** (`lib/rateLimit.ts`
+  ignores its check-only flag when no record exists) — locks after 4 not 5.
+- **"Verification email sent!" shows even when the resend failed**
+  (`EmailVerificationBanner.tsx` sets `sent=true` without checking `res.ok`).
+- **Analytics "Overdue" count vs filter disagree for a task due today** — same
+  deadline-meaning product question flagged across several sessions.

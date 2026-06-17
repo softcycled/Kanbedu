@@ -135,3 +135,106 @@ judgment call about what "overdue" should mean).
   (RESOLVED 2026-06-17, commit 839d1ac — deadline display standardized: overdue
   only after the deadline day passes; deadline day shows "Due today".)
   *Tech: `lib/utils.ts` — `formatDeadlineLabel` and `isOverdue`.*
+
+---
+
+## 2026-06-17 — Session 4
+
+Explored the tag/comment/invite endpoints, the analytics and academic-integrity
+number-crunching, the CSV and group-search helpers, the board-resources data
+hook, the add-task and column-header widgets, the create/join-board dialog and
+invite-link parsing, the notifications endpoint, and the formatting toolbar.
+Found and fixed one genuine bug.
+
+### Fixed
+
+1. **Renaming a column could silently undo a teammate's rename.** The column
+   rename box still showed the old name after a live rename; pressing Enter
+   without retyping pushed the stale name back.
+   *Tech: `ColumnHeader.tsx` seeded `editValue` from `label` only on mount; added
+   resync effect. Commit 8152d87.*
+
+### Checked and found fine
+
+- Tag/comment/invite endpoints; analytics/integrity divide-by-zero guards; CSV
+  parser, group-name search, board-resource cache, invite-link parsing.
+
+### Recommendation (RESOLVED 2026-06-17, commit 94504ce)
+
+- Formatting toolbar's bold/italic toggle could mangle nested styles.
+
+---
+
+## 2026-06-17 — Session 5
+
+Read line-by-line the single-task endpoint (view/edit/delete), the
+comments/notifications/invite/bug-report/description-history endpoints, the
+search/filter bar, the list view, the monitor screen, and the date/deadline
+helpers. All double-checked suspicions were already handled correctly.
+
+### Checked and found fine (no action needed)
+
+- Task view/edit/delete: board-membership checks, done-date sync on moves,
+  assignee/tag validation, notify newly-added assignees without double-pinging.
+- Search/filter bar listener cleanup + Clear reset; list-view avatar refresh;
+  monitor live reload; comments/notifications/invites/bug-report/description
+  history input + permission guards.
+
+No code changes. Open items were the long-standing judgment calls (since
+resolved on dev).
+
+---
+
+## 2026-06-17 — Session 6
+
+Class workspace screens (group board wrapper, student view, preset editor,
+settings), sidebar drag-reorder, and shared widgets. Fixed two bugs + removed a
+dead file; cleared two false suspicions.
+
+### Fixed
+
+1. **Reordering classes in the sidebar hid your other class sections.**
+   *Tech: `BoardContainer.handleReorderClasses` rebuilt the full list from one
+   subset; now splices the subset back. Commit 178e6b0.*
+2. **A student switching classes could briefly see the wrong board.**
+   *Tech: `StudentClassView` rendered `GroupBoardView` without a `key`; the
+   cache-write effect poisoned the new board's cache. Added `key={boardId}`.
+   Commit a05b44f.*
+3. **Removed an orphaned duplicate `SupportModal.tsx`** (live form is in
+   `HelpPanel`). Commit 512116c.
+
+### Confirmed NOT bugs
+
+- Add-task box does not double-create on Enter (in-flight guard catches the
+  unmount blur). Roster/monitor/integrity/theme/avatar/preset cleanup all fine.
+
+### Recommendations (need a human decision — auth-adjacent, left alone)
+
+- **Login lockout can trip one attempt early.** `lib/rateLimit.ts` ignores its
+  "check only" flag when no record exists yet, so the first failed login is
+  counted twice (lock after 4 instead of 5). Fix: when `!increment` and no valid
+  record, return allowed without writing.
+- **"Verification email sent!" shows even when the resend failed.**
+  `EmailVerificationBanner.tsx` `resend()` sets `sent=true` without checking
+  `res.ok`. Fix: only mark sent when `res.ok`.
+
+---
+
+## 2026-06-17 — Session 7
+
+Boards/group create-rename-delete-reorder endpoints, analytics, comments/invite
+endpoints, realtime/broadcast, CSV/preset helpers, and the List view. Found one
+display bug.
+
+### Fixed
+
+1. **In List view, renaming a column left task rows showing the old column
+   name/colour** (the phase pill). The card view was unaffected.
+   *Tech: `ListView.tsx` memoised `TaskRow` comparator only checked
+   `columnEntry.id`; added `label` and `paletteIdx`. Commit eb66d9b.*
+
+### Checked and found fine (no action needed)
+
+- Boards/group endpoints (membership/owner/archived guards, cascade cleanup);
+  analytics divide-by-zero guards; comments/invite membership+expiry; realtime
+  reconnect/poll fallback; card view re-renders correctly on rename.
