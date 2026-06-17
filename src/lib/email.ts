@@ -62,6 +62,21 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   }
 }
 
+export async function sendClassInviteEmail(to: string, studentName: string, className: string, joinUrl: string): Promise<void> {
+  const content = `
+    <h1 style="font-size:18px;font-weight:700;color:#1C1917;margin:0 0 8px">You've been added to a class</h1>
+    <p style="font-size:14px;color:#78716C;margin:0;line-height:1.6">
+      Hi ${studentName}, your educator has added you to <strong style="color:#1C1917">${className}</strong> on Kanbedu.
+      Click the button below to join. You'll need to create an account if you don't have one yet.
+    </p>
+    ${ctaButton(joinUrl, "Join class")}
+    <p style="font-size:12px;color:#A8A29E;margin:20px 0 0;line-height:1.6">
+      If you weren't expecting this, you can safely ignore this email.
+    </p>`;
+
+  await sendEmail(to, `You've been added to ${className}`, emailLayout(content));
+}
+
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const resetUrl = `${BASE_URL}/reset-password/${token}`;
 

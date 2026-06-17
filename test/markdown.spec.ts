@@ -26,8 +26,8 @@ describe("MarkdownText (Discord-flavored markdown)", () => {
     expect(h).toContain("<em");
   });
 
-  it("renders __underline__", () => {
-    expect(html("__hello__")).toContain("underline");
+  it("renders ++underline++", () => {
+    expect(html("++hello++")).toContain("underline");
   });
 
   it("renders ~~strikethrough~~", () => {

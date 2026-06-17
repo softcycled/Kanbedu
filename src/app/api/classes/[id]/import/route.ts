@@ -4,6 +4,10 @@ import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { parseCSV } from "@/lib/csvParser";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { sendClassInviteEmail } from "@/lib/email";
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const MAX_ROSTER_ROWS = 100;
 
 // POST: import a CSV roster into a class.
 // Accepts multipart/form-data with a "file" field (.csv).
@@ -34,6 +38,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (await isClassArchived(id)) {
       return NextResponse.json({ error: "This class is archived." }, { status: 403 });
     }
+
+    const cls = await prisma.class.findUnique({ where: { id }, select: { name: true, joinCode: true } });
+    if (!cls) return NextResponse.json({ error: "Class not found." }, { status: 404 });
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -67,9 +74,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!validRows.length) {
       return NextResponse.json({ error: "No valid rows found (every row is missing name or email)." }, { status: 400 });
     }
+    if (validRows.length > MAX_ROSTER_ROWS) {
+      return NextResponse.json({ error: `CSV exceeds the ${MAX_ROSTER_ROWS}-student limit. Split it into smaller files.` }, { status: 400 });
+    }
+
+    const emails = validRows.map((r) => r.email);
+
+    // Pre-check which emails already have a roster entry so we only invite new ones
+    const existingRosterEntries = await prisma.classRosterEntry.findMany({
+      where: { classId: id, email: { in: emails } },
+      select: { email: true },
+    });
+    const existingRosterEmails = new Set(existingRosterEntries.map((e) => e.email));
 
     // Batch-look up existing accounts by email
-    const emails = validRows.map((r) => r.email);
     const existingUsers = await prisma.user.findMany({
       where: { email: { in: emails } },
       select: { id: true, email: true },
@@ -121,6 +139,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Process each row
     let matched = 0;
     let unmatched = 0;
+    const newlyAdded: { email: string; name: string }[] = [];
 
     for (const row of validRows) {
       const userId = userByEmail.get(row.email);
@@ -133,6 +152,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         update: { name: row.name, groupName: row.groupName },
       });
 
+      if (!existingRosterEmails.has(row.email)) {
+        newlyAdded.push({ email: row.email, name: row.name });
+      }
+
       if (userId) {
         matched++;
       } else {
@@ -140,7 +163,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    return NextResponse.json({ ok: true, total: validRows.length, matched, unmatched, groupsCreated });
+    // Fire invite emails to newly added students — fire-and-forget, don't block response
+    if (newlyAdded.length > 0) {
+      const joinUrl = `${BASE_URL}/class/join/${cls.joinCode}`;
+      void Promise.all(
+        newlyAdded.map(({ email, name }) =>
+          sendClassInviteEmail(email, name, cls.name, joinUrl).catch(console.error)
+        )
+      );
+    }
+
+    return NextResponse.json({ ok: true, total: validRows.length, matched, unmatched, groupsCreated, invited: newlyAdded.length });
   } catch (error) {
     console.error("Failed to import roster:", error);
     return NextResponse.json({ error: "Failed to import roster." }, { status: 500 });
