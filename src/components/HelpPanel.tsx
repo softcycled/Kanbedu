@@ -5,11 +5,12 @@ import Link from "next/link";
 
 type Tab = "support" | "changelog";
 
-const CHANGELOG: { date: string; title: string; description: string }[] = [
+const CHANGELOG: { date: string; title: string; description: string; href?: string }[] = [
   {
     date: "Jun 17, 2026",
     title: "Reliability Update",
     description: "A broad wave of fixes across the board — deadlines, drag-and-drop, notifications, group search, and the class clone flow are all more consistent and dependable.",
+    href: "/changelog/reliability-update",
   },
   {
     date: "Jun 8, 2026",
@@ -193,7 +194,11 @@ function ChangelogTab() {
               </div>
               <div className={i < CHANGELOG.length - 1 ? "pb-8" : ""}>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-1">{entry.date}</p>
-                <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
+                {entry.href ? (
+                  <Link href={entry.href} className="text-sm font-semibold text-ink hover:text-accent transition-colors mb-1 inline-block">{entry.title}</Link>
+                ) : (
+                  <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
+                )}
                 <p className="text-sm text-muted leading-relaxed">{entry.description}</p>
               </div>
             </div>
