@@ -73,7 +73,10 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {activeClass.boardId ? (
         // Board renders the single header row: breadcrumb title + filters + Leave.
+        // Key by board id so switching to another class remounts with fresh state
+        // instead of reusing the previous board's tasks/columns.
         <GroupBoardView
+          key={activeClass.boardId}
           boardId={activeClass.boardId}
           boardName={activeClass.groupName || "Your group"}
           currentUserId={currentUserId}
