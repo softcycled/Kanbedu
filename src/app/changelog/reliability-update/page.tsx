@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Reliability Update — Jun 17, 2026 | Kanbedu",
+  title: "Reliability Update | Kanbedu",
   description: "A broad wave of fixes across deadlines, drag-and-drop, notifications, group search, and the class clone flow.",
 };
 
@@ -22,7 +22,7 @@ export default function ReliabilityUpdatePage() {
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Jun 17, 2026</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Reliability Update</h1>
           <p className="text-base text-muted leading-relaxed">
-            A broad wave of fixes shipped this week. Nothing flashy — just things that were quietly off, now working the way they should.
+            A broad wave of fixes shipped this week. Nothing flashy, just things that were quietly off and now work the way they should.
           </p>
         </div>
 
@@ -30,14 +30,14 @@ export default function ReliabilityUpdatePage() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Deadlines</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              Tasks now only show as overdue the day <em>after</em> the deadline — not at midnight on the deadline day itself. The overdue label on the card and inside the task now agree with each other.
+              Tasks now only show as overdue the day <em>after</em> the deadline, not at midnight on the deadline day itself. The overdue label on the card and inside the task now agree with each other.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Drag & Drop</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              If a card move fails — say, due to a connection hiccup — the card now snaps back to where it was instead of staying in the wrong column.
+              If a card move fails due to a connection hiccup, the card now snaps back to where it was instead of staying in the wrong column.
             </p>
           </section>
 
@@ -58,7 +58,7 @@ export default function ReliabilityUpdatePage() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Column Rename</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              On shared boards, the column rename box now always opens with the current name — previously it could show a stale name and silently overwrite a teammate&apos;s recent rename.
+              On shared boards, the column rename box now always opens with the current name. Previously it could show a stale name and silently overwrite a teammate&apos;s recent rename.
             </p>
           </section>
 
