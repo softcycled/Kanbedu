@@ -173,6 +173,13 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadSignal]);
+  // Background poll so the participation view updates without a page reload.
+  useEffect(() => {
+    const iv = setInterval(() => load(true), 15_000);
+    const onVisibility = () => { if (!document.hidden) load(true); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [load]);
 
   if (loading) {
     return (

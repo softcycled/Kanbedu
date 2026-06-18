@@ -94,6 +94,13 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadSignal]);
+  // Background poll so the educator sees live progress without a page reload.
+  useEffect(() => {
+    const iv = setInterval(() => load(true), 15_000);
+    const onVisibility = () => { if (!document.hidden) load(true); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [load]);
   // Trigger bar animation only after loading finishes, not on a fixed timeout.
   // Bars paint at 0% on the first frame, then transition to real widths.
   useEffect(() => {
