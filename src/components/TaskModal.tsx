@@ -655,7 +655,9 @@ export default function TaskModal({
   }, [flushUpdates, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape" && !isEditingTitleRef.current && !isEditingDescriptionRef.current) handleClose();
+    if (e.key !== "Escape") return;
+    e.stopPropagation(); // prevent ClassWorkspace / BoardContainer window listeners from also firing
+    if (!isEditingTitleRef.current && !isEditingDescriptionRef.current) handleClose();
   }, [handleClose]);
 
   useEffect(() => {
