@@ -263,17 +263,27 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
               ))}
             </div>
             <div className="ml-auto flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                  <SearchIcon />
+              <div className="flex flex-col items-end gap-1">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                    <SearchIcon />
+                  </div>
+                  <input
+                    type="text"
+                    value={groupSearch}
+                    onChange={(e) => setGroupSearch(e.target.value)}
+                    placeholder="Search groups…"
+                    className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={groupSearch}
-                  onChange={(e) => setGroupSearch(e.target.value)}
-                  placeholder="Search groups…"
-                  className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
-                />
+                {groupSuggestion && (
+                  <button
+                    onClick={() => setGroupSearch(groupSuggestion)}
+                    className="text-[11px] text-muted hover:text-ink transition-colors"
+                  >
+                    Did you mean <span className="font-medium underline">{groupSuggestion}</span>?
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}
@@ -283,15 +293,6 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
               </button>
             </div>
           </div>
-
-          {groupSuggestion && (
-            <button
-              onClick={() => setGroupSearch(groupSuggestion)}
-              className="block mb-4 text-xs text-muted hover:text-ink transition-colors"
-            >
-              Did you mean <span className="font-medium underline">{groupSuggestion}</span>?
-            </button>
-          )}
 
           {displayGroups.length === 0 ? (
             <p className="text-sm text-muted py-4">No groups match this filter.</p>
