@@ -18,6 +18,7 @@ function PanelSkeleton() {
 
 const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
+const ParticipationPanel = dynamic(() => import("./ParticipationPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const RosterPanel = dynamic(() => import("./RosterPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const PresetEditor = dynamic(() => import("./PresetEditor"), { ssr: false, loading: () => <PanelSkeleton /> });
 const ClassSettingsPanel = dynamic(() => import("./ClassSettingsPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
@@ -44,7 +45,7 @@ interface Props {
   myGroupName?: string | null;
 }
 
-type Tab = "monitor" | "integrity" | "roster" | "preset" | "settings";
+type Tab = "monitor" | "integrity" | "participation" | "roster" | "preset" | "settings";
 
 
 export default function ClassWorkspace(props: Props) {
@@ -127,6 +128,7 @@ export default function ClassWorkspace(props: Props) {
   const tabs: { id: Tab; label: string }[] = [
     { id: "monitor", label: "Monitor" },
     { id: "integrity", label: "Integrity" },
+    { id: "participation", label: "Participation" },
     { id: "roster", label: "Roster" },
     { id: "preset", label: "Preset" },
     { id: "settings", label: "Settings" },
@@ -168,6 +170,9 @@ export default function ClassWorkspace(props: Props) {
       </div>
       <div className={tab === "integrity" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
         {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
+      </div>
+      <div className={tab === "participation" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("participation") && <ParticipationPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
       </div>
       <div className={tab === "roster" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
         {visitedTabs.has("roster") && (
