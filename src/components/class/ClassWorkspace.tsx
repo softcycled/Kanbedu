@@ -46,16 +46,6 @@ interface Props {
 
 type Tab = "monitor" | "integrity" | "roster" | "preset" | "settings";
 
-function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
-  return (
-    <div className="flex-shrink-0 flex items-center gap-3 px-6 md:px-10 py-3 border-b border-border/60">
-      <button onClick={onBack} className="text-sm text-muted hover:text-ink transition-colors">
-        Back
-      </button>
-      <span className="text-sm font-medium text-ink truncate">{title}</span>
-    </div>
-  );
-}
 
 export default function ClassWorkspace(props: Props) {
   const { classId, name, term, archived, ownerId, currentUserId, joinCode, groups } = props;
@@ -115,8 +105,16 @@ export default function ClassWorkspace(props: Props) {
   if (openBoard) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
-        {header}
-        <BackBar onBack={() => setOpenBoard(null)} title={openBoard.name} />
+        <header className="flex-shrink-0 flex items-center justify-between px-6 md:px-10 pt-6 pb-4 border-b border-border/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity">kanbedu</Link>
+            <span className="text-muted">/</span>
+            <button onClick={() => setOpenBoard(null)} className="text-base font-semibold text-ink/60 hover:text-ink transition-colors truncate">{name}</button>
+            <span className="text-muted">/</span>
+            <span className="text-base font-semibold text-ink truncate">{openBoard.name}</span>
+          </div>
+          <button onClick={() => setOpenBoard(null)} className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0">Back</button>
+        </header>
         <GroupBoardView
           boardId={openBoard.boardId}
           boardName={openBoard.name}
