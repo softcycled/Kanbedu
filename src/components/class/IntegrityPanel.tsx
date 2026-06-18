@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
 import SearchIcon from "../SearchIcon";
-import { findGroupSuggestion } from "@/lib/groupSearch";
+import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
 
 interface FlaggedTask {
   id: string;
@@ -176,17 +176,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
       ),
     }))
     .filter((g) => g.flagged.length > 0)
-    .filter((g) => {
-      const q = groupSearch.trim().toLowerCase();
-      if (!q) return true;
-      const words = q.split(/\s+/).filter(Boolean);
-      const haystack = [
-        g.name,
-        ...g.flagged.map((t) => t.title),
-        ...g.flagged.map((t) => t.assignee),
-      ].join(" ").toLowerCase();
-      return words.every((w) => haystack.includes(w));
-    })
+    .filter((g) => !groupSearch.trim() || matchesGroupName(g.name, groupSearch))
     .sort((a, b) =>
       sortOrder === "flagCount" ? b.flagged.length - a.flagged.length : a.name.localeCompare(b.name)
     );

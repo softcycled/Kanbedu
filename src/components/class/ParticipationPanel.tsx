@@ -198,7 +198,7 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
   }
 
   const searchTrimmed = search.trim();
-  const filtered = groups.filter((g) => !searchTrimmed || matchesGroupName(searchTrimmed, g.name));
+  const filtered = groups.filter((g) => !searchTrimmed || matchesGroupName(g.name, searchTrimmed));
   const groupSuggestion = searchTrimmed
     ? findGroupSuggestion(groups.map((g) => g.name), searchTrimmed, new Set(filtered.map((g) => g.name)))
     : null;
