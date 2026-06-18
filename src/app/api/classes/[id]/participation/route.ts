@@ -125,15 +125,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // --- Comment contributions ---
-    // Build author string -> userId for all members across all boards.
-    // Comments store the author string that was computed at write time from the
-    // user's handle / name / email, so we reconstruct the same formula here.
+    // Comments store the author string baked in at write time. Map every stable
+    // identifier for each user so name changes break as few lookups as possible.
+    // Full fix requires adding userId to the Comment model (migration needed).
     const authorToUserId = new Map<string, string>();
     for (const g of groups) {
       for (const m of g.board.members) {
         const { id: uid, handle, name, email } = m.user;
-        const authorStr = handle ? `@${handle}` : (name && name.trim()) || email || "Anonymous";
-        authorToUserId.set(authorStr, uid);
+        if (handle) authorToUserId.set(`@${handle}`, uid);
+        if (name && name.trim()) authorToUserId.set(name.trim(), uid);
+        if (email) authorToUserId.set(email, uid);
+        const override = nameOverrides.get(uid);
+        if (override) authorToUserId.set(override, uid);
       }
     }
 
