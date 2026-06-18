@@ -27,6 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       prisma.group.findMany({
         where: { classId: id },
         orderBy: { order: "asc" },
+        take: 200,
         include: { board: { include: { columns: { orderBy: { order: "asc" } } } } },
       }),
       // Educator-set roster names override self-chosen account names here

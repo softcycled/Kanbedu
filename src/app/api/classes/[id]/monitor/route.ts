@@ -21,6 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const groups = await prisma.group.findMany({
       where: { classId: id },
       orderBy: { order: "asc" },
+      take: 200,
       include: {
         board: { include: { columns: { orderBy: { order: "asc" } } } },
         members: {

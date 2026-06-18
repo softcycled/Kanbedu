@@ -262,6 +262,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   // Selected student ids for bulk assignment / distribution.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkTarget, setBulkTarget] = useState("");
+  const [lobbyVisible, setLobbyVisible] = useState(20);
   // Member pending a "kick from class" confirmation (lobby only).
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
   // Group pending a delete confirmation (destructive — wipes the group board).
@@ -273,6 +274,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number; invited: number; inviteFailed: number; inviteCapped: number } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingDeleteRef = useRef<number | null>(null);
   const { push } = useToasts();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -483,34 +485,53 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
     }
   };
 
-  const deleteGroup = async (groupId: string) => {
+  const deleteGroup = (groupId: string) => {
     const prevGroups = groups;
     const prevMembers = members;
     const affectedStudents = members.filter((m) => m.groupId === groupId);
     const groupName = groups.find((g) => g.id === groupId)?.name ?? "Group";
-    // optimistic: remove the group, return its students to the lobby
+
+    // Optimistic: remove from UI immediately
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
     setMembers((prev) => prev.map((m) => (m.groupId === groupId ? { ...m, groupId: null } : m)));
-    try {
-      const res = await tracked(fetch(`/api/classes/${classId}/groups`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId }),
-      }));
-      if (!res.ok) throw new Error("delete failed");
-      onChanged?.();
-      const n = affectedStudents.length;
-      push({
-        title: `"${groupName}" deleted`,
-        description: n > 0
-          ? `${n} student${n === 1 ? "" : "s"} moved back to waiting.`
-          : "No students were affected.",
-      });
-    } catch {
-      setGroups(prevGroups);
-      setMembers(prevMembers);
-      push({ title: "Couldn't delete group", description: "Please try again." });
-    }
+
+    // Cancel any in-flight pending delete before scheduling a new one
+    if (pendingDeleteRef.current !== null) window.clearTimeout(pendingDeleteRef.current);
+
+    const n = affectedStudents.length;
+    push({
+      title: `"${groupName}" deleted`,
+      description: n > 0
+        ? `${n} student${n === 1 ? "" : "s"} moved back to waiting.`
+        : "No students were affected.",
+      actionLabel: "Undo",
+      onAction: () => {
+        if (pendingDeleteRef.current !== null) {
+          window.clearTimeout(pendingDeleteRef.current);
+          pendingDeleteRef.current = null;
+        }
+        setGroups(prevGroups);
+        setMembers(prevMembers);
+      },
+    });
+
+    // Fire the actual API call after the undo window (toast actionLabel duration = 6500ms)
+    pendingDeleteRef.current = window.setTimeout(async () => {
+      pendingDeleteRef.current = null;
+      try {
+        const res = await tracked(fetch(`/api/classes/${classId}/groups`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ groupId }),
+        }));
+        if (!res.ok) throw new Error("delete failed");
+        onChanged?.();
+      } catch {
+        setGroups(prevGroups);
+        setMembers(prevMembers);
+        push({ title: "Couldn't delete group", description: "Please try again." });
+      }
+    }, 5500);
   };
 
   const renameGroup = async (groupId: string, name: string) => {
@@ -767,25 +788,35 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               {lobby.length === 0 ? (
                 <p className="text-[11px] text-muted">Everyone has been placed.</p>
               ) : (
-                lobby.map((m) => (
-                  <div key={m.userId} className="group/chip flex items-center gap-1.5">
-                    {interactive && (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(m.userId)}
-                        onChange={() => toggleSelect(m.userId)}
-                        className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0"><DraggableStudent member={m} disabled={!interactive} onRename={interactive ? (name) => renameStudent(m.userId, name) : undefined} /></div>
-                    {interactive && (
-                      <>
-                        <AssignSelect value={LOBBY} groups={groups} onPick={(gid) => assign(m.userId, gid)} />
-                        <button onClick={() => setConfirmRemove(m)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
-                      </>
-                    )}
-                  </div>
-                ))
+                <>
+                  {lobby.slice(0, lobbyVisible).map((m) => (
+                    <div key={m.userId} className="group/chip flex items-center gap-1.5">
+                      {interactive && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(m.userId)}
+                          onChange={() => toggleSelect(m.userId)}
+                          className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0"><DraggableStudent member={m} disabled={!interactive} onRename={interactive ? (name) => renameStudent(m.userId, name) : undefined} /></div>
+                      {interactive && (
+                        <>
+                          <AssignSelect value={LOBBY} groups={groups} onPick={(gid) => assign(m.userId, gid)} />
+                          <button onClick={() => setConfirmRemove(m)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {lobby.length > lobbyVisible && (
+                    <button
+                      onClick={() => setLobbyVisible((v) => v + 20)}
+                      className="text-[11px] text-muted hover:text-ink transition-colors mt-1"
+                    >
+                      Show {Math.min(20, lobby.length - lobbyVisible)} more ({lobby.length - lobbyVisible} remaining)
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </DropZone>
@@ -966,14 +997,14 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                 const { name, taskCount, memberCount } = confirmDeleteGroup;
                 const tasks = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
                 const students = memberCount === 1 ? "1 student" : `${memberCount} students`;
-                return `"${name}" will be permanently deleted — ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. This cannot be undone.`;
+                return `"${name}" will be deleted — ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. You'll have a few seconds to undo.`;
               })()
             : ""
         }
         confirmLabel="Delete group"
         onClose={() => setConfirmDeleteGroup(null)}
-        onConfirm={async () => {
-          if (confirmDeleteGroup) await deleteGroup(confirmDeleteGroup.id);
+        onConfirm={() => {
+          if (confirmDeleteGroup) deleteGroup(confirmDeleteGroup.id);
         }}
       />
     </div>

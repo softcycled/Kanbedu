@@ -21,6 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       prisma.group.findMany({
         where: { classId: id },
         orderBy: { order: "asc" },
+        take: 200,
         include: {
           board: {
             include: {
@@ -88,10 +89,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       });
     }
 
-    // Fetch description versions and comments in parallel
+    // 90-day cutoff on description versions matches the integrity route and
+    // prevents runaway memory on large classes with long edit histories.
+    const versionCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const [descVersions, comments] = await Promise.all([
       prisma.taskDescriptionVersion.findMany({
-        where: { taskId: { in: taskIds } },
+        where: { taskId: { in: taskIds }, createdAt: { gte: versionCutoff } },
         select: { taskId: true, userId: true, content: true, createdAt: true },
         orderBy: [{ taskId: "asc" }, { createdAt: "asc" }],
       }),
