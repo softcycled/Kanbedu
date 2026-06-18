@@ -30,6 +30,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         members: {
           include: { user: { select: { id: true, name: true, handle: true, color: true, email: true } } },
         },
+        rosterEntries: {
+          where: { claimedBy: null },
+          select: { id: true, email: true, name: true, groupName: true },
+        },
       },
     });
     if (!cls) return NextResponse.json({ error: "Class not found." }, { status: 404 });
@@ -86,6 +90,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         handle: m.user.handle,
         color: m.user.color,
         email: m.user.email,
+      })),
+      pendingInvites: cls.rosterEntries.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        groupName: r.groupName ?? null,
       })),
     });
   } catch (error) {

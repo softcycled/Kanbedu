@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
-const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL = 3_000;
 
 export function useRealtime(channelSecret: string | null, onRefresh?: (payload?: unknown) => void) {
   const onRefreshRef = useRef(onRefresh);

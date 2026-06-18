@@ -253,6 +253,7 @@ function AssignSelect({
 export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, readOnly = false }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; name: string; groupName: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -288,6 +289,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           const data = await res.json();
           setMembers(data.members || []);
           setGroups(data.groups || []);
+          setPendingInvites(data.pendingInvites || []);
           if (silent) setLoadError(false);
         } else if (!silent) {
           setLoadError(true);
@@ -863,6 +865,29 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           {activeMember ? <StudentChip member={activeMember} dragging /> : null}
         </DragOverlay>
       </DndContext>
+
+      {pendingInvites.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-ink">Invited, not yet joined</h3>
+            <span className="text-[11px] text-muted">{pendingInvites.length}</span>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card-bg divide-y divide-border/50">
+            {pendingInvites.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="w-7 h-7 rounded-full bg-ink/8 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] text-muted">?</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-ink truncate">{p.name}</p>
+                  <p className="text-[11px] text-muted truncate">{p.email}{p.groupName ? ` · ${p.groupName}` : ""}</p>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-600 dark:text-amber-400 flex-shrink-0">Pending</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={!!confirmRemove}
