@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Only educators can view participation." }, { status: 403 });
     }
 
-    const [groups, nameOverrides] = await Promise.all([
+    const [groups, nameOverrides, classMembers] = await Promise.all([
       prisma.group.findMany({
         where: { classId: id },
         orderBy: { order: "asc" },
@@ -33,7 +33,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         },
       }),
       getClassNameOverrides(id),
+      prisma.classMember.findMany({
+        where: { classId: id },
+        select: { userId: true, role: true },
+      }),
     ]);
+
+    const nonStudentIds = new Set(
+      classMembers.filter((m) => m.role === "educator" || m.role === "ta").map((m) => m.userId)
+    );
 
     // Map column id -> boardId, task id -> boardId
     const colToBoardId = new Map<string, string>();
@@ -66,7 +74,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           groupId: g.id,
           name: g.name,
           boardId: g.boardId,
-          members: g.board.members.map((m) => ({
+          members: g.board.members.filter((m) => !nonStudentIds.has(m.user.id)).map((m) => ({
             userId: m.user.id,
             name: nameOverrides.get(m.user.id) ?? (m.user.handle ? `@${m.user.handle}` : m.user.name),
             handle: m.user.handle,
@@ -145,7 +153,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       groupId: g.id,
       name: g.name,
       boardId: g.boardId,
-      members: g.board.members.map((m) => {
+      members: g.board.members.filter((m) => !nonStudentIds.has(m.user.id)).map((m) => {
         const uid = m.user.id;
         const displayName = nameOverrides.get(uid) ?? (m.user.handle ? `@${m.user.handle}` : m.user.name);
         const desc = descStats.get(uid) ?? { wordsAdded: 0, edits: 0 };
