@@ -15,6 +15,7 @@ import {
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import Skeleton from "../Skeleton";
+import LiveIndicator from "./LiveIndicator";
 
 interface Member {
   userId: string;
@@ -156,7 +157,7 @@ function RosterDropdown({
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") { e.stopPropagation(); setOpen(false); }
     };
     document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", keyHandler);
@@ -633,10 +634,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               {showImport ? "Cancel" : "Import CSV"}
             </button>
           )}
-          <span className="flex items-center gap-1.5 text-[11px] text-muted" title="The roster auto-updates as students join">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
+          <LiveIndicator />
         </div>
       </div>
 

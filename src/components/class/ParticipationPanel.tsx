@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Skeleton from "../Skeleton";
 import SharedAvatar from "../Avatar";
-import SearchIcon from "../SearchIcon";
 import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
+import GroupSearchBar from "./GroupSearchBar";
+import SortPills from "./SortPills";
+import GroupCardHeader from "./GroupCardHeader";
 
 interface ParticipationMember {
   userId: string;
@@ -108,20 +110,15 @@ function GroupCard({
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card-bg">
-      <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-border/60">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-sm font-semibold text-ink truncate">{group.name}</h3>
+      <GroupCardHeader
+        name={group.name}
+        badge={
           <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-ink/8 text-muted flex-shrink-0">
             {totalWords.toLocaleString()} words
           </span>
-        </div>
-        <button
-          onClick={() => onOpenBoard({ id: group.groupId, name: group.name, boardId: group.boardId })}
-          className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0"
-        >
-          Open board
-        </button>
-      </div>
+        }
+        onOpenBoard={() => onOpenBoard({ id: group.groupId, name: group.name, boardId: group.boardId })}
+      />
       {group.members.length === 0 ? (
         <p className="px-5 py-4 text-sm text-muted">No members in this group yet.</p>
       ) : (
@@ -192,7 +189,7 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
   if (groups.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab first.
+        No groups yet. Create groups in the Roster tab.
       </div>
     );
   }
@@ -223,48 +220,22 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
 
       {/* Sort pills + search */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {([
+        <SortPills
+          options={[
             { key: "total", label: "Total" },
             { key: "desc", label: "Descriptions" },
             { key: "comments", label: "Comments" },
             { key: "alpha", label: "A–Z" },
-          ] as { key: SortKey; label: string }[]).map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setSortKey(opt.key)}
-              className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
-                sortKey === opt.key
-                  ? "bg-ink text-paper"
-                  : "bg-ink/8 text-ink/70 hover:bg-ink/12 hover:text-ink"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <div className="flex flex-col items-end gap-1">
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                <SearchIcon />
-              </div>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search groups…"
-                className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
-              />
-            </div>
-            {groupSuggestion && (
-              <button
-                onClick={() => setSearch(groupSuggestion)}
-                className="text-[11px] text-muted hover:text-ink transition-colors"
-              >
-                Did you mean <span className="font-medium underline">{groupSuggestion}</span>?
-              </button>
-            )}
-          </div>
+          ]}
+          value={sortKey}
+          onChange={(k) => setSortKey(k as SortKey)}
+        />
+        <div className="ml-auto">
+          <GroupSearchBar
+            value={search}
+            onChange={setSearch}
+            suggestion={groupSuggestion}
+          />
         </div>
       </div>
 

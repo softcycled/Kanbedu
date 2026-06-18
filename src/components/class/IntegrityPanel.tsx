@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
-import SearchIcon from "../SearchIcon";
 import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
+import GroupSearchBar from "./GroupSearchBar";
+import SortPills from "./SortPills";
+import LiveIndicator from "./LiveIndicator";
+import GroupCardHeader from "./GroupCardHeader";
 
 interface FlaggedTask {
   id: string;
@@ -158,7 +161,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
   if (!data || data.teamCount === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab. Each group&apos;s board is checked here.
+        No groups yet. Create groups in the Roster tab.
       </div>
     );
   }
@@ -204,10 +207,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
           moved straight to done without passing through
           earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
         </p>
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live
-        </span>
+        <LiveIndicator />
       </div>
 
       {data.totalFlagged === 0 ? (
@@ -232,49 +232,22 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {([
-                { id: "all", label: "All" },
-                { id: "speedRun", label: "Speed-run" },
-                { id: "columnSkip", label: "Skipped column" },
-                { id: "movedByOther", label: "Moved by other" },
-              ] as { id: FlagFilter; label: string }[]).map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFlagFilter(f.id)}
-                  className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
-                    flagFilter === f.id
-                      ? "bg-ink text-paper"
-                      : "bg-ink/8 text-ink/70 hover:bg-ink/12 hover:text-ink"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <SortPills
+              options={[
+                { key: "all", label: "All" },
+                { key: "speedRun", label: "Speed-run" },
+                { key: "columnSkip", label: "Skipped column" },
+                { key: "movedByOther", label: "Moved by other" },
+              ]}
+              value={flagFilter}
+              onChange={(k) => setFlagFilter(k as FlagFilter)}
+            />
             <div className="ml-auto flex items-center gap-3">
-              <div className="flex flex-col items-end gap-1">
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                    <SearchIcon />
-                  </div>
-                  <input
-                    type="text"
-                    value={groupSearch}
-                    onChange={(e) => setGroupSearch(e.target.value)}
-                    placeholder="Search groups…"
-                    className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
-                  />
-                </div>
-                {groupSuggestion && (
-                  <button
-                    onClick={() => setGroupSearch(groupSuggestion)}
-                    className="text-[11px] text-muted hover:text-ink transition-colors"
-                  >
-                    Did you mean <span className="font-medium underline">{groupSuggestion}</span>?
-                  </button>
-                )}
-              </div>
+              <GroupSearchBar
+                value={groupSearch}
+                onChange={setGroupSearch}
+                suggestion={groupSuggestion}
+              />
               <button
                 onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}
                 className="text-[11px] text-muted hover:text-ink transition-colors whitespace-nowrap"
@@ -290,20 +263,15 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
           <div className="space-y-5">
             {displayGroups.map((g) => (
               <section key={g.groupId} className="rounded-2xl border border-border/70 bg-card-bg">
-                <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-border/60">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm font-semibold text-ink truncate">{g.name}</h3>
+                <GroupCardHeader
+                  name={g.name}
+                  badge={
                     <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex-shrink-0">
                       {g.flagged.length} flagged
                     </span>
-                  </div>
-                  <button
-                    onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
-                    className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0"
-                  >
-                    Open board
-                  </button>
-                </div>
+                  }
+                  onOpenBoard={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
+                />
                 <ul className="divide-y divide-border/50">
                   {g.flagged.map((t) => (
                     <li key={t.id} className="px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">

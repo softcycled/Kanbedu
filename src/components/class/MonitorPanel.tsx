@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
 import SharedAvatar from "../Avatar";
-import SearchIcon from "../SearchIcon";
 import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
+import GroupSearchBar from "./GroupSearchBar";
+import LiveIndicator from "./LiveIndicator";
 
 interface MonitorMember {
   id: string;
@@ -132,7 +133,7 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
   if (groups.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab. Each group gets its own board to track here.
+        No groups yet. Create groups in the Roster tab.
       </div>
     );
   }
@@ -151,39 +152,18 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="flex flex-col items-end gap-1">
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                <SearchIcon />
-              </div>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search groups…"
-                className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
-              />
-            </div>
-            {(() => {
-              const suggestion = search.trim()
-                ? findGroupSuggestion(groups.map((g) => g.name), search, new Set(
-                    search.trim() ? groups.filter((g) => matchesGroupName(g.name, search)).map((g) => g.name) : []
-                  ))
-                : null;
-              return suggestion ? (
-                <button
-                  onClick={() => setSearch(suggestion)}
-                  className="text-[11px] text-muted hover:text-ink transition-colors"
-                >
-                  Did you mean <span className="font-medium underline">{suggestion}</span>?
-                </button>
-              ) : null;
-            })()}
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
+          <GroupSearchBar
+            value={search}
+            onChange={setSearch}
+            suggestion={search.trim()
+              ? findGroupSuggestion(
+                  groups.map((g) => g.name),
+                  search,
+                  new Set(groups.filter((g) => matchesGroupName(g.name, search)).map((g) => g.name))
+                )
+              : null}
+          />
+          <LiveIndicator />
         </div>
       </div>
 

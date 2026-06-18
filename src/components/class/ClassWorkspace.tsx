@@ -68,7 +68,7 @@ export default function ClassWorkspace(props: Props) {
       // Don't hijack Esc while a modal (e.g. a delete confirmation) is open —
       // the user expects Esc to dismiss the dialog, not leave the class.
       if (document.querySelector("[data-modal-open]")) return;
-      if (!openBoard) router.push("/");
+      if (openBoard) { setOpenBoard(null); } else { router.push("/"); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
