@@ -5,7 +5,18 @@ import ToastProvider from "@/components/Toasts";
 
 export const metadata: Metadata = {
   title: "Kanbedu",
-  description: "Lightweight kanban for student group projects",
+  description: "Kanban boards built for the classroom",
+  openGraph: {
+    title: "Kanbedu",
+    description: "Kanban boards built for the classroom",
+    siteName: "Kanbedu",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kanbedu",
+    description: "Kanban boards built for the classroom",
+  },
 };
 
 export default function RootLayout({
