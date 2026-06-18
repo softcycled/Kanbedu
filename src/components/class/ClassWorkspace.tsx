@@ -67,12 +67,11 @@ export default function ClassWorkspace(props: Props) {
       // Don't hijack Esc while a modal (e.g. a delete confirmation) is open —
       // the user expects Esc to dismiss the dialog, not leave the class.
       if (document.querySelector("[data-modal-open]")) return;
-      if (openBoard) setOpenBoard(null);
-      else router.push("/");
+      if (!openBoard) router.push("/");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openBoard, router]);
+  }, [openBoard, router]); // openBoard in deps so the closure sees current value
 
   // Opening a board takes the board info from the caller (Roster/Monitor always
   // have fresh data), since groups created in-session aren't in the page-load
