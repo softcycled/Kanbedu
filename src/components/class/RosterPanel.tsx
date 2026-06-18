@@ -874,7 +874,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           </div>
           <div className="rounded-2xl border border-border/70 bg-card-bg divide-y divide-border/50">
             {pendingInvites.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+              <div key={p.id} className="group/invite flex items-center gap-3 px-4 py-2.5">
                 <div className="w-7 h-7 rounded-full bg-ink/8 flex items-center justify-center flex-shrink-0">
                   <span className="text-[11px] text-muted">?</span>
                 </div>
@@ -883,6 +883,48 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                   <p className="text-[11px] text-muted truncate">{p.email}{p.groupName ? ` · ${p.groupName}` : ""}</p>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-600 dark:text-amber-400 flex-shrink-0">Pending</span>
+                {interactive && (
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover/invite:opacity-100 transition-opacity flex-shrink-0">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/classes/${classId}/roster`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ entryId: p.id }),
+                          });
+                          if (res.ok) push({ title: "Invite resent", description: p.email });
+                          else push({ title: "Couldn't resend invite", description: "Please try again." });
+                        } catch {
+                          push({ title: "Couldn't resend invite", description: "Please try again." });
+                        }
+                      }}
+                      className="text-[11px] text-muted hover:text-ink transition-colors"
+                      title="Resend invite email"
+                    >
+                      Resend
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/classes/${classId}/roster`, {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ entryId: p.id }),
+                          });
+                          if (res.ok) setPendingInvites((prev) => prev.filter((x) => x.id !== p.id));
+                          else push({ title: "Couldn't remove invite", description: "Please try again." });
+                        } catch {
+                          push({ title: "Couldn't remove invite", description: "Please try again." });
+                        }
+                      }}
+                      className="text-[11px] text-muted hover:text-red-500 transition-colors"
+                      title="Remove from roster"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
