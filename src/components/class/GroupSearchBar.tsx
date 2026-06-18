@@ -59,7 +59,7 @@ export default function GroupSearchBar({
                   onChange(name);
                   setOpen(false);
                 }}
-                className="w-full text-left px-3 py-1.5 text-sm text-ink hover:bg-ink/6 transition-colors"
+                className="w-full text-left px-3 py-1.5 text-sm text-ink/70 hover:text-ink hover:bg-ink/10 transition-all duration-100 border-l-2 border-transparent hover:border-ink/30"
               >
                 {name}
               </button>
