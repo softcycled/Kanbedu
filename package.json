@@ -10,7 +10,8 @@
     "start": "next start",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:backup": "node scripts/test-backup.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
