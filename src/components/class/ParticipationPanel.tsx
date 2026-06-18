@@ -60,7 +60,12 @@ function MemberRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="text-sm font-medium text-ink truncate">{member.name || member.handle || "Unknown"}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium text-ink truncate">{member.name || member.handle || "Unknown"}</span>
+            {member.handle && member.name !== `@${member.handle}` && (
+              <span className="text-[11px] text-muted/60 truncate">@{member.handle}</span>
+            )}
+          </div>
           <span className="text-xs text-muted flex-shrink-0">{total.toLocaleString()} words total</span>
         </div>
         <div className="grid grid-cols-[72px_1fr_auto] items-center gap-2 mb-1.5">

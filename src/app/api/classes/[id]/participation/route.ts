@@ -76,7 +76,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           boardId: g.boardId,
           members: g.board.members.filter((m) => !nonStudentIds.has(m.user.id)).map((m) => ({
             userId: m.user.id,
-            name: nameOverrides.get(m.user.id) ?? (m.user.handle ? `@${m.user.handle}` : m.user.name),
+            name: nameOverrides.get(m.user.id) || m.user.name || (m.user.handle ? `@${m.user.handle}` : "Unknown"),
             handle: m.user.handle,
             color: m.user.color,
             descWordsAdded: 0,
@@ -155,7 +155,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       boardId: g.boardId,
       members: g.board.members.filter((m) => !nonStudentIds.has(m.user.id)).map((m) => {
         const uid = m.user.id;
-        const displayName = nameOverrides.get(uid) ?? (m.user.handle ? `@${m.user.handle}` : m.user.name);
+        const displayName = nameOverrides.get(uid) || m.user.name || (m.user.handle ? `@${m.user.handle}` : "Unknown");
         const desc = descStats.get(uid) ?? { wordsAdded: 0, edits: 0 };
         const cmts = commentStats.get(uid) ?? { count: 0, words: 0 };
         return {
