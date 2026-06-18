@@ -2,6 +2,26 @@ const FROM_NAME = "Kanbedu";
 const FROM_EMAIL = "noreply@kanbedu.com";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+// Returns today's sent count (requests) from Brevo's statistics API.
+// Returns null if the API key is missing or the request fails.
+export async function getBrevoTodayStats(): Promise<{ sent: number; limit: number } | null> {
+  if (!process.env.BREVO_API_KEY) return null;
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const res = await fetch(
+      `https://api.brevo.com/v3/smtp/statistics/reports?startDate=${today}&endDate=${today}&days=1`,
+      { headers: { "api-key": process.env.BREVO_API_KEY }, next: { revalidate: 0 } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const report = Array.isArray(data?.reports) ? data.reports[0] : null;
+    const sent = typeof report?.requests === "number" ? report.requests : 0;
+    return { sent, limit: 300 };
+  } catch {
+    return null;
+  }
+}
+
 function emailLayout(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">

@@ -22,9 +22,18 @@ interface HealthData {
   latency: string;
 }
 
+interface EmailStats {
+  available: boolean;
+  sent?: number;
+  limit?: number;
+  remaining?: number;
+  warning?: boolean;
+}
+
 export default function AdminPanel() {
   const [reports, setReports] = useState<BugReport[]>([]);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
 
@@ -35,13 +44,15 @@ export default function AdminPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [reportsRes, healthRes] = await Promise.all([
+      const [reportsRes, healthRes, emailRes] = await Promise.all([
         fetch("/api/admin/reports"),
-        fetch("/api/admin/health")
+        fetch("/api/admin/health"),
+        fetch("/api/admin/email-stats"),
       ]);
-      
+
       if (reportsRes.ok) setReports(await reportsRes.json());
       if (healthRes.ok) setHealth(await healthRes.json());
+      if (emailRes.ok) setEmailStats(await emailRes.json());
     } catch (error) {
       console.error("Failed to fetch admin data:", error);
     } finally {
@@ -137,6 +148,18 @@ export default function AdminPanel() {
                   <span className="text-[9px] text-muted leading-none mb-1 uppercase font-bold">DB Latency</span>
                   <span className="text-xs font-mono font-bold text-ink">{health.latency}</span>
                 </div>
+                {emailStats?.available && emailStats.sent !== undefined && emailStats.limit !== undefined && (
+                  <>
+                    <div className="h-3 w-[1px] bg-border/60" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-[9px] text-muted leading-none mb-1 uppercase font-bold">Email today</span>
+                      <span className={`text-xs font-mono font-bold ${emailStats.warning ? "text-amber-500" : "text-ink"}`}>
+                        {emailStats.sent} / {emailStats.limit}
+                        {emailStats.warning && " !"}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
