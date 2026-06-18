@@ -192,6 +192,10 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
       )
     : null;
 
+  const groupAutocomplete = groupSearch.trim()
+    ? flaggedGroups.map((g) => g.name).filter((name) => matchesGroupName(name, groupSearch))
+    : flaggedGroups.map((g) => g.name);
+
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-4xl">
       {/* Live subscriptions: re-check integrity when any group board changes. */}
@@ -247,6 +251,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
                 value={groupSearch}
                 onChange={setGroupSearch}
                 suggestion={groupSuggestion}
+                suggestions={groupAutocomplete}
               />
               <button
                 onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}

@@ -172,7 +172,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       if (!container || !target) return;
       const cRect = container.getBoundingClientRect();
       const tRect = target.getBoundingClientRect();
-      setPos({ left: Math.round(tRect.left - cRect.left), width: Math.round(tRect.width) });
+      const borderLeft = parseFloat(getComputedStyle(container).borderLeftWidth) || 0;
+      setPos({ left: Math.round(tRect.left - cRect.left - borderLeft), width: Math.round(tRect.width) });
     };
     const update = () => {
       measure(toggleRef.current, viewMode === "board" ? boardBtnRef.current : listBtnRef.current, setSliderPos);
