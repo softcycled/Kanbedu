@@ -95,9 +95,12 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-3xl">
-      <p className="text-xs text-muted mb-5">
-        This is the starting layout for every <em>new</em> group board. Changing it won&apos;t touch boards that already exist.
-      </p>
+      <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/30 bg-amber-400/8 px-4 py-3 mb-5">
+        <span className="text-amber-500 text-sm flex-shrink-0 mt-px">!</span>
+        <p className="text-xs text-ink/70 leading-relaxed">
+          Changes here only apply to <strong className="text-ink font-medium">new groups</strong> created after you save. Existing group boards are not affected.
+        </p>
+      </div>
 
       {/* Columns */}
       <h3 className="text-sm font-semibold text-ink mb-2">Columns</h3>
