@@ -146,24 +146,41 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
         ) : null
       )}
 
-      <div className="flex items-center justify-between mb-5 gap-4">
-        <p className="text-xs text-muted">
+      <div className="flex items-start justify-between mb-5 gap-4">
+        <p className="text-xs text-muted max-w-xl">
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-              <SearchIcon />
+          <div className="flex flex-col items-end gap-1">
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                <SearchIcon />
+              </div>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search groups…"
+                className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
+              />
             </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search groups…"
-              className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
-            />
+            {(() => {
+              const suggestion = search.trim()
+                ? findGroupSuggestion(groups.map((g) => g.name), search, new Set(
+                    search.trim() ? groups.filter((g) => matchesGroupName(g.name, search)).map((g) => g.name) : []
+                  ))
+                : null;
+              return suggestion ? (
+                <button
+                  onClick={() => setSearch(suggestion)}
+                  className="text-[11px] text-muted hover:text-ink transition-colors"
+                >
+                  Did you mean <span className="font-medium underline">{suggestion}</span>?
+                </button>
+              ) : null;
+            })()}
           </div>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Live
           </span>
@@ -174,19 +191,8 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
         const visible = search.trim()
           ? groups.filter((g) => matchesGroupName(g.name, search))
           : groups;
-        const suggestion = search.trim()
-          ? findGroupSuggestion(groups.map((g) => g.name), search, new Set(visible.map((g) => g.name)))
-          : null;
         return (
         <>
-        {suggestion && (
-          <button
-            onClick={() => setSearch(suggestion)}
-            className="block mb-4 text-xs text-muted hover:text-ink transition-colors"
-          >
-            Did you mean <span className="font-medium underline">{suggestion}</span>?
-          </button>
-        )}
         {visible.length === 0 ? (
           <p className="text-sm text-muted">No groups match &ldquo;{search}&rdquo;.</p>
         ) : (
