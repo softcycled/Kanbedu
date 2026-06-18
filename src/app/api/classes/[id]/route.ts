@@ -22,7 +22,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         groups: {
           orderBy: { order: "asc" },
-          include: { _count: { select: { members: true } } },
+          include: {
+            _count: { select: { members: true } },
+            board: { select: { columns: { select: { _count: { select: { tasks: true } } } } } },
+          },
         },
         members: {
           include: { user: { select: { id: true, name: true, handle: true, color: true, email: true } } },
@@ -72,6 +75,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         order: g.order,
         boardId: g.boardId,
         memberCount: g._count.members,
+        taskCount: g.board.columns.reduce((s, c) => s + c._count.tasks, 0),
       })),
       members: cls.members.map((m) => ({
         userId: m.userId,

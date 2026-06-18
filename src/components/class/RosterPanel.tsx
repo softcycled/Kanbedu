@@ -33,6 +33,7 @@ interface Group {
   order: number;
   boardId: string;
   memberCount: number;
+  taskCount: number;
 }
 
 interface Props {
@@ -885,7 +886,12 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         title="Delete this group?"
         message={
           confirmDeleteGroup
-            ? `"${confirmDeleteGroup.name}" and its board, including all of the group's tasks, will be permanently deleted. Students in it return to waiting. This cannot be undone.`
+            ? (() => {
+                const { name, taskCount, memberCount } = confirmDeleteGroup;
+                const tasks = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
+                const students = memberCount === 1 ? "1 student" : `${memberCount} students`;
+                return `"${name}" will be permanently deleted — ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. This cannot be undone.`;
+              })()
             : ""
         }
         confirmLabel="Delete group"

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     return NextResponse.json(
-      { id: group.id, name: group.name, order: group.order, boardId: group.boardId, memberCount: 0 },
+      { id: group.id, name: group.name, order: group.order, boardId: group.boardId, memberCount: 0, taskCount: 0 },
       { status: 201 }
     );
   } catch (error) {
