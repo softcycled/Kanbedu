@@ -486,6 +486,8 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   const deleteGroup = async (groupId: string) => {
     const prevGroups = groups;
     const prevMembers = members;
+    const affectedStudents = members.filter((m) => m.groupId === groupId);
+    const groupName = groups.find((g) => g.id === groupId)?.name ?? "Group";
     // optimistic: remove the group, return its students to the lobby
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
     setMembers((prev) => prev.map((m) => (m.groupId === groupId ? { ...m, groupId: null } : m)));
@@ -497,6 +499,13 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
       }));
       if (!res.ok) throw new Error("delete failed");
       onChanged?.();
+      const n = affectedStudents.length;
+      push({
+        title: `"${groupName}" deleted`,
+        description: n > 0
+          ? `${n} student${n === 1 ? "" : "s"} moved back to waiting.`
+          : "No students were affected.",
+      });
     } catch {
       setGroups(prevGroups);
       setMembers(prevMembers);
