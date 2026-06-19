@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
-import { Task, Comment, TaskActivity } from "@/lib/types";
+import { Task, Comment, TaskActivity, Attachment } from "@/lib/types";
 import dynamic from "next/dynamic";
 const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
 import {
@@ -25,6 +25,12 @@ import { useToasts } from "@/components/Toasts";
 
 const getColumnDot = (color: string | null | undefined, index: number) =>
   index < 0 ? "bg-muted" : resolveColumnPalette(color, index).dot;
+
+function formatAttachmentSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface Props {
   task: Task | null;
@@ -132,6 +138,9 @@ export default function TaskModal({
   }, []);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const saveErrorTimeoutRef = useRef<number | null>(null);
@@ -203,9 +212,10 @@ export default function TaskModal({
         deadline: formatDateForInput(task.deadline),
       };
 
-      // sync comments/activities on first load for this task
+      // sync comments/activities/attachments on first load for this task
       setComments(task.comments ?? []);
       setActivities(task.activities ?? []);
+      setAttachments(task.attachments ?? []);
 
   // Do not eagerly fetch heavy relations while opening the modal. Instead:
       // - schedule a background fetch for comments (non-blocking, idle-friendly)
@@ -339,6 +349,43 @@ export default function TaskModal({
     pendingRequestsRef.current.versions = p;
     return p;
   }, [task]);
+
+  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!task || !e.target.files?.length) return;
+    const files = Array.from(e.target.files);
+    e.target.value = "";
+    setUploading(true);
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch(`/api/tasks/${task.id}/attachments`, { method: "POST", body: fd });
+        if (res.ok) {
+          const attachment: Attachment = await res.json();
+          setAttachments((prev) => [...prev, attachment]);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toasts.push({ title: data.error ?? "Upload failed." });
+        }
+      } catch {
+        toasts.push({ title: "Upload failed." });
+      }
+    }
+    setUploading(false);
+  }, [task, toasts]);
+
+  const deleteAttachment = useCallback(async (attachmentId: string) => {
+    let removed: Attachment | undefined;
+    setAttachments((prev) => {
+      removed = prev.find((a) => a.id === attachmentId);
+      return prev.filter((a) => a.id !== attachmentId);
+    });
+    const res = await fetch(`/api/attachments/${attachmentId}`, { method: "DELETE" });
+    if (!res.ok) {
+      toasts.push({ title: "Could not delete attachment." });
+      if (removed) setAttachments((prev) => [...prev, removed!].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))));
+    }
+  }, [toasts]);
 
   // Close column dropdown on outside click
   useEffect(() => {
@@ -1912,6 +1959,79 @@ export default function TaskModal({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Attachments */}
+            <div className="px-8 md:px-10 py-8 border-b border-border/30">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted">
+                  Attachments{attachments.length > 0 && <span className="normal-case font-normal ml-1">({attachments.length})</span>}
+                </label>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="text-xs text-muted hover:text-ink transition-colors disabled:opacity-40"
+                >
+                  {uploading ? "Uploading..." : "+ Attach file"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleUpload}
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.csv"
+                />
+              </div>
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  {attachments.map((a) => {
+                    const isImage = a.contentType.startsWith("image/");
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-column-bg/30 hover:bg-column-bg/50 transition-colors group"
+                      >
+                        {isImage ? (
+                          <img
+                            src={a.url}
+                            alt={a.filename}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-border/40"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-column-bg flex items-center justify-center flex-shrink-0 border border-border/40">
+                            <span className="text-[10px] font-bold text-muted uppercase">
+                              {a.filename.split(".").pop()?.slice(0, 4) ?? "file"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-ink hover:underline truncate block leading-tight"
+                          >
+                            {a.filename}
+                          </a>
+                          <span className="text-xs text-muted">{formatAttachmentSize(a.size)}</span>
+                        </div>
+                        <button
+                          onClick={() => deleteAttachment(a.id)}
+                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-500/15 text-muted hover:text-red-400 transition-all flex-shrink-0"
+                          title="Remove attachment"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted italic">No attachments yet.</p>
+              )}
             </div>
 
             {/* Comments */}

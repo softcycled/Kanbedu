@@ -92,6 +92,10 @@ export async function GET(
     priority: true,
     movedByNonAssignee: true,
     tags: { select: { id: true, name: true, color: true } },
+    attachments: {
+      orderBy: { createdAt: "asc" as const },
+      select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
+    },
   };
 
   const detailedInclude: any = wantAll

@@ -33,6 +33,7 @@ model User {
   classMemberships    ClassMember[]
   notifications       Notification[]
   pushSubscriptions   PushSubscription[]
+  attachments         Attachment[]
 }
 
 // In-app notification feed. Push delivery is best-effort on top of this.
@@ -149,6 +150,7 @@ model Task {
   columnHistory       TaskColumnHistory[]
   descriptionVersions TaskDescriptionVersion[]
   tags                Tag[]                    @relation("TagToTask")
+  attachments         Attachment[]
 
   // Compound (column, order): serves the board load (orderBy column, order),
   // the "last order in column" lookup on task create, and any column-only/FK
@@ -330,6 +332,21 @@ model Group {
   members ClassMember[]
 
   @@index([classId])
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  url         String
+  filename    String
+  size        Int
+  contentType String
+  uploadedBy  String
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
 }
 
 // Snapshot of column layout + seed tasks; materialized into each group board, and cloned on reuse

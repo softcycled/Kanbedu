@@ -30,6 +30,16 @@ export interface Tag {
   boardId: string;
 }
 
+export interface Attachment {
+  id: string;
+  url: string;
+  filename: string;
+  size: number;
+  contentType: string;
+  uploadedBy: string;
+  createdAt: string | Date;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -65,6 +75,7 @@ export interface Task {
   };
   tags?: Tag[];
   activities?: TaskActivity[];
+  attachments?: Attachment[];
 }
 
 export interface TaskActivity {
