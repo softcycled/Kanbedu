@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/auth";
+import { getClientIp } from "@/lib/rateLimit";
+import { logSecurityEvent } from "@/lib/securityLog";
 
 // Status Update
 export async function PATCH(
@@ -20,6 +22,7 @@ export async function PATCH(
     });
 
     if (!user?.isAdmin) {
+      logSecurityEvent({ type: "admin_denied", route: `/api/admin/reports/${id}`, ip: getClientIp(req), userId: session.userId, detail: "PATCH" });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -39,6 +42,7 @@ export async function PATCH(
       data: { status },
     });
 
+    logSecurityEvent({ type: "admin_action", route: `/api/admin/reports/${id}`, userId: session.userId, detail: `set status ${status}` });
     return NextResponse.json(report);
   } catch (error) {
     console.error("Admin report update error:", error);
@@ -64,6 +68,7 @@ export async function DELETE(
     });
 
     if (!user?.isAdmin) {
+      logSecurityEvent({ type: "admin_denied", route: `/api/admin/reports/${id}`, ip: getClientIp(req), userId: session.userId, detail: "DELETE" });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -71,6 +76,7 @@ export async function DELETE(
       where: { id },
     });
 
+    logSecurityEvent({ type: "admin_action", route: `/api/admin/reports/${id}`, userId: session.userId, detail: "delete report" });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Admin report deletion error:", error);
