@@ -8,7 +8,6 @@ import {
   isOverdue,
   timeInColumn,
   formatDateForInput,
-  formatTimeForInput,
   combineDateTimeToISO,
   formatDateTime,
   formatTimeAgo,
@@ -82,7 +81,6 @@ export default function TaskModal({
   const [columnDropdownOpen, setColumnDropdownOpen] = useState(false);
   const columnDropdownRef = useRef<HTMLDivElement>(null);
   const [deadline, setDeadline] = useState("");
-  const [deadlineTime, setDeadlineTime] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
@@ -165,7 +163,6 @@ export default function TaskModal({
   const debouncedDescription = useDebounce(description, 600);
   const debouncedAssigneeIds = useDebounce(assigneeIds.join(","), 600);
   const debouncedDeadline = useDebounce(deadline, 600);
-  const debouncedDeadlineTime = useDebounce(deadlineTime, 600);
   const [optimisticTagIds, setOptimisticTagIds] = useState<string[] | null>(null);
 
   const prevTask = useRef<string | null>(null);
@@ -208,14 +205,12 @@ export default function TaskModal({
       setAssigneeIds(taskAssigneeIds);
       setColumnId(task.column ?? "");
       const initialDeadlineDate = formatDateForInput(task.deadline);
-      const initialDeadlineTime = formatTimeForInput(task.deadline);
       setDeadline(initialDeadlineDate);
-      setDeadlineTime(initialDeadlineTime);
 
       originalTask.current = {
         description: task.description ?? "",
         assigneeIds: taskAssigneeIds.join(","),
-        deadline: combineDateTimeToISO(initialDeadlineDate, initialDeadlineTime),
+        deadline: combineDateTimeToISO(initialDeadlineDate, ""),
       };
 
       // sync comments/activities/attachments on first load for this task
@@ -651,13 +646,13 @@ export default function TaskModal({
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    const deadlineValue = combineDateTimeToISO(debouncedDeadline, debouncedDeadlineTime);
+    const deadlineValue = combineDateTimeToISO(debouncedDeadline, "");
     const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       void handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDeadline, debouncedDeadlineTime]);
+  }, [debouncedDeadline]);
 
   // Flush any pending debounced updates before closing
   const flushUpdates = useCallback(() => {
@@ -670,7 +665,7 @@ export default function TaskModal({
     if (assigneeIds.join(",") !== (originalTask.current?.assigneeIds ?? "")) {
       (updates as any).assigneeIds = assigneeIds;
     }
-    const deadlineValue = combineDateTimeToISO(deadline, deadlineTime);
+    const deadlineValue = combineDateTimeToISO(deadline, "");
     const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       updates.deadline = deadlineValue;
@@ -680,7 +675,7 @@ export default function TaskModal({
     if (Object.keys(updates).length > 0) {
       void handleUpdateWithFeedback(task.id, updates);
     }
-  }, [task, description, assigneeIds, deadline, deadlineTime, handleUpdateWithFeedback]);
+  }, [task, description, assigneeIds, deadline, handleUpdateWithFeedback]);
 
   const handleClose = useCallback(() => {
     setConfirmDelete(false);
@@ -908,7 +903,7 @@ export default function TaskModal({
 
   const overdue = isOverdue(task.deadline, task.completedAt);
   // derive semantic deadline info from the local date/time inputs (shows unsaved edits)
-  const deadlineInfo = formatDeadlineLabel(combineDateTimeToISO(deadline, deadlineTime), task.completedAt);
+  const deadlineInfo = formatDeadlineLabel(combineDateTimeToISO(deadline, ""), task.completedAt);
 
   // decide whether to show a muted 'future' status: show only for deadlines within the next 7 days
   let showDeadlineStatus = false;
@@ -1130,30 +1125,16 @@ export default function TaskModal({
               value={deadline}
               onChange={(e) => {
                 userHasEdited.current = true;
-                const v = e.target.value;
-                setDeadline(v);
-                // A time without a date is meaningless; clear it when the date is removed.
-                if (!v) setDeadlineTime("");
+                setDeadline(e.target.value);
               }}
               className="-mx-2 px-2 py-1 bg-transparent text-sm text-ink rounded-md hover:bg-column-bg focus:bg-column-bg focus:outline-none transition-colors"
             />
-            {deadline && (
-              <input
-                type="time"
-                value={deadlineTime}
-                onChange={(e) => { userHasEdited.current = true; setDeadlineTime(e.target.value); }}
-                aria-label="Deadline time (optional)"
-                title="Optional time of day"
-                className="px-1.5 py-1 bg-transparent text-sm text-muted rounded-md hover:bg-column-bg hover:text-ink focus:bg-column-bg focus:text-ink focus:outline-none transition-colors"
-              />
-            )}
             {deadline && (
               <button
                 type="button"
                 onClick={() => {
                   userHasEdited.current = true;
                   setDeadline("");
-                  setDeadlineTime("");
                   // Fire immediately so removal never depends on the debounce/close flush.
                   void handleUpdateWithFeedback(task.id, { deadline: null } as Partial<Task>);
                 }}
