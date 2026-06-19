@@ -100,7 +100,7 @@ function KanbanColumn({
       <div
         ref={setDropRef}
         className={`rounded-2xl p-3 transition-colors duration-150 min-h-[120px] ${
-          isOver ? "bg-accent-light" : `bg-column-bg ${colors.bg}`
+          isOver ? "bg-accent-light" : "bg-column-bg"
         }`}
       >
         <SortableContext
