@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateBoardSchema, parseBody } from "@/lib/validations";
 import { getVerifiedSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 // PATCH update board
 export async function PATCH(
@@ -23,6 +24,7 @@ export async function PATCH(
       where: { userId_boardId: { userId: session.userId, boardId: id } },
     });
     if (!membership || membership.role !== "owner") {
+      logAuthzDenied(request, "/api/boards/[id]", session.userId, "PATCH owner-only");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -69,6 +71,7 @@ export async function DELETE(
       prisma.group.findUnique({ where: { boardId: id }, select: { classId: true } }),
     ]);
     if (!membership || membership.role !== "owner") {
+      logAuthzDenied(_request, "/api/boards/[id]", session.userId, "DELETE owner-only");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (groupBoard) {

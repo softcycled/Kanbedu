@@ -33,3 +33,24 @@ export function logSecurityEvent(event: SecurityEvent): void {
     // ignore serialization/logging failures
   }
 }
+
+// Extract the client IP without importing the rate-limit module (keeps this file
+// free of Prisma so it stays edge-safe for middleware).
+function clientIpFrom(req: { headers: { get(name: string): string | null } }): string | undefined {
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+  const last = req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  return last || undefined;
+}
+
+// Convenience wrapper for an authorization denial in a route handler: logs an
+// authz_denied event with the caller and route. Call it right before returning
+// the 403. detail can note the scope (e.g. "educator-only", "cross-tenant").
+export function logAuthzDenied(
+  req: { headers: { get(name: string): string | null } },
+  route: string,
+  userId?: string,
+  detail?: string
+): void {
+  logSecurityEvent({ type: "authz_denied", route, ip: clientIpFrom(req), userId, detail });
+}

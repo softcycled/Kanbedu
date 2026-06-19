@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { put } from "@vercel/blob";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PER_TASK = 20;
@@ -52,7 +53,10 @@ export async function GET(
   });
 
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!task.columnRel.board?.members?.length) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!task.columnRel.board?.members?.length) {
+    logAuthzDenied(_req, "/api/tasks/[id]/attachments", session.userId, "GET cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const attachments = await prisma.attachment.findMany({
     where: { taskId: id },
@@ -89,7 +93,10 @@ export async function POST(
   });
 
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!task.columnRel.board?.members?.length) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!task.columnRel.board?.members?.length) {
+    logAuthzDenied(req, "/api/tasks/[id]/attachments", session.userId, "POST cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const count = await prisma.attachment.count({ where: { taskId: id } });
   if (count >= MAX_PER_TASK) {

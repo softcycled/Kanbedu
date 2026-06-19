@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { getBoardNameOverrides } from "@/lib/classNames";
 
 export async function GET(request: NextRequest) {
@@ -18,7 +19,10 @@ export async function GET(request: NextRequest) {
   }
 
   const allowed = await isMemberOfBoard(session.userId, boardId);
-  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!allowed) {
+    logAuthzDenied(request, "/api/analytics", session.userId, "GET cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
 
   // Limit history lookback to 90 days — prevents unbounded scans on long-lived boards

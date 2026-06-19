@@ -5,6 +5,7 @@ import { getVerifiedSession } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 export async function POST(req: Request) {
   const parsed = await parseJsonBody(req);
@@ -43,7 +44,10 @@ export async function POST(req: Request) {
     prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, handle: true, email: true } }),
   ]);
   if (!taskRow || !taskRow.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  if ((taskRow.columnRel.board?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((taskRow.columnRel.board?.members?.length ?? 0) === 0) {
+    logAuthzDenied(req, "/api/comments", session.userId, "POST cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const author = user?.handle
     ? `@${user.handle}`

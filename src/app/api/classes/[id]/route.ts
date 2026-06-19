@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { updateClassSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 // GET: role-aware class detail.
 // Educators/TAs receive the full roster, groups and joinCode.
@@ -15,7 +16,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const role = await getClassRole(session.userId, id);
-    if (!role) return NextResponse.json({ error: "Not a member of this class." }, { status: 403 });
+    if (!role) {
+      logAuthzDenied(_req, "/api/classes/[id]", session.userId, "GET not-a-member");
+      return NextResponse.json({ error: "Not a member of this class." }, { status: 403 });
+    }
 
     const cls = await prisma.class.findUnique({
       where: { id },

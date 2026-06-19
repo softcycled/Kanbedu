@@ -6,6 +6,7 @@ import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getBoardNameOverrides } from "@/lib/classNames";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 // GET single task with full details (activities, comments, etc.)
 export async function GET(
@@ -68,6 +69,7 @@ export async function GET(
   const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
   if (!allowed) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 403 });
+    logAuthzDenied(_req, "/api/tasks/[id]", session.userId, "GET cross-tenant");
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -241,7 +243,10 @@ export async function PATCH(
   });
   if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
   const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
-  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!allowed) {
+    logAuthzDenied(req, "/api/tasks/[id]", session.userId, "PATCH cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Validate that any assignee/tags are scoped to this task's board — prevents
   // assigning to a non-member or attaching another board's tags. Null assignee
@@ -680,7 +685,10 @@ export async function DELETE(
       },
     });
     if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if ((taskAuth.columnRel.board?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if ((taskAuth.columnRel.board?.members?.length ?? 0) === 0) {
+      logAuthzDenied(_req, "/api/tasks/[id]", session.userId, "DELETE cross-tenant");
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await prisma.notification.deleteMany({ where: { taskId: id } });
     await prisma.task.delete({ where: { id: id } });

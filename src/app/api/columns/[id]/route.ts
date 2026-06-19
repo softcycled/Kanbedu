@@ -4,6 +4,7 @@ import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validat
 import { getVerifiedSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 // PATCH update column (rename, set done)
 export async function PATCH(
@@ -30,6 +31,7 @@ export async function PATCH(
       where: { userId_boardId: { userId: session.userId, boardId: columnInfo.boardId } },
     });
     if (!membership) {
+      logAuthzDenied(request, "/api/columns/[id]", session.userId, "PATCH cross-tenant");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -144,6 +146,7 @@ export async function DELETE(
       where: { userId_boardId: { userId: session.userId, boardId: col.boardId } },
     });
     if (!membership) {
+      logAuthzDenied(request, "/api/columns/[id]", session.userId, "DELETE cross-tenant");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (membership.role !== "owner") {
