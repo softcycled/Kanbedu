@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
+import { logSecurityEvent } from "@/lib/securityLog";
 
 // A task is "stalled" if it has sat in a non-done column without movement for
 // this many days. Surfaced as a help signal, never as a ranking.
@@ -15,6 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logSecurityEvent({ type: "authz_denied", route: "/api/classes/[id]/monitor", userId: session.userId, detail: "educator-only" });
       return NextResponse.json({ error: "Only educators can view the monitor." }, { status: 403 });
     }
 
