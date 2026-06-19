@@ -4,7 +4,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com;
+  img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com;
   font-src 'self' https://fonts.gstatic.com;
   connect-src 'self' https://*.supabase.co wss://*.supabase.co;
   object-src 'none';
