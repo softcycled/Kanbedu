@@ -6,17 +6,17 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const COLS = [
-  { color: "#60A5FA", height: 250, cards: [72, 52, 40] },
-  { color: "#C084FC", height: 215, cards: [72, 52] },
-  { color: "#FB923C", height: 230, cards: [72, 52] },
-  { color: "#4ADE80", height: 200, cards: [72, 52] },
+  { color: "#60A5FA", label: "To Do",       cards: [80, 60, 44] },
+  { color: "#FB923C", label: "In Progress", cards: [80, 60] },
+  { color: "#C084FC", label: "Review",      cards: [80] },
+  { color: "#4ADE80", label: "Done",        cards: [80, 60] },
 ];
 
 export default async function Image() {
   let fontData: ArrayBuffer | null = null;
   try {
     const css = await fetch(
-      "https://fonts.googleapis.com/css2?family=Geist:wght@300&display=swap",
+      "https://fonts.googleapis.com/css2?family=Geist:wght@700&display=swap",
       { headers: { "User-Agent": "Mozilla/5.0 (compatible; bot)" } }
     ).then((r) => r.text());
     const match = css.match(/src: url\((.+?)\) format\('woff2'\)/);
@@ -56,59 +56,77 @@ export default async function Image() {
               key={i}
               style={{
                 flex: 1,
-                height: `${col.height}px`,
                 display: "flex",
                 flexDirection: "column",
-                borderRadius: "14px 14px 0 0",
-                border: "1px solid rgba(255,255,255,0.07)",
-                borderBottom: "none",
-                backgroundColor: "rgba(255,255,255,0.025)",
-                padding: "16px 14px",
                 gap: "10px",
               }}
             >
-              {/* Colored accent dot + label row */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+              {/* Column header — matches ColumnHeader.tsx style */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  border: `1px solid ${col.color}40`,
+                  backgroundColor: `${col.color}18`,
+                }}
+              >
                 <div
                   style={{
                     width: "10px",
                     height: "10px",
                     borderRadius: "50%",
                     backgroundColor: col.color,
-                    opacity: 0.9,
                     flexShrink: 0,
                   }}
                 />
                 <div
                   style={{
-                    height: "8px",
-                    width: "56px",
-                    backgroundColor: col.color,
-                    borderRadius: "4px",
-                    opacity: 0.25,
-                  }}
-                />
-              </div>
-              {/* Card stubs */}
-              {col.cards.map((h, j) => (
-                <div
-                  key={j}
-                  style={{
-                    height: `${h}px`,
-                    width: "100%",
-                    backgroundColor: "rgba(255,255,255,0.055)",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    display: "flex",
-                    flexDirection: "column",
-                    padding: "12px",
-                    gap: "8px",
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: col.color,
+                    letterSpacing: "-0.2px",
                   }}
                 >
-                  <div style={{ height: "8px", width: "70%", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: "4px" }} />
-                  {h > 52 && <div style={{ height: "6px", width: "45%", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: "4px" }} />}
+                  {col.label}
                 </div>
-              ))}
+              </div>
+
+              {/* Card stubs */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  padding: "10px",
+                  borderRadius: "14px",
+                  backgroundColor: `${col.color}08`,
+                  border: `1px solid ${col.color}18`,
+                  flex: 1,
+                }}
+              >
+                {col.cards.map((h, j) => (
+                  <div
+                    key={j}
+                    style={{
+                      height: `${h}px`,
+                      width: "100%",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      display: "flex",
+                      flexDirection: "column",
+                      padding: "12px",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ height: "8px", width: "70%", backgroundColor: "rgba(255,255,255,0.18)", borderRadius: "4px" }} />
+                    {h > 52 && <div style={{ height: "6px", width: "45%", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: "4px" }} />}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -131,7 +149,7 @@ export default async function Image() {
           <div
             style={{
               fontSize: "96px",
-              fontWeight: 300,
+              fontWeight: 700,
               color: "#FAFAF9",
               letterSpacing: "-3px",
               lineHeight: 1,
@@ -155,7 +173,7 @@ export default async function Image() {
     {
       ...size,
       ...(fontData
-        ? { fonts: [{ name: "Geist", data: fontData, weight: 300, style: "normal" }] }
+        ? { fonts: [{ name: "Geist", data: fontData, weight: 700, style: "normal" }] }
         : {}),
     }
   );

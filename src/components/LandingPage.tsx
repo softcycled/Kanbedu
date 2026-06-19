@@ -145,7 +145,7 @@ export default function LandingPage() {
           style={{ background: "rgba(22,20,18,0.90)" }}
         >
           <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
-            <Link href="/landing" className="text-lg font-semibold tracking-tight text-ink">
+            <Link href="/landing" className="text-lg font-bold tracking-tight text-ink">
               kanbedu
             </Link>
             <div className="flex items-center gap-5">
