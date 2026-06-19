@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/Toasts";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://kanbedu.com"),
   title: "Kanbedu",
   description: "Kanban boards built for the classroom",
   openGraph: {
