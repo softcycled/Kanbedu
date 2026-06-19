@@ -27,6 +27,13 @@ async function unassignUserFromBoardTasks(
     WHERE t."column" IN (${Prisma.join(colIds)}) AND t."assigneeId" = ${userId}`;
 }
 
+// Rotate a group board's realtime secret so a student removed from it can no
+// longer use the secret they already learned to subscribe to its channel.
+// Remaining group members re-subscribe on their next board refetch.
+async function rotateBoardSecret(tx: Prisma.TransactionClient, boardId: string) {
+  await tx.board.update({ where: { id: boardId }, data: { realtimeSecret: crypto.randomUUID() } });
+}
+
 // PATCH: assign/move a student to a group, return them to the lobby, change
 // their role, remove them from the class, or assign many students at once
 // (batch). Educator/TA only.
@@ -97,6 +104,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             await tx.boardMember.deleteMany({ where: { userId: a.userId, boardId: oldBoardId } });
             // Unassign from tasks on the old board — treat as leaving the group.
             await unassignUserFromBoardTasks(tx, a.userId, oldBoardId);
+            await rotateBoardSecret(tx, oldBoardId);
           }
           if (newBoardId) {
             await tx.boardMember.upsert({
@@ -145,6 +153,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (oldBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
           await unassignUserFromBoardTasks(tx, userId, oldBoardId);
+          await rotateBoardSecret(tx, oldBoardId);
         }
         await tx.classMember.delete({ where: { userId_classId: { userId, classId: id } } });
       });
@@ -172,6 +181,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (oldBoardId && oldBoardId !== newBoardId) {
           await tx.boardMember.deleteMany({ where: { userId, boardId: oldBoardId } });
           await unassignUserFromBoardTasks(tx, userId, oldBoardId);
+          await rotateBoardSecret(tx, oldBoardId);
         }
         // Add to the new group's board (idempotent).
         if (newBoardId) {
@@ -237,6 +247,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     await prisma.$transaction(async (tx) => {
       if (boardId) {
         await tx.boardMember.deleteMany({ where: { userId: session.userId, boardId } });
+        await rotateBoardSecret(tx, boardId);
       }
       await tx.classMember.delete({ where: { userId_classId: { userId: session.userId, classId: id } } });
     });
