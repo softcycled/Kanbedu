@@ -115,10 +115,11 @@ function LoginContent() {
             {mode === "signup" && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
+                  <label htmlFor="signup-name" className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                     Name
                   </label>
                   <input
+                    id="signup-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -128,7 +129,7 @@ function LoginContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
+                  <label htmlFor="signup-handle" className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                     Username
                   </label>
                   <div className="relative">
@@ -136,6 +137,7 @@ function LoginContent() {
                       @
                     </span>
                     <input
+                      id="signup-handle"
                       type="text"
                       value={handle}
                       onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
@@ -162,10 +164,11 @@ function LoginContent() {
             )}
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
+              <label htmlFor="auth-email" className="block text-xs font-semibold uppercase tracking-widest mb-2 text-muted">
                 Email
               </label>
               <input
+                id="auth-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -179,7 +182,7 @@ function LoginContent() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted">
+                <label htmlFor="auth-password" className="block text-xs font-semibold uppercase tracking-widest text-muted">
                   Password
                 </label>
                 {mode === "login" && (
@@ -189,6 +192,7 @@ function LoginContent() {
                 )}
               </div>
               <input
+                id="auth-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
