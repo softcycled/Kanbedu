@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
-import { Task, Comment, TaskActivity } from "@/lib/types";
+import { Task, Comment, TaskActivity, Attachment } from "@/lib/types";
 import dynamic from "next/dynamic";
 const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
 import {
@@ -19,13 +19,19 @@ import { LABEL_PALETTE } from "@/lib/labelPalette";
 import PriorityIcon from "./PriorityIcon";
 import MarkdownText from "./MarkdownText";
 import MarkdownToolbar from "./MarkdownToolbar";
-import { getColumnPalette } from "@/lib/columnPalette";
+import { resolveColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 import Avatar from "./Avatar";
 import { useToasts } from "@/components/Toasts";
 
-const getColumnDot = (index: number) =>
-  index < 0 ? "bg-muted" : getColumnPalette(index).dot;
+const getColumnDot = (color: string | null | undefined, index: number) =>
+  index < 0 ? "bg-muted" : resolveColumnPalette(color, index).dot;
+
+function formatAttachmentSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface Props {
   task: Task | null;
@@ -134,6 +140,9 @@ export default function TaskModal({
   }, []);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const saveErrorTimeoutRef = useRef<number | null>(null);
@@ -209,9 +218,10 @@ export default function TaskModal({
         deadline: combineDateTimeToISO(initialDeadlineDate, initialDeadlineTime),
       };
 
-      // sync comments/activities on first load for this task
+      // sync comments/activities/attachments on first load for this task
       setComments(task.comments ?? []);
       setActivities(task.activities ?? []);
+      setAttachments(task.attachments ?? []);
 
   // Do not eagerly fetch heavy relations while opening the modal. Instead:
       // - schedule a background fetch for comments (non-blocking, idle-friendly)
@@ -251,9 +261,10 @@ export default function TaskModal({
 
       const lastIncomingCommentId = incomingComments.length ? incomingComments[incomingComments.length - 1].id : null;
       const lastLocalCommentId = comments.length ? comments[comments.length - 1].id : null;
+      const hasPendingOptimistic = comments.some((c) => c.id.startsWith("local-"));
       if ((!comments || comments.length === 0) && incomingComments.length > 0) {
         setComments(incomingComments);
-      } else if (lastIncomingCommentId && lastIncomingCommentId !== lastLocalCommentId) {
+      } else if (lastIncomingCommentId && lastIncomingCommentId !== lastLocalCommentId && !hasPendingOptimistic) {
         setComments(incomingComments);
       }
 
@@ -344,6 +355,43 @@ export default function TaskModal({
     pendingRequestsRef.current.versions = p;
     return p;
   }, [task]);
+
+  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!task || !e.target.files?.length) return;
+    const files = Array.from(e.target.files);
+    e.target.value = "";
+    setUploading(true);
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch(`/api/tasks/${task.id}/attachments`, { method: "POST", body: fd });
+        if (res.ok) {
+          const attachment: Attachment = await res.json();
+          setAttachments((prev) => [...prev, attachment]);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toasts.push({ title: data.error ?? "Upload failed." });
+        }
+      } catch {
+        toasts.push({ title: "Upload failed." });
+      }
+    }
+    setUploading(false);
+  }, [task, toasts]);
+
+  const deleteAttachment = useCallback(async (attachmentId: string) => {
+    let removed: Attachment | undefined;
+    setAttachments((prev) => {
+      removed = prev.find((a) => a.id === attachmentId);
+      return prev.filter((a) => a.id !== attachmentId);
+    });
+    const res = await fetch(`/api/attachments/${attachmentId}`, { method: "DELETE" });
+    if (!res.ok) {
+      toasts.push({ title: "Could not delete attachment." });
+      if (removed) setAttachments((prev) => [...prev, removed!].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))));
+    }
+  }, [toasts]);
 
   // Close column dropdown on outside click
   useEffect(() => {
@@ -554,6 +602,16 @@ export default function TaskModal({
     try {
       await onUpdate(id, data);
       if (!isMounted.current) return;
+      // Refresh the saved baseline for the fields we just persisted so later
+      // autosaves and the flush-on-close don't re-send unchanged values
+      // (which would create duplicate description-version history entries and
+      // redundant "Updated the description" activity records).
+      if (originalTask.current) {
+        const d = data as any;
+        if ("description" in d) originalTask.current.description = d.description ?? "";
+        if ("deadline" in d) originalTask.current.deadline = d.deadline ? formatDateForInput(d.deadline) : "";
+        if ("assigneeIds" in d) originalTask.current.assigneeIds = (d.assigneeIds ?? []).join(",");
+      }
       setJustSaved(true);
       if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
       savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);
@@ -646,7 +704,9 @@ export default function TaskModal({
   }, [flushUpdates, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape" && !isEditingTitleRef.current && !isEditingDescriptionRef.current) handleClose();
+    if (e.key !== "Escape") return;
+    e.stopPropagation(); // prevent ClassWorkspace / BoardContainer window listeners from also firing
+    if (!isEditingTitleRef.current && !isEditingDescriptionRef.current) handleClose();
   }, [handleClose]);
 
   useEffect(() => {
@@ -683,8 +743,8 @@ export default function TaskModal({
     if (!trimmed || !task) return;
     // optimistic UI: add a local comment and activity immediately
     setCommentInput("");
-    const localId = `local-comment-${Date.now()}`;
-    const localActId = `local-act-comment-${Date.now()}`;
+    const localId = `local-comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const localActId = `local-act-comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const optimistic: Comment = { id: localId, content: trimmed, author: commentAuthor.trim() || "Anonymous", createdAt: new Date().toISOString(), taskId: task.id };
     setComments((prev) => [...prev, optimistic]);
     setActivities((prev) => [
@@ -967,7 +1027,7 @@ export default function TaskModal({
             onClick={() => setColumnDropdownOpen((v) => !v)}
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.findIndex((c) => c.id === columnId))}`} />
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.find((c) => c.id === columnId)?.color, columns.findIndex((c) => c.id === columnId))}`} />
             <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
           </button>
           {columnDropdownOpen && (
@@ -986,7 +1046,7 @@ export default function TaskModal({
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
                   >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
                     <span className="truncate">{c.label}</span>
                     {isSelected && (
                       <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1356,7 +1416,7 @@ export default function TaskModal({
           )}
         </div>
 
-        {/* History */}
+        {/* Description History */}
         <div>
           <button
             onClick={() => {
@@ -1372,9 +1432,7 @@ export default function TaskModal({
             >
               <path d="M3 2l4 3-4 3"/>
             </svg>
-            {showHistory
-              ? "Hide history"
-              : `Show history${versions.length > 0 ? ` (${versions.length})` : ""}`}
+            {showHistory ? "Hide description history" : "Show description history"}
           </button>
           {showHistory && (
             <div className="mt-3 space-y-5">
@@ -1541,6 +1599,7 @@ export default function TaskModal({
                 .filter((mm): mm is NonNullable<typeof mm> => !!mm);
               const hasDeadline = !!deadline && deadlineInfo.severity !== "none";
               const colIdx = columns.findIndex((c) => c.id === columnId);
+              const colColor = columns.find((c) => c.id === columnId)?.color;
               const colLabel = columns.find((c) => c.id === columnId)?.label;
               const itemClass = "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:bg-column-bg transition-colors cursor-pointer";
               return (
@@ -1555,7 +1614,7 @@ export default function TaskModal({
                         onClick={() => setOpenMetaProp((cur) => cur === "phase" ? null : "phase")}
                         className={`${itemClass} text-ink`}
                       >
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colIdx)}`} />
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colColor, colIdx)}`} />
                         <span>{colLabel}</span>
                       </button>
                       {openMetaProp === "phase" && (
@@ -1574,7 +1633,7 @@ export default function TaskModal({
                                 }}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
                               >
-                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.indexOf(c))}`} />
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
                                 <span className="truncate">{c.label}</span>
                                 {isSelected && (
                                   <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1931,6 +1990,79 @@ export default function TaskModal({
               </div>
             </div>
 
+            {/* Attachments */}
+            <div className="px-8 md:px-10 py-8 border-b border-border/30">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted">
+                  Attachments{attachments.length > 0 && <span className="normal-case font-normal ml-1">({attachments.length})</span>}
+                </label>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="text-xs text-muted hover:text-ink transition-colors disabled:opacity-40"
+                >
+                  {uploading ? "Uploading..." : "+ Attach file"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleUpload}
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.csv"
+                />
+              </div>
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  {attachments.map((a) => {
+                    const isImage = a.contentType.startsWith("image/");
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-column-bg/30 hover:bg-column-bg/50 transition-colors group"
+                      >
+                        {isImage ? (
+                          <img
+                            src={a.url}
+                            alt={a.filename}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-border/40"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-column-bg flex items-center justify-center flex-shrink-0 border border-border/40">
+                            <span className="text-[10px] font-bold text-muted uppercase">
+                              {a.filename.split(".").pop()?.slice(0, 4) ?? "file"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-ink hover:underline truncate block leading-tight"
+                          >
+                            {a.filename}
+                          </a>
+                          <span className="text-xs text-muted">{formatAttachmentSize(a.size)}</span>
+                        </div>
+                        <button
+                          onClick={() => deleteAttachment(a.id)}
+                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-500/15 text-muted hover:text-red-400 transition-all flex-shrink-0"
+                          title="Remove attachment"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted italic">No attachments yet.</p>
+              )}
+            </div>
+
             {/* Comments */}
             <div ref={commentsRef} className="px-8 md:px-10 py-8 border-b border-border/30">
               <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted mb-4">
@@ -2011,7 +2143,7 @@ export default function TaskModal({
               <button
                 onClick={handleAddComment}
                 disabled={!commentInput.trim()}
-                className="px-4 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold hover:opacity-90 disabled:opacity-20 transition-all flex-shrink-0 shadow-sm"
+                className="px-4 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-20 transition-colors flex-shrink-0 shadow-sm"
               >
                 Post
               </button>

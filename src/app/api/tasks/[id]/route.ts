@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { updateTaskSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { updateTaskSchema, parseBody, parseJsonBody } from "@/lib/validations";
+import { getVerifiedSession } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -35,7 +35,7 @@ export async function GET(
   const connectMs = Date.now() - connectStart;
 
   const sessionStart = Date.now();
-  const session = await getSession();
+  const session = await getVerifiedSession();
   const sessionMs = Date.now() - sessionStart;
   if (!session) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, status: 401 });
@@ -44,14 +44,28 @@ export async function GET(
 
   // Authorization: ensure the requesting user is a member of the task's board
   const authStart = Date.now();
-  const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
+  const taskAuth = await prisma.task.findUnique({
+    where: { id: id },
+    select: {
+      columnRel: {
+        select: {
+          boardId: true,
+          board: {
+            select: {
+              members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+            },
+          },
+        },
+      },
+    },
+  });
   const authMs = Date.now() - authStart;
   if (!taskAuth || !taskAuth.columnRel) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 404 });
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
   if (!allowed) {
     if (process.env.NODE_ENV !== "production") console.info(logPrefix, { totalMs: Date.now() - totalStart, connectMs, sessionMs, authMs, status: 403 });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -78,6 +92,10 @@ export async function GET(
     priority: true,
     movedByNonAssignee: true,
     tags: { select: { id: true, name: true, color: true } },
+    attachments: {
+      orderBy: { createdAt: "asc" as const },
+      select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
+    },
   };
 
   const detailedInclude: any = wantAll
@@ -119,44 +137,42 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // If activities or comments were requested, fetch them using targeted queries.
-  let activities: any[] = [];
-  let activitiesMs = 0;
-  let comments: any[] = [];
-  let commentsMs = 0;
+  // Fetch activities, comments, and name overrides in parallel.
+  const extrasStart = Date.now();
+  const [activities, comments, nameOverrides] = await Promise.all([
+    wantActivities
+      ? prisma.taskActivity.findMany({
+          where: { taskId: id },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            createdAt: true,
+            userId: true,
+            user: { select: { id: true, name: true, color: true, handle: true } },
+          },
+        })
+      : Promise.resolve([] as any[]),
+    wantComments
+      ? prisma.comment.findMany({
+          where: { taskId: id },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, content: true, author: true, createdAt: true, taskId: true },
+        })
+      : Promise.resolve([] as any[]),
+    getBoardNameOverrides(taskAuth.columnRel.boardId),
+  ]);
+  const extrasMs = Date.now() - extrasStart;
 
-  if (wantActivities) {
-    const activitiesStart = Date.now();
-    // fetch only the small set of fields the UI renders; include minimal user info
-    activities = await prisma.taskActivity.findMany({
-      where: { taskId: id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        type: true,
-        content: true,
-        createdAt: true,
-        userId: true,
-        user: { select: { id: true, name: true, color: true, handle: true } },
-      },
-    });
-    activitiesMs = Date.now() - activitiesStart;
-    task.activities = activities;
-  }
+  if (wantActivities) (task as any).activities = activities;
+  if (wantComments) (task as any).comments = comments;
 
-  if (wantComments) {
-    const commentsStart = Date.now();
-    comments = await prisma.comment.findMany({ where: { taskId: id }, orderBy: { createdAt: "asc" } , select: { id: true, content: true, author: true, createdAt: true, taskId: true } });
-    commentsMs = Date.now() - commentsStart;
-    task.comments = comments;
-  }
-
-  const queryMs = taskQueryMs + activitiesMs + commentsMs;
+  const queryMs = taskQueryMs + extrasMs;
 
   // Flatten assignee junction rows to plain user objects, then overlay
   // educator-set roster names (class group boards) on every name we return.
-  const nameOverrides = await getBoardNameOverrides(taskAuth.columnRel.boardId);
   {
     const t = task as any;
     t.assignees = (t.assignees ?? []).map((a: any) => ({
@@ -188,14 +204,16 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const raw = await req.json();
+  const parsed = await parseJsonBody(req);
+  if (parsed.error) return parsed.error;
+  const raw = parsed.data;
   const result = parseBody(updateTaskSchema, raw);
   if (!result.data) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
   const body = result.data;
   const { id } = await params;
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -203,10 +221,26 @@ export async function PATCH(
   const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
   if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-  // Authorize: ensure the user is a member of the board this task belongs to
-  const taskAuth = await prisma.task.findUnique({ where: { id }, select: { columnRel: { select: { boardId: true } } } });
+  // Authorize: fetch boardId + membership + realtimeSecret in one query.
+  const taskAuth = await prisma.task.findUnique({
+    where: { id },
+    select: {
+      columnRel: {
+        select: {
+          boardId: true,
+          isDone: true,
+          board: {
+            select: {
+              realtimeSecret: true,
+              members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+            },
+          },
+        },
+      },
+    },
+  });
   if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
+  const allowed = (taskAuth.columnRel.board?.members?.length ?? 0) > 0;
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Validate that any assignee/tags are scoped to this task's board — prevents
@@ -218,23 +252,19 @@ export async function PATCH(
   const newAssigneeIds: string[] | null = assigneeSetChanged
     ? [...new Set(body.assigneeIds ?? (body.assigneeId ? [body.assigneeId] : []))]
     : null;
-  if (newAssigneeIds && newAssigneeIds.length > 0) {
-    const assigneeMembers = await prisma.boardMember.findMany({
-      where: { userId: { in: newAssigneeIds }, boardId },
-      select: { userId: true },
-    });
-    if (assigneeMembers.length !== newAssigneeIds.length) {
-      return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
-    }
+  const [assigneeMembers, validTags] = await Promise.all([
+    newAssigneeIds && newAssigneeIds.length > 0
+      ? prisma.boardMember.findMany({ where: { userId: { in: newAssigneeIds }, boardId }, select: { userId: true } })
+      : Promise.resolve(null),
+    body.tagIds?.length
+      ? prisma.tag.findMany({ where: { id: { in: body.tagIds }, boardId }, select: { id: true } })
+      : Promise.resolve(null),
+  ]);
+  if (assigneeMembers !== null && assigneeMembers.length !== newAssigneeIds!.length) {
+    return NextResponse.json({ error: "Assignee is not a member of this board." }, { status: 400 });
   }
-  if (body.tagIds?.length) {
-    const validTags = await prisma.tag.findMany({
-      where: { id: { in: body.tagIds }, boardId },
-      select: { id: true },
-    });
-    if (validTags.length !== body.tagIds.length) {
-      return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
-    }
+  if (validTags !== null && validTags.length !== body.tagIds!.length) {
+    return NextResponse.json({ error: "One or more tags do not belong to this board." }, { status: 400 });
   }
 
   const totalStart = Date.now();
@@ -303,13 +333,21 @@ export async function PATCH(
     if (current.column !== body.column) {
       // Verify destination column exists and belongs to a board the user can access
       try {
-        const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true } });
+        const destCol = await prisma.column.findUnique({ where: { id: body.column }, select: { boardId: true, isDone: true } });
         if (!destCol) return NextResponse.json({ error: "Destination column not found" }, { status: 400 });
         if (destCol.boardId !== taskAuth.columnRel.boardId) {
           return NextResponse.json({ error: "Destination column must belong to the same board." }, { status: 400 });
         }
-        const destAllowed = await isMemberOfBoard(session.userId, destCol.boardId);
-        if (!destAllowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        // No separate membership check needed: destCol.boardId is the same board as taskAuth,
+        // and membership was already verified in the combined auth query above.
+
+        // Set completedAt synchronously so the PATCH response reflects the correct value immediately.
+        const currentIsDone = taskAuth.columnRel.isDone ?? false;
+        if (destCol.isDone && !currentIsDone) {
+          updateData.completedAt = new Date();
+        } else if (!destCol.isDone && currentIsDone) {
+          updateData.completedAt = null;
+        }
       } catch (err) {
         console.error("Failed to validate destination column membership:", err);
         return NextResponse.json({ error: "Failed to validate destination" }, { status: 500 });
@@ -337,13 +375,11 @@ export async function PATCH(
           ]);
 
           const destinationIsDone = toCol?.isDone ?? false;
-          const currentIsDone = fromCol?.isDone ?? false;
+          const wasInDone = fromCol?.isDone ?? false;
 
-          if (destinationIsDone && !currentIsDone) {
-            await prisma.task.update({ where: { id }, data: { completedAt: now } });
+          if (destinationIsDone && !wasInDone) {
             void recordActivity(id, session.userId, "COMPLETE", `Completed in ${toCol?.label}`);
-          } else if (!destinationIsDone && currentIsDone) {
-            await prisma.task.update({ where: { id }, data: { completedAt: null } });
+          } else if (!destinationIsDone && wasInDone) {
             void recordActivity(id, session.userId, "REOPEN", `Reopened and moved to ${toCol?.label}`);
           } else {
             void recordActivity(id, session.userId, "MOVE", `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`);
@@ -372,6 +408,10 @@ export async function PATCH(
       select: { id: true },
     });
     if (isGroupBoard) updateData.movedByNonAssignee = true;
+  }
+  // Clear the flag when the actual assignee moves the task themselves.
+  if (columnActuallyChanged && currentAssigneeIds.includes(session.userId)) {
+    updateData.movedByNonAssignee = false;
   }
   // Clear the flag when the assignee set is changed — new assignees start clean.
   if (assigneeSetChanged) {
@@ -597,16 +637,15 @@ export async function PATCH(
     console.info(`[perf] PATCH /api/tasks/${id}`, { totalMs, connectMs, findMs, updateMs, serializeMs, timestamp: new Date().toISOString() });
   }
 
-  // Fetch the board's cryptographic channel secret to broadcast the update securely
-  // We do this asynchronously so it doesn't block the API response
-  prisma.board.findUnique({
-    where: { id: taskAuth.columnRel.boardId },
-    select: { realtimeSecret: true }
-  }).then((board) => {
-    if (board?.realtimeSecret) {
-      broadcastToBoard(board.realtimeSecret, { type: "task:update", task: response });
+  // Broadcast using the realtimeSecret already fetched in the initial auth query.
+  try {
+    const realtimeSecret = taskAuth.columnRel.board?.realtimeSecret;
+    if (realtimeSecret) {
+      await broadcastToBoard(realtimeSecret, { type: "task:update", task: response });
     }
-  }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+  }
 
   return new NextResponse(bodyString, { headers: { "Content-Type": "application/json" } });
 }
@@ -617,30 +656,44 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    // Ensure the task exists and belongs to a board the user can access
-    const taskAuth = await prisma.task.findUnique({ where: { id: id }, select: { columnRel: { select: { boardId: true } } } });
+    // Ensure the task exists and belongs to a board the user can access.
+    const taskAuth = await prisma.task.findUnique({
+      where: { id: id },
+      select: {
+        columnRel: {
+          select: {
+            boardId: true,
+            board: {
+              select: {
+                realtimeSecret: true,
+                members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    });
     if (!taskAuth || !taskAuth.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if ((taskAuth.columnRel.board?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const allowed = await isMemberOfBoard(session.userId, taskAuth.columnRel.boardId);
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+    await prisma.notification.deleteMany({ where: { taskId: id } });
     await prisma.task.delete({ where: { id: id } });
 
-    // Fetch the board's cryptographic channel secret to broadcast the deletion
-    prisma.board.findUnique({
-      where: { id: taskAuth.columnRel.boardId },
-      select: { realtimeSecret: true }
-    }).then((board) => {
-      if (board?.realtimeSecret) {
-        broadcastToBoard(board.realtimeSecret, { type: "task:delete", taskId: id });
+    // Broadcast the deletion using the realtimeSecret already fetched in the auth query.
+    try {
+      const realtimeSecret = taskAuth.columnRel.board?.realtimeSecret;
+      if (realtimeSecret) {
+        await broadcastToBoard(realtimeSecret, { type: "task:delete", taskId: id });
       }
-    }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

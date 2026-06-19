@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
@@ -12,7 +12,7 @@ const bugReportSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

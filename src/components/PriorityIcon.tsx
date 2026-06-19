@@ -1,23 +1,18 @@
 "use client";
 
+import { getPriorityConfig } from "@/lib/priority";
+
 interface Props {
   priority: "low" | "medium" | "high" | "urgent" | string | null | undefined;
   className?: string;
   colorClass?: string; // overrides the default priority-based color
 }
 
-const DEFAULT_COLOR: Record<string, string> = {
-  urgent: "text-red-500 dark:text-red-400",
-  high:   "text-orange-500 dark:text-orange-400",
-  medium: "text-yellow-500 dark:text-yellow-400",
-  low:    "text-blue-500 dark:text-blue-400",
-};
-
 const LEVELS: Record<string, number> = { low: 1, medium: 2, high: 3 };
 
 export default function PriorityIcon({ priority, className = "w-3 h-3", colorClass }: Props) {
   const p = (priority ?? "medium") as string;
-  const color = colorClass ?? DEFAULT_COLOR[p] ?? "text-muted";
+  const color = colorClass ?? getPriorityConfig(p).text;
 
   if (p === "urgent") {
     return (

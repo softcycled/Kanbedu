@@ -32,6 +32,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   }
 
+  // Per-email cap so rotating IPs can't spam a specific account's inbox.
+  // Only applied to real accounts (no DB record created for unknown emails).
+  const emailLimit = await checkRateLimit(email, "reset_password_email", 3, 1440);
+  if (!emailLimit.allowed) {
+    return NextResponse.json({ success: true }); // silently succeed to avoid leaking
+  }
+
   // Delete any existing tokens for this user, then create a fresh one
   await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
   const record = await prisma.passwordResetToken.create({

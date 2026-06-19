@@ -68,11 +68,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   }, []);
   useEffect(() => { setMobileFilterOpen(false); }, [viewMode]);
 
-  // Toggle slider refs/state for animated highlight
+  // Toggle slider refs/state for animated highlight. Mobile and desktop render
+  // separate toggle instances (one is always display:none), so each needs its
+  // own refs/position — sharing one set measures whichever is hidden as 0x0.
   const toggleRef = useRef<HTMLDivElement | null>(null);
   const boardBtnRef = useRef<HTMLButtonElement | null>(null);
   const listBtnRef = useRef<HTMLButtonElement | null>(null);
   const [sliderPos, setSliderPos] = useState({ left: 0, width: 0 });
+  const desktopToggleRef = useRef<HTMLDivElement | null>(null);
+  const desktopBoardBtnRef = useRef<HTMLButtonElement | null>(null);
+  const desktopListBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [desktopSliderPos, setDesktopSliderPos] = useState({ left: 0, width: 0 });
 
   // use shared board resources (members, tags) to avoid duplicate fetches
   const { members: boardMembers, tags: allBoardTags } = useBoardResources(boardId);
@@ -80,6 +86,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   // Stable ref so callbacks can read the latest tasks without being recreated on every change
   const tasksRef = useRef(tasks);
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+
+  // Captures a dragged task's column/order at drag start. handleDragOver
+  // optimistically rewrites the task's column mid-drag, so by drag end the
+  // task's own column is the destination — we need this to revert on failure.
+  const dragOriginRef = useRef<{ column: string; order: number } | null>(null);
 
   const toasts = useToasts();
 
@@ -149,17 +160,24 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     [tasksByColumn]
   );
 
-  // Position the toggle slider under the active button and update on resize/view change
+  // Position each toggle's slider under its own active button and update on
+  // resize/view change. Mobile and desktop are measured independently since
+  // only one is ever visible at a given viewport width.
   useLayoutEffect(() => {
-    const update = () => {
-      const container = toggleRef.current;
-      const target = viewMode === "board" ? boardBtnRef.current : listBtnRef.current;
+    const measure = (
+      container: HTMLDivElement | null,
+      target: HTMLButtonElement | null,
+      setPos: (pos: { left: number; width: number }) => void
+    ) => {
       if (!container || !target) return;
       const cRect = container.getBoundingClientRect();
       const tRect = target.getBoundingClientRect();
-      const left = Math.round(tRect.left - cRect.left);
-      const width = Math.round(tRect.width);
-      setSliderPos({ left, width });
+      const borderLeft = parseFloat(getComputedStyle(container).borderLeftWidth) || 0;
+      setPos({ left: Math.round(tRect.left - cRect.left - borderLeft), width: Math.round(tRect.width) });
+    };
+    const update = () => {
+      measure(toggleRef.current, viewMode === "board" ? boardBtnRef.current : listBtnRef.current, setSliderPos);
+      measure(desktopToggleRef.current, viewMode === "board" ? desktopBoardBtnRef.current : desktopListBtnRef.current, setDesktopSliderPos);
     };
     update();
     window.addEventListener("resize", update);
@@ -498,6 +516,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const task = tasks.find((t) => t.id === active.id);
     if (task) {
+      dragOriginRef.current = { column: task.column, order: task.order };
       setActiveTask(task);
       return;
     }
@@ -541,7 +560,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       );
       return updated;
     });
-  }, [tasks, columns, sortedColumns, onTasksChange]);
+  }, [tasks, columns, onTasksChange]);
 
   const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
     setActiveTask(null);
@@ -558,7 +577,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       // Done column is pinned to the end — never draggable.
       if (draggedColumn.isDone) return;
 
-      const overTask = tasks.find((t) => t.id === overId);
+      const overTask = tasksRef.current.find((t) => t.id === overId);
       const overColumnId = overTask ? overTask.column : overId;
       if (!sortedColumns.find((c) => c.id === overColumnId)) return;
 
@@ -588,18 +607,18 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
 
     // Handle task dragging
-    const task = tasks.find((t) => t.id === activeId);
+    const task = tasksRef.current.find((t) => t.id === activeId);
     if (!task) return;
 
     // Determine destination column
-    const overTask = tasks.find((t) => t.id === overId);
+    const overTask = tasksRef.current.find((t) => t.id === overId);
     const destColumn: string | undefined = overTask
       ? overTask.column
       : columns.find((c) => c.id === overId)?.id;
     if (!destColumn) return;
 
     // Reorder within column
-    const columnTasks = tasks
+    const columnTasks = tasksRef.current
       .filter((t) => t.column === destColumn)
       .sort((a, b) => a.order - b.order);
 
@@ -667,10 +686,15 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         }).catch((err) => console.error("Failed to bulk update task order:", err));
       }
     } else {
-      // Revert optimistic move — restore original column and order
+      // Revert optimistic move — restore the column/order captured at drag
+      // start. task.column here is the destination (handleDragOver already
+      // rewrote it mid-drag), so we must use the saved origin instead.
+      const origin = dragOriginRef.current;
       onTasksChange((prev) =>
         prev.map((t) =>
-          t.id === activeId ? { ...t, column: task.column, order: task.order } : t
+          t.id === activeId
+            ? { ...t, column: origin?.column ?? task.column, order: origin?.order ?? task.order }
+            : t
         )
       );
     }
@@ -914,7 +938,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               aria-label="Board view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "board" ? "text-ink/90" : "text-muted/70"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ display: "block" }}>
                 <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
                 <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
               </svg>
@@ -925,8 +949,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               aria-label="List view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ display: "block" }}>
+                <line x1="2" y1="3.5" x2="12" y2="3.5"/><line x1="2" y1="7" x2="12" y2="7"/><line x1="2" y1="10.5" x2="12" y2="10.5"/>
               </svg>
             </button>
           </div>
@@ -988,31 +1012,33 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             filteredTasksCount={filteredTasks.length}
           />
           {/* View mode toggle (animated slider) */}
-          <div className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
+          <div ref={desktopToggleRef} className="relative flex items-center gap-1 px-1 py-1 bg-column-bg rounded-lg border border-border/30 flex-shrink-0">
             <div
               aria-hidden
-              style={{ left: `${sliderPos.left}px`, width: `${sliderPos.width}px` }}
+              style={{ left: `${desktopSliderPos.left}px`, width: `${desktopSliderPos.width}px` }}
               className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-ink/10 transition-all duration-180 ease-out pointer-events-none"
             />
             <button
+              ref={desktopBoardBtnRef}
               onClick={() => setViewMode("board")}
               title="Board view"
               aria-label="Board view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "board" ? "text-ink/90" : "text-muted/70 hover:text-ink/80"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: "translateY(0.3px)" }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ display: "block" }}>
                 <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
                 <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
               </svg>
             </button>
             <button
+              ref={desktopListBtnRef}
               onClick={() => setViewMode("list")}
               title="List view"
               aria-label="List view"
               className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-colors ${viewMode === "list" ? "text-ink/90" : "text-muted/70 hover:text-ink/80"}`}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ transform: "translateY(0.2px)" }}>
-                <line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="7" x2="13" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ display: "block" }}>
+                <line x1="2" y1="3.5" x2="12" y2="3.5"/><line x1="2" y1="7" x2="12" y2="7"/><line x1="2" y1="10.5" x2="12" y2="10.5"/>
               </svg>
             </button>
           </div>
@@ -1121,7 +1147,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         task={selectedTask}
         boardId={boardId}
         boardMembers={boardMembers}
-        columns={columns}
+        columns={sortedColumns}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}

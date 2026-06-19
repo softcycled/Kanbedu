@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { createColumnSchema, reorderColumnsSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET columns (scoped by boardId)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const allowed = await isMemberOfBoard(session.userId, boardId);
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const columns = await prisma.column.findMany({
+    let columns = await prisma.column.findMany({
       where: { boardId },
       orderBy: { order: "asc" },
     });
@@ -31,13 +31,12 @@ export async function GET(request: NextRequest) {
         { label: "Done", order: 2, isDone: true, boardId },
       ];
 
-      await prisma.column.createMany({ data: defaultColumns });
-      const created = await prisma.column.findMany({
-        where: { boardId },
-        orderBy: { order: "asc" },
+      columns = await prisma.$transaction(async (tx) => {
+        const recheck = await tx.column.findMany({ where: { boardId }, orderBy: { order: "asc" } });
+        if (recheck.length > 0) return recheck; // another request already seeded
+        await tx.column.createMany({ data: defaultColumns });
+        return tx.column.findMany({ where: { boardId }, orderBy: { order: "asc" } });
       });
-
-      return NextResponse.json(created);
     }
 
     return NextResponse.json(columns);
@@ -61,20 +60,24 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is signed in and is a member of the board
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    const member = await isMemberOfBoard(session.userId, data.boardId);
-    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-    // Get max order for this board
-    const maxOrder = await prisma.column.aggregate({
-      where: { boardId: data.boardId },
-      _max: { order: true },
-    });
+    // Fetch membership + realtimeSecret + max column order in parallel.
+    const [boardAuth, maxOrder] = await Promise.all([
+      prisma.board.findUnique({
+        where: { id: data.boardId },
+        select: {
+          realtimeSecret: true,
+          members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+        },
+      }),
+      prisma.column.aggregate({ where: { boardId: data.boardId }, _max: { order: true } }),
+    ]);
+    if ((boardAuth?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const newOrder = (maxOrder._max.order || 0) + 1;
 
@@ -82,12 +85,11 @@ export async function POST(request: NextRequest) {
       data: { label: data.label, order: newOrder, boardId: data.boardId, color: data.color ?? null },
     });
 
-    prisma.board.findUnique({
-      where: { id: data.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      if (boardAuth?.realtimeSecret) await broadcastToBoard(boardAuth.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(column, { status: 201 });
   } catch (error) {
@@ -110,7 +112,7 @@ export async function PATCH(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is signed in and is a member of the affected board
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -128,8 +130,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     const boardId = boardIds[0];
-    const allowed = await isMemberOfBoard(session.userId, boardId);
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Fetch membership + realtimeSecret in one query to avoid two separate round-trips.
+    const boardAuth = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: {
+        realtimeSecret: true,
+        members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+      },
+    });
+    if ((boardAuth?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const updated = await prisma.$transaction(
       data.columns.map((col: any) =>
@@ -140,12 +150,11 @@ export async function PATCH(request: NextRequest) {
       )
     );
 
-    prisma.board.findUnique({
-      where: { id: boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      if (boardAuth?.realtimeSecret) await broadcastToBoard(boardAuth.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

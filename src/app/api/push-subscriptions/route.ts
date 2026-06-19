@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { z } from "zod";
 
 const subscribeSchema = z.object({
@@ -12,7 +12,7 @@ const subscribeSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => null);

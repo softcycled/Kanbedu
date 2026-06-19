@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+function safeNextParam(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  return raw;
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const base = new URL(req.url).origin;
+  const next = safeNextParam(req.nextUrl.searchParams.get("next"));
 
   try {
     const record = await prisma.emailVerification.findUnique({ where: { token } });
@@ -22,6 +29,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
       prisma.emailVerification.deleteMany({ where: { userId: record.userId } }),
     ]);
 
+    if (next) {
+      const sep = next.includes("?") ? "&" : "?";
+      return NextResponse.redirect(`${base}${next}${sep}auto=1`);
+    }
     return NextResponse.redirect(`${base}/verify-email/done`);
   } catch {
     return NextResponse.redirect(`${base}/verify-email/done?error=unknown`);

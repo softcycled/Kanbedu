@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole } from "@/lib/auth";
+import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { updateClassSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -10,7 +11,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const role = await getClassRole(session.userId, id);
@@ -21,10 +22,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         groups: {
           orderBy: { order: "asc" },
-          include: { _count: { select: { members: true } } },
+          include: {
+            _count: { select: { members: true } },
+            board: { select: { columns: { select: { _count: { select: { tasks: true } } } } } },
+          },
         },
         members: {
           include: { user: { select: { id: true, name: true, handle: true, color: true, email: true } } },
+        },
+        rosterEntries: {
+          where: { claimedBy: null },
+          select: { id: true, email: true, name: true, groupName: true },
         },
       },
     });
@@ -71,6 +79,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         order: g.order,
         boardId: g.boardId,
         memberCount: g._count.members,
+        taskCount: g.board.columns.reduce((s, c) => s + c._count.tasks, 0),
       })),
       members: cls.members.map((m) => ({
         userId: m.userId,
@@ -81,6 +90,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         handle: m.user.handle,
         color: m.user.color,
         email: m.user.email,
+      })),
+      pendingInvites: cls.rosterEntries.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        groupName: r.groupName ?? null,
       })),
     });
   } catch (error) {
@@ -93,7 +108,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -107,6 +122,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const raw = await req.json();
     const result = parseBody(updateClassSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    if (result.data.archived !== undefined && role !== "educator") {
+      return NextResponse.json({ error: "Only the class owner can archive or unarchive a class." }, { status: 403 });
+    }
 
     // Archived classes are read-only: detail edits (name/term) are rejected
     // unless the same request also unarchives. Toggling archived is always OK.
@@ -132,6 +151,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json(updated);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Class not found." }, { status: 404 });
+    }
     console.error("Failed to update class:", error);
     return NextResponse.json({ error: "Failed to update class." }, { status: 500 });
   }
@@ -143,7 +165,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);

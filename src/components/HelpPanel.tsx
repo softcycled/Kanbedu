@@ -5,8 +5,13 @@ import Link from "next/link";
 
 type Tab = "support" | "changelog";
 
-// Add entries here when ready for launch
-const CHANGELOG: { date: string; title: string; description: string }[] = [
+const CHANGELOG: { date: string; title: string; description: string; href?: string }[] = [
+  {
+    date: "Jun 17, 2026",
+    title: "Reliability Update",
+    description: "A full sweep of improvements across the app. Deadlines, drag-and-drop, notifications, group search, and the class clone flow are all tightened up. Roster CSV imports now send invite emails to newly added students, capped at 100 per file.",
+    href: "/changelog/reliability-update",
+  },
   {
     date: "Jun 8, 2026",
     title: "Mobile Support",
@@ -154,7 +159,7 @@ function SupportTab() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-ink text-paper py-2.5 rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors disabled:opacity-50"
+          className="w-full bg-primary text-on-primary py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {isSubmitting ? "Sending…" : "Submit report"}
         </button>
@@ -189,7 +194,11 @@ function ChangelogTab() {
               </div>
               <div className={i < CHANGELOG.length - 1 ? "pb-8" : ""}>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-1">{entry.date}</p>
-                <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
+                {entry.href ? (
+                  <Link href={entry.href} className="text-sm font-semibold text-ink hover:text-accent transition-colors mb-1 inline-block">{entry.title}</Link>
+                ) : (
+                  <p className="text-sm font-semibold text-ink mb-1">{entry.title}</p>
+                )}
                 <p className="text-sm text-muted leading-relaxed">{entry.description}</p>
               </div>
             </div>

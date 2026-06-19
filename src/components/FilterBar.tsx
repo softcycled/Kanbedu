@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, memo } from "react";
 import { BoardMemberData, Tag } from "@/lib/types";
 import Avatar from "./Avatar";
+import SearchIcon from "./SearchIcon";
 
 interface Props {
   searchQuery: string;
@@ -307,14 +308,6 @@ function FilterBar({
 }
 
 export default memo(FilterBar);
-
-function SearchIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
 
 function FilterIcon() {
   return (

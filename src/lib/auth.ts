@@ -36,32 +36,43 @@ export async function createSession(userId: string): Promise<void> {
   });
 }
 
-export async function getSession(): Promise<{ userId: string } | null> {
+// Private helper — one DB round-trip, returns verification status too
+async function resolveSession(): Promise<{ userId: string; emailVerified: boolean } | null> {
   const cookieStore = await cookies();
   const cookie = cookieStore.get(COOKIE_NAME);
   if (!cookie?.value) return null;
-
   try {
     const { payload } = await jwtVerify(cookie.value, SECRET);
     if (typeof payload.userId !== "string") return null;
-
-    // Reject sessions issued before the most recent password change so that
-    // changing a password immediately invalidates all existing sessions.
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { passwordChangedAt: true } as any,
-    }) as { passwordChangedAt: Date | null } | null;
-
+      select: { passwordChangedAt: true, emailVerified: true } as any,
+    }) as { passwordChangedAt: Date | null; emailVerified: boolean } | null;
     if (!user) return null;
-    if (user.passwordChangedAt && typeof payload.iat === "number") {
-      // JWT iat is in seconds; passwordChangedAt is a JS Date (milliseconds)
-      if (payload.iat * 1000 < user.passwordChangedAt.getTime()) return null;
-    }
-
-    return { userId: payload.userId };
+    if (
+      user.passwordChangedAt &&
+      typeof payload.iat === "number" &&
+      payload.iat * 1000 < user.passwordChangedAt.getTime()
+    ) return null;
+    return { userId: payload.userId, emailVerified: user.emailVerified };
   } catch {
     return null;
   }
+}
+
+export async function getSession(): Promise<{ userId: string } | null> {
+  const s = await resolveSession();
+  return s ? { userId: s.userId } : null;
+}
+
+export async function getVerifiedSession(): Promise<{ userId: string } | null> {
+  const s = await resolveSession();
+  if (!s || !s.emailVerified) return null;
+  return { userId: s.userId };
+}
+
+export async function getSessionFull(): Promise<{ userId: string; emailVerified: boolean } | null> {
+  return resolveSession();
 }
 
 export async function destroySession(): Promise<void> {

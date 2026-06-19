@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { createTaskSchema, parseBody } from "@/lib/validations";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { createTaskSchema, parseBody, parseJsonBody } from "@/lib/validations";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { getBoardNameOverrides } from "@/lib/classNames";
@@ -12,7 +12,7 @@ const bulkReorderSchema = z.array(z.object({ id: z.string(), order: z.number() }
 
 // PUT /api/tasks — bulk update task order values
 export async function PUT(req: Request) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -20,7 +20,9 @@ export async function PUT(req: Request) {
   const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
   if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-  const raw = await req.json();
+  const parsed = await parseJsonBody(req);
+  if (parsed.error) return parsed.error;
+  const raw = parsed.data;
   const result = bulkReorderSchema.safeParse(raw);
   if (!result.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -36,30 +38,47 @@ export async function PUT(req: Request) {
   const taskIds = result.data.map((t) => t.id);
   const validTasks = await prisma.task.findMany({
     where: { id: { in: taskIds }, columnRel: { boardId: { in: boardIds } } },
-    select: { id: true },
+    select: { id: true, columnRel: { select: { boardId: true } } },
   });
   const validTaskIds = new Set(validTasks.map((t) => t.id));
+  const taskBoardMap = new Map(validTasks.map((t) => [t.id, t.columnRel.boardId]));
+
+  const validUpdates = result.data.filter(({ id }) => validTaskIds.has(id));
 
   await prisma.$transaction(
-    result.data
-      .filter(({ id }) => validTaskIds.has(id))
-      .map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
+    validUpdates.map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
   );
 
-  // Broadcast refresh to all affected boards
+  // Group updates by board and broadcast surgical reorder payload to each
+  const updatesByBoard = new Map<string, { id: string; order: number }[]>();
+  for (const { id, order } of validUpdates) {
+    const boardId = taskBoardMap.get(id)!;
+    const arr = updatesByBoard.get(boardId) ?? [];
+    arr.push({ id, order });
+    updatesByBoard.set(boardId, arr);
+  }
   const affectedBoards = await prisma.board.findMany({
-    where: { id: { in: boardIds } },
-    select: { realtimeSecret: true },
+    where: { id: { in: [...updatesByBoard.keys()] } },
+    select: { id: true, realtimeSecret: true },
   });
-  affectedBoards.forEach((board) => {
-    if (board.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-  });
+  try {
+    await Promise.all(
+      affectedBoards.map(async (board) => {
+        const updates = updatesByBoard.get(board.id) ?? [];
+        if (board.realtimeSecret && updates.length > 0) {
+          await broadcastToBoard(board.realtimeSecret, { type: "task:reorder", updates });
+        }
+      })
+    );
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+  }
 
   return NextResponse.json({ ok: true });
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -135,7 +154,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -143,7 +162,9 @@ export async function POST(req: Request) {
   const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
   if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-  const raw = await req.json();
+  const parsed = await parseJsonBody(req);
+  if (parsed.error) return parsed.error;
+  const raw = parsed.data;
   const result = parseBody(createTaskSchema, raw);
   if (!result.data) {
     return NextResponse.json({ error: result.error }, { status: 400 });
@@ -153,10 +174,14 @@ export async function POST(req: Request) {
   // Profile start
   const start = Date.now();
 
-  // Find last order in column and destination column (parallel)
+  // Find last order in column and destination column (parallel).
+  // Include realtimeSecret here to avoid an extra board lookup when broadcasting.
   const [lastTask, destinationColumn] = await Promise.all([
     prisma.task.findFirst({ where: { column: data.column }, orderBy: { order: "desc" } }),
-    prisma.column.findUnique({ where: { id: data.column } }),
+    prisma.column.findUnique({
+      where: { id: data.column },
+      include: { board: { select: { realtimeSecret: true } } },
+    }),
   ]);
 
   // Validate destination column and membership
@@ -267,15 +292,15 @@ export async function POST(req: Request) {
     console.info(`[perf] POST /api/tasks total ${Date.now() - start}ms`);
   }
 
-  // Broadcast task creation securely using the board's realtimeSecret
-  prisma.board.findUnique({
-    where: { id: destinationColumn.boardId },
-    select: { realtimeSecret: true }
-  }).then((board) => {
-    if (board?.realtimeSecret) {
-      broadcastToBoard(board.realtimeSecret, { type: "task:create", task: responseTask });
+  // Broadcast task creation using the realtimeSecret already fetched with the column.
+  try {
+    const realtimeSecret = (destinationColumn as any).board?.realtimeSecret;
+    if (realtimeSecret) {
+      await broadcastToBoard(realtimeSecret, { type: "task:create", task: responseTask });
     }
-  }).catch((err) => console.error("Failed to fetch realtimeSecret for broadcast:", err));
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+  }
 
   return NextResponse.json(responseTask);
 }

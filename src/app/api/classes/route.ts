@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { createClassSchema, parseBody } from "@/lib/validations";
 import { DEFAULT_PRESET } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -9,7 +9,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // GET: list every class the current user belongs to (any role).
 export async function GET() {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
@@ -63,7 +63,7 @@ export async function GET() {
 // is attached, and a persistent joinCode is generated.
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 // PUT: reorder the caller's class memberships by storing an explicit order index.
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const { ids } = await request.json();

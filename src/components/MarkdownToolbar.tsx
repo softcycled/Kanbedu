@@ -100,7 +100,15 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }: Props)
       const after = value.slice(end);
 
       // Toggle: strip the marker if the selection is already wrapped in it.
-      const wrapped = before.endsWith(marker) && after.startsWith(marker);
+      // Also check the character just outside the boundary isn't the same character
+      // (e.g. "*" italic toggle on "**bold**" would otherwise false-positive).
+      const charBefore = before[before.length - marker.length - 1];
+      const charAfter = after[marker.length];
+      const wrapped =
+        before.endsWith(marker) &&
+        after.startsWith(marker) &&
+        charBefore !== marker[0] &&
+        charAfter !== marker[marker.length - 1];
       let next: string;
       let ns: number;
       let ne: number;
@@ -130,7 +138,7 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }: Props)
   const buttons: { marker: string; label: string; node: React.ReactNode }[] = [
     { marker: "**", label: "Bold", node: <span className="font-bold">B</span> },
     { marker: "*", label: "Italic", node: <span className="italic font-serif">I</span> },
-    { marker: "__", label: "Underline", node: <span className="underline">U</span> },
+    { marker: "++", label: "Underline", node: <span className="underline">U</span> },
     { marker: "~~", label: "Strikethrough", node: <span className="line-through">S</span> },
     { marker: "`", label: "Code", node: <span className="font-mono text-[13px]">{"<>"}</span> },
   ];

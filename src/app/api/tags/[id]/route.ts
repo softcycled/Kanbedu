@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { updateTagSchema, parseBody } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function PATCH(
@@ -10,7 +11,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -46,6 +47,9 @@ export async function PATCH(
 
     return NextResponse.json(tag);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "A tag with that name already exists on this board." }, { status: 409 });
+    }
     console.error("Failed to update tag:", error);
     return NextResponse.json(
       { error: "Failed to update tag" },
@@ -60,7 +64,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

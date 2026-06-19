@@ -222,6 +222,8 @@ function SortableClassItem({
           <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">archived</span>
         ) : isEducator ? (
           <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/70 flex-shrink-0 pl-1">teaching</span>
+        ) : !cls.boardId ? (
+          <span className="ml-auto text-[9px] uppercase tracking-wide text-muted/60 flex-shrink-0 pl-1">waiting</span>
         ) : null}
       </button>
       <button
@@ -457,7 +459,7 @@ export default function Sidebar({
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
     // "Boards" opens the board settings panel; "Settings" opens the profile/account panel.
-    { id: "settings", label: "Boards", icon: <IconLayers /> },
+    { id: "settings", label: "Manage", icon: <IconLayers /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
     { id: "help", label: "Help", icon: <IconHelp /> },
@@ -492,7 +494,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="sidebar-boards" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
               {boards.map((board) => (
                 <SortableBoardItem
@@ -530,7 +532,7 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(studentClasses)}>
+              <DndContext id="sidebar-student-classes" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(studentClasses)}>
                 <SortableContext items={studentClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                   {studentClasses.map((c) => (
                     <SortableClassItem
@@ -574,7 +576,7 @@ export default function Sidebar({
             </button>
           ) : (
             <>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(educatorClasses)}>
+              <DndContext id="sidebar-educator-classes" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleClassDragEnd(educatorClasses)}>
                 <SortableContext items={educatorClasses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                   {educatorClasses.map((c) => (
                     <SortableClassItem

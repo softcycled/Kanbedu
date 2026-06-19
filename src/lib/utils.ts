@@ -161,29 +161,26 @@ export function formatDeadlineLabel(deadline: Date | string | null, completedAt?
   const diffMs = effectiveDeadlineMs(d) - now.getTime();
   const timeSuffix = hasTime ? `, ${formatDeadlineTime(d)}` : "";
 
-  // Past (overdue)
+  // Past (overdue) — time-aware, consistent with isOverdue(): timed deadlines go
+  // overdue at their exact instant, date-only ones once the day has fully passed.
   if (diffMs < 0) {
     const absMs = Math.abs(diffMs);
     const days = Math.floor(absMs / 86_400_000);
-    if (days >= 1) {
-      return { label: `Overdue by ${days}d`, severity: "overdue" };
-    }
+    if (days >= 1) return { label: `Overdue by ${days}d`, severity: "overdue" };
     const hours = Math.ceil(absMs / 3_600_000);
     return { label: `Overdue by ${hours}h`, severity: "overdue" };
   }
 
-  // Normalize to date boundaries for 'tomorrow' detection
+  // Day-boundary diff for relative labels.
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const startOfDeadlineDay = new Date(d);
   startOfDeadlineDay.setHours(0, 0, 0, 0);
   const daysUntil = Math.round((startOfDeadlineDay.getTime() - startOfToday.getTime()) / 86_400_000);
 
-  // Due today
+  // Due today — show the time when set, else the plain date-only label.
   if (daysUntil === 0) {
-    if (hasTime) return { label: `Due ${formatDeadlineTime(d)}`, severity: "due-soon" };
-    const hours = Math.ceil(diffMs / 3_600_000);
-    return { label: `Due in ${hours}h`, severity: "due-soon" };
+    return { label: hasTime ? `Due ${formatDeadlineTime(d)}` : "Due today", severity: "due-soon" };
   }
 
   // Due tomorrow
@@ -191,8 +188,8 @@ export function formatDeadlineLabel(deadline: Date | string | null, completedAt?
     return { label: hasTime ? `Tomorrow, ${formatDeadlineTime(d)}` : "Due tomorrow", severity: "due-soon" };
   }
 
-  // Near future (within 48h window but not tomorrow due to date boundaries)
-  if (diffMs <= 48 * 3_600_000) {
+  // Timed deadlines within ~2 days show hours for precision.
+  if (hasTime && diffMs <= 48 * 3_600_000) {
     const hours = Math.ceil(diffMs / 3_600_000);
     return { label: `Due in ${hours}h`, severity: "due-soon" };
   }

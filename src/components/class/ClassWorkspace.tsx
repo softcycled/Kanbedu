@@ -18,6 +18,7 @@ function PanelSkeleton() {
 
 const MonitorPanel = dynamic(() => import("./MonitorPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const IntegrityPanel = dynamic(() => import("./IntegrityPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
+const ParticipationPanel = dynamic(() => import("./ParticipationPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const RosterPanel = dynamic(() => import("./RosterPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
 const PresetEditor = dynamic(() => import("./PresetEditor"), { ssr: false, loading: () => <PanelSkeleton /> });
 const ClassSettingsPanel = dynamic(() => import("./ClassSettingsPanel"), { ssr: false, loading: () => <PanelSkeleton /> });
@@ -44,18 +45,8 @@ interface Props {
   myGroupName?: string | null;
 }
 
-type Tab = "monitor" | "integrity" | "roster" | "preset" | "settings";
+type Tab = "monitor" | "integrity" | "participation" | "roster" | "preset" | "settings";
 
-function BackBar({ onBack, title }: { onBack: () => void; title: string }) {
-  return (
-    <div className="flex-shrink-0 flex items-center gap-3 px-6 md:px-10 py-3 border-b border-border/60">
-      <button onClick={onBack} className="text-sm text-muted hover:text-ink transition-colors">
-        Back
-      </button>
-      <span className="text-sm font-medium text-ink truncate">{title}</span>
-    </div>
-  );
-}
 
 export default function ClassWorkspace(props: Props) {
   const { classId, name, term, archived, ownerId, currentUserId, joinCode, groups } = props;
@@ -64,6 +55,9 @@ export default function ClassWorkspace(props: Props) {
   // first visit — switching back is instant with no re-fetch.
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
   const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
+  // Bumped whenever Roster creates/deletes a group, so Monitor and Integrity
+  // (which stay mounted across tab switches) refetch instead of showing stale data.
+  const [groupsVersion, setGroupsVersion] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -74,12 +68,11 @@ export default function ClassWorkspace(props: Props) {
       // Don't hijack Esc while a modal (e.g. a delete confirmation) is open —
       // the user expects Esc to dismiss the dialog, not leave the class.
       if (document.querySelector("[data-modal-open]")) return;
-      if (openBoard) setOpenBoard(null);
-      else router.push("/");
+      if (openBoard) { setOpenBoard(null); } else { router.push("/"); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openBoard, router]);
+  }, [openBoard, router]); // openBoard in deps so the closure sees current value
 
   // Opening a board takes the board info from the caller (Roster/Monitor always
   // have fresh data), since groups created in-session aren't in the page-load
@@ -112,8 +105,16 @@ export default function ClassWorkspace(props: Props) {
   if (openBoard) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
-        {header}
-        <BackBar onBack={() => setOpenBoard(null)} title={openBoard.name} />
+        <header className="flex-shrink-0 flex items-center justify-between px-6 md:px-10 pt-6 pb-4 border-b border-border/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity">kanbedu</Link>
+            <span className="text-muted">/</span>
+            <button onClick={() => setOpenBoard(null)} className="text-base font-semibold text-ink/60 hover:text-ink transition-colors truncate">{name}</button>
+            <span className="text-muted">/</span>
+            <span className="text-base font-semibold text-ink truncate">{openBoard.name}</span>
+          </div>
+          <button onClick={() => setOpenBoard(null)} className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0">Back</button>
+        </header>
         <GroupBoardView
           boardId={openBoard.boardId}
           boardName={openBoard.name}
@@ -127,6 +128,7 @@ export default function ClassWorkspace(props: Props) {
   const tabs: { id: Tab; label: string }[] = [
     { id: "monitor", label: "Monitor" },
     { id: "integrity", label: "Integrity" },
+    { id: "participation", label: "Participation" },
     { id: "roster", label: "Roster" },
     { id: "preset", label: "Preset" },
     { id: "settings", label: "Settings" },
@@ -164,13 +166,24 @@ export default function ClassWorkspace(props: Props) {
       )}
 
       <div className={tab === "monitor" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} />}
+        {visitedTabs.has("monitor") && <MonitorPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
       </div>
       <div className={tab === "integrity" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} />}
+        {visitedTabs.has("integrity") && <IntegrityPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
+      </div>
+      <div className={tab === "participation" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+        {visitedTabs.has("participation") && <ParticipationPanel classId={classId} onOpenBoard={openGroupBoard} reloadSignal={groupsVersion} />}
       </div>
       <div className={tab === "roster" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
-        {visitedTabs.has("roster") && <RosterPanel classId={classId} ownerId={ownerId} onOpenBoard={openGroupBoard} readOnly={archived} />}
+        {visitedTabs.has("roster") && (
+          <RosterPanel
+            classId={classId}
+            ownerId={ownerId}
+            onOpenBoard={openGroupBoard}
+            onChanged={() => setGroupsVersion((v) => v + 1)}
+            readOnly={archived}
+          />
+        )}
       </div>
       <div className={tab === "preset" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
         {visitedTabs.has("preset") && <PresetEditor classId={classId} readOnly={archived} />}

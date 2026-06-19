@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateColumnSchema, deleteColumnSchema, parseBody } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { broadcastToBoard } from "@/lib/broadcast";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -99,12 +99,15 @@ export async function PATCH(
       data: updateData,
     });
 
-    prisma.board.findUnique({
-      where: { id: columnInfo.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: columnInfo.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(column);
   } catch (error) {
@@ -123,7 +126,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -192,7 +195,16 @@ export async function DELETE(
         }
       }
 
-      const clearCompleted = deletingColumn?.isDone && !destColumn?.isDone;
+      // Keep completedAt consistent with the destination column's done status,
+      // mirroring the normal task-move path: moving out of a done column clears
+      // completion, moving into a done column marks tasks complete.
+      const clearCompleted = deletingColumn.isDone && !destColumn.isDone;
+      const setCompleted = !deletingColumn.isDone && destColumn.isDone;
+      const completedAtUpdate = clearCompleted
+        ? { completedAt: null }
+        : setCompleted
+          ? { completedAt: new Date() }
+          : {};
 
       // WRAP IN TRANSACTION
       const [_, deleted] = await prisma.$transaction([
@@ -200,7 +212,7 @@ export async function DELETE(
           where: { column: id },
           data: {
             column: moveToColumnId,
-            ...(clearCompleted ? { completedAt: null } : {}),
+            ...completedAtUpdate,
           },
         }),
         prisma.column.delete({
@@ -213,24 +225,31 @@ export async function DELETE(
       if (col.isDone && !otherDone) {
         return NextResponse.json({ error: "Cannot delete the only 'Done' column. Mark another column as done before deleting this one." }, { status: 400 });
       }
-      // Delete the column directly
-      deletedCol = await prisma.column.delete({
-        where: { id: id },
-      });
+      // Collect task IDs to clean up orphaned Notification rows (Notification has no cascade from Task).
+      const taskIds = (await prisma.task.findMany({ where: { column: id }, select: { id: true } })).map((t) => t.id);
+      const results = await prisma.$transaction([
+        prisma.notification.deleteMany({ where: { taskId: { in: taskIds } } }),
+        prisma.task.deleteMany({ where: { column: id } }),
+        prisma.column.delete({ where: { id } }),
+      ]);
+      deletedCol = results[2];
     }
 
-    prisma.board.findUnique({
-      where: { id: col.boardId },
-      select: { realtimeSecret: true },
-    }).then((board) => {
-      if (board?.realtimeSecret) broadcastToBoard(board.realtimeSecret);
-    }).catch((err) => console.error("Failed to fetch realtimeSecret:", err));
+    try {
+      const broadcastBoard = await prisma.board.findUnique({
+        where: { id: col.boardId },
+        select: { realtimeSecret: true },
+      });
+      if (broadcastBoard?.realtimeSecret) await broadcastToBoard(broadcastBoard.realtimeSecret);
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+    }
 
     return NextResponse.json(deletedCol);
   } catch (error) {
     console.error("Failed to delete column:", error);
     return NextResponse.json(
-      { error: "Failed to delete column", details: String(error) },
+      { error: "Failed to delete column" },
       { status: 500 }
     );
   }

@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
 import SharedAvatar from "../Avatar";
+import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
+import GroupSearchBar from "./GroupSearchBar";
+import LiveIndicator from "./LiveIndicator";
 
 interface MonitorMember {
   id: string;
@@ -29,6 +32,9 @@ interface MonitorGroup {
 interface Props {
   classId: string;
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
+  // Bumped by the parent whenever Roster creates/deletes a group, so Monitor
+  // picks up the change without requiring a full page reload.
+  reloadSignal?: number;
 }
 
 function Avatar({ member }: { member: MonitorMember }) {
@@ -52,7 +58,7 @@ function Avatar({ member }: { member: MonitorMember }) {
 
 // Educator overview. Each card shows a group's OWN progress — intentionally no
 // leaderboard or cross-group ranking. Attention cues are framed as help signals.
-export default function MonitorPanel({ classId, onOpenBoard }: Props) {
+export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Props) {
   const [groups, setGroups] = useState<MonitorGroup[]>([]);
   const [stallDays, setStallDays] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -79,7 +85,29 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, []);
+  // Roster created/deleted a group — refetch without flashing the loading state.
+  // Skip the first run so we don't double-fetch alongside the mount effect above.
+  const skipFirstReload = useRef(true);
+  useEffect(() => {
+    if (reloadSignal === undefined) return;
+    if (skipFirstReload.current) { skipFirstReload.current = false; return; }
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadSignal]);
+  // Background poll so the educator sees live progress without a page reload.
+  useEffect(() => {
+    const iv = setInterval(() => load(true), 15_000);
+    const onVisibility = () => { if (!document.hidden) load(true); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [load]);
+  // Trigger bar animation only after loading finishes, not on a fixed timeout.
+  // Bars paint at 0% on the first frame, then transition to real widths.
+  useEffect(() => {
+    if (loading) return;
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [loading]);
 
   // Coalesce bursts of board events (a student dragging several tasks) into one
   // refetch ~0.7s after activity settles.
@@ -112,7 +140,7 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
   if (groups.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab. Each group gets its own board to track here.
+        No groups yet. Create groups in the Roster tab.
       </div>
     );
   }
@@ -126,30 +154,33 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
         ) : null
       )}
 
-      <div className="flex items-center justify-between mb-5 gap-4">
-        <p className="text-xs text-muted">
+      <div className="flex items-start justify-between mb-5 gap-4">
+        <p className="text-xs text-muted max-w-xl">
           Each group&apos;s own progress. Orange marks a group that may need a hand.
         </p>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <input
-            type="text"
+          <GroupSearchBar
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search groups…"
-            className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
+            onChange={setSearch}
+            suggestion={search.trim()
+              ? findGroupSuggestion(
+                  groups.map((g) => g.name),
+                  search,
+                  new Set(groups.filter((g) => matchesGroupName(g.name, search)).map((g) => g.name))
+                )
+              : null}
           />
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
+          <LiveIndicator />
         </div>
       </div>
 
       {(() => {
         const visible = search.trim()
-          ? groups.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
+          ? groups.filter((g) => matchesGroupName(g.name, search))
           : groups;
-        return visible.length === 0 ? (
+        return (
+        <>
+        {visible.length === 0 ? (
           <p className="text-sm text-muted">No groups match &ldquo;{search}&rdquo;.</p>
         ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -214,6 +245,8 @@ export default function MonitorPanel({ classId, onOpenBoard }: Props) {
           </button>
           ))}
         </div>
+        )}
+        </>
         );
       })()}
     </div>

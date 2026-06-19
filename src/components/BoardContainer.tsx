@@ -168,6 +168,15 @@ export default function BoardContainer({
   const handleRefresh = useCallback(async (payload?: any) => {
     const boardId = activeBoardIdRef.current;
 
+    if (payload?.updates) {
+      const updates = payload.updates as { id: string; order: number }[];
+      setTasks((prev) => prev.map((t) => {
+        const u = updates.find((u) => u.id === t.id);
+        return u ? { ...t, order: u.order } : t;
+      }));
+      return;
+    }
+
     if (payload?.task) {
       const t = payload.task;
       setTasks((prev) => {
@@ -416,9 +425,16 @@ export default function BoardContainer({
       body: JSON.stringify({ ids }),
     });
     if (!res.ok) return;
+    // The sidebar reorders one section at a time (student / educator / archived),
+    // so `ids` is only that subset. Splice the reordered subset back into their
+    // existing slots in the full list instead of replacing the whole list with
+    // the subset — otherwise the untouched sections vanish until a reload.
     setClasses((prev) => {
       const map = new Map(prev.map((c) => [c.id, c]));
-      return ids.map((id) => map.get(id)!).filter(Boolean);
+      const reordered = ids.map((id) => map.get(id)!).filter(Boolean);
+      const reorderedIds = new Set(ids);
+      let next = 0;
+      return prev.map((c) => (reorderedIds.has(c.id) ? reordered[next++] : c));
     });
   }, []);
 

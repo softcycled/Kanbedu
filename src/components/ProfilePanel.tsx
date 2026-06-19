@@ -312,36 +312,27 @@ function AppearanceTab() {
   );
 }
 
-// ── Name Input Component (Performance Fix) ──────────────────────
-function NameInput({ 
-  value, 
-  onChange, 
-  onSave, 
-  saving 
-}: { 
-  value: string; 
-  onChange: (val: string) => void; 
-  onSave: () => void; 
+// ── Name Input Component ────────────────────────────────────────
+// Controlled directly by the parent's `name` state so that the Save button
+// and Enter key always persist the latest typed value. (A previous debounced
+// local-state version could save a stale name when the user typed and saved
+// within the debounce window.)
+function NameInput({
+  value,
+  onChange,
+  onSave,
+  saving
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onSave: () => void;
   saving: boolean;
 }) {
-  const [localValue, setLocalValue] = useState(value);
-  
-  // Sync if external value changes (e.g. from fetch)
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  // Debounce the upward change to avoid lag during rapid typing
-  useEffect(() => {
-    const timeout = setTimeout(() => onChange(localValue), 300);
-    return () => clearTimeout(timeout);
-  }, [localValue, onChange]);
-
   return (
     <input
       type="text"
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => e.key === "Enter" && onSave()}
       disabled={saving}
       placeholder="Your name"
@@ -652,7 +643,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       {saved ? "Saved" : saving ? "Saving…" : "Save"}
                     </button>
@@ -676,11 +667,11 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       />
                     </div>
                     {handleValue && handleValue !== profile?.handle && (
-                      <p className="text-xs mb-2" style={{
-                        color: handleStatus === "available" ? "#22C55E"
-                          : handleStatus === "taken" || handleStatus === "invalid" ? "#E8613A"
-                          : "var(--color-muted)"
-                      }}>
+                      <p className={`text-xs mb-2 ${
+                        handleStatus === "available" ? "text-green-600 dark:text-green-400"
+                          : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
+                          : "text-muted"
+                      }`}>
                         {handleStatus === "available" ? `@${handleValue} is available`
                           : handleStatus === "taken" ? "That username is already taken"
                           : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
@@ -691,7 +682,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                     <button
                       onClick={handleSaveHandle}
                       disabled={handleSaving || handleValue === profile?.handle || (handleStatus !== "available")}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       {handleSaved ? "Saved" : handleSaving ? "Saving…" : "Save username"}
                     </button>
@@ -741,7 +732,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       <button
                         onClick={handlePasswordChange}
                         disabled={pwSaving}
-                        className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50"
+                        className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                       >
                         {pwSaved ? "Password updated!" : pwSaving ? "Updating…" : "Update password"}
                       </button>

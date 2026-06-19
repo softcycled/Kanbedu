@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSessionFull } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: accept an invite (add user to board)
@@ -10,9 +10,12 @@ export async function POST(
 ) {
   const { token } = await params;
   try {
-    const session = await getSession();
+    const session = await getSessionFull();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+    if (!session.emailVerified) {
+      return NextResponse.json({ error: "Please verify your email to accept this invitation.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
     }
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -20,7 +23,7 @@ export async function POST(
 
     const invite = await prisma.boardInvite.findUnique({
       where: { token },
-      include: { board: true },
+      include: { board: { select: { name: true } } },
     });
 
     if (!invite) {
@@ -67,9 +70,12 @@ export async function GET(
 ) {
   const { token } = await params;
   try {
-    const session = await getSession();
+    const session = await getSessionFull();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+    if (!session.emailVerified) {
+      return NextResponse.json({ error: "Please verify your email to accept this invitation.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
     }
 
     const invite = await prisma.boardInvite.findUnique({

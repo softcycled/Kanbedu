@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, isMemberOfBoard } from "@/lib/auth";
+import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getBoardNameOverrides } from "@/lib/classNames";
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const rl = await checkRateLimit(session.userId, "analytics_read", 60, 15);
@@ -73,6 +73,12 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const columnMap = new Map(columns.map((c) => [c.id, c]));
+
+  function endOfDay(d: Date): Date {
+    const r = new Date(d);
+    r.setUTCHours(23, 59, 59, 999);
+    return r;
+  }
 
   // Pre-bucket once so phase stats are O(tasks × history) instead of
   // O(columns × tasks × history). One pass groups current tasks by column and
@@ -259,9 +265,9 @@ export async function GET(request: NextRequest) {
   //   completed + inProgress === total
   const completed = tasks.filter((t) => columnMap.get(t.column)?.isDone).length;
   const inProgressCount = tasks.length - completed;
-  // Overdue: tasks in active (non-done) columns that are past their deadline
+  // Overdue: tasks in active (non-done) columns that are past their deadline (end-of-day)
   const overdue = tasks.filter(
-    (t) => t.deadline && t.deadline < now && !(columnMap.get(t.column)?.isDone)
+    (t) => t.deadline && endOfDay(t.deadline) < now && !(columnMap.get(t.column)?.isDone)
   ).length;
 
   const cycleTimes = taskDetails
@@ -334,7 +340,7 @@ export async function GET(request: NextRequest) {
       const entry = assigneeMap.get(name)!;
       entry.total++;
       if (t.columnIsDone) entry.completed++;
-      if (t.deadline && new Date(t.deadline) < now && !t.columnIsDone) entry.overdue++;
+      if (t.deadline && endOfDay(new Date(t.deadline)) < now && !t.columnIsDone) entry.overdue++;
       if (t.cycleTimeMs !== null) entry.cycleTimes.push(t.cycleTimeMs);
     }
   });

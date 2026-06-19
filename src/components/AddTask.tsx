@@ -8,7 +8,7 @@ interface Props {
   prominent?: boolean;
 }
 
-const TITLE_CHAR_LIMIT = 100;
+const TITLE_CHAR_LIMIT = 200;
 
 export default function AddTask({ column, onAdd, prominent = false }: Props) {
   const [active, setActive] = useState(false);

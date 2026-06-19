@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
 import { createGroupSchema, updateGroupSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -17,7 +18,7 @@ const archivedError = () =>
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     return NextResponse.json(
-      { id: group.id, name: group.name, order: group.order, boardId: group.boardId, memberCount: 0 },
+      { id: group.id, name: group.name, order: group.order, boardId: group.boardId, memberCount: 0, taskCount: 0 },
       { status: 201 }
     );
   } catch (error) {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl2 = await checkRateLimit(session.userId, "api_write", 300, 15);
@@ -113,6 +114,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({ id: updated.id, name: updated.name, order: updated.order, boardId: updated.boardId });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Group not found." }, { status: 404 });
+    }
     console.error("Failed to update group:", error);
     return NextResponse.json({ error: "Failed to update group." }, { status: 500 });
   }
@@ -123,7 +127,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl3 = await checkRateLimit(session.userId, "api_write", 300, 15);

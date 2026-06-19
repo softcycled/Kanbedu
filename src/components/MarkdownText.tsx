@@ -3,7 +3,7 @@
 import React from "react";
 
 // Discord-flavored markdown rendering.
-// Inline: ***bold+italic*** · **bold** · __underline__ · ~~strikethrough~~ · *italic* · `code`
+// Inline: ***bold+italic*** · **bold** · ++underline++ · ~~strikethrough~~ · *italic* · `code`
 // Block:  # / ## / ### headings · ``` fences · > blockquotes · - / * lists
 
 type InlineRule = { delim: string; render: (children: React.ReactNode, key: string) => React.ReactNode };
@@ -11,7 +11,7 @@ type InlineRule = { delim: string; render: (children: React.ReactNode, key: stri
 const INLINE_RULES: InlineRule[] = [
   { delim: "***", render: (c, k) => <strong key={k} className="font-semibold"><em>{c}</em></strong> },
   { delim: "**",  render: (c, k) => <strong key={k} className="font-semibold">{c}</strong> },
-  { delim: "__",  render: (c, k) => <span key={k} className="underline">{c}</span> },
+  { delim: "++",  render: (c, k) => <span key={k} className="underline">{c}</span> },
   { delim: "~~",  render: (c, k) => <span key={k} className="line-through">{c}</span> },
   { delim: "*",   render: (c, k) => <em key={k}>{c}</em> },
 ];

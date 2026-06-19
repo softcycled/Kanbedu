@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSessionFull } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 // GET: validate a class join code without joining. Returns the class name.
@@ -27,13 +27,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   }
 }
 
-// POST: join a class as a student. Lands the caller in the lobby (no group);
-// the educator sorts them into a group afterwards.
+// POST: join a class as a student. If the caller's email matches a roster
+// entry with a group, they're placed in that group (and granted its board);
+// otherwise they land in the lobby for the educator to sort later.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   try {
-    const session = await getSession();
+    const session = await getSessionFull();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    if (!session.emailVerified) {
+      return NextResponse.json({ error: "Please verify your email to join a class.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
+    }
 
     const limit = await checkRateLimit(session.userId, "class-join", 30, 60);
     if (!limit.allowed) {
@@ -79,32 +83,34 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
       groupBoardId = group?.boardId ?? null;
     }
 
-    await prisma.classMember.create({
-      data: {
-        userId: session.userId,
-        classId: cls.id,
-        role: "student",
-        ...(rosterEntry ? { displayName: rosterEntry.name } : {}),
-        ...(groupId ? { groupId } : {}),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.classMember.create({
+        data: {
+          userId: session.userId,
+          classId: cls.id,
+          role: "student",
+          ...(rosterEntry ? { displayName: rosterEntry.name } : {}),
+          ...(groupId ? { groupId } : {}),
+        },
+      });
+
+      // Grant board access so the student can load their group's board immediately.
+      if (groupBoardId) {
+        await tx.boardMember.upsert({
+          where: { userId_boardId: { userId: session.userId, boardId: groupBoardId } },
+          update: {},
+          create: { userId: session.userId, boardId: groupBoardId, role: "member" },
+        });
+      }
+
+      // Mark the roster entry as claimed
+      if (rosterEntry) {
+        await tx.classRosterEntry.update({
+          where: { classId_email: { classId: cls.id, email: normalizedEmail } },
+          data: { claimedBy: session.userId },
+        });
+      }
     });
-
-    // Grant board access so the student can load their group's board immediately.
-    if (groupBoardId) {
-      await prisma.boardMember.upsert({
-        where: { userId_boardId: { userId: session.userId, boardId: groupBoardId } },
-        update: {},
-        create: { userId: session.userId, boardId: groupBoardId, role: "member" },
-      });
-    }
-
-    // Mark the roster entry as claimed
-    if (rosterEntry) {
-      await prisma.classRosterEntry.update({
-        where: { classId_email: { classId: cls.id, email: normalizedEmail } },
-        data: { claimedBy: session.userId },
-      });
-    }
 
     return NextResponse.json({ message: "You have joined the class.", classId: cls.id, name: cls.name });
   } catch (error) {

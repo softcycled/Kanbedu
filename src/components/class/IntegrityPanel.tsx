@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardChannel from "./BoardChannel";
 import Skeleton from "../Skeleton";
+import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
+import GroupSearchBar from "./GroupSearchBar";
+import SortPills from "./SortPills";
+import LiveIndicator from "./LiveIndicator";
+import GroupCardHeader from "./GroupCardHeader";
 
 interface FlaggedTask {
   id: string;
@@ -39,6 +44,9 @@ interface Props {
   classId: string;
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
   onFlagCount?: (n: number) => void;
+  // Bumped by the parent whenever Roster creates/deletes a group, so Integrity
+  // picks up the change without requiring a full page reload.
+  reloadSignal?: number;
 }
 
 const MS_DAY = 86_400_000;
@@ -88,7 +96,7 @@ function FlagChip({
 // Educator integrity overview across every group board in the class. One screen,
 // grouped by team — surfaces tasks that look completed dishonestly so a teacher
 // can check students are using the board properly. Not a ranking, not full stats.
-export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Props) {
+export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, reloadSignal }: Props) {
   const [data, setData] = useState<IntegrityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +123,22 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
   }, [classId]);
 
   useEffect(() => { load(); }, [load]);
+  // Roster created/deleted a group — refetch without flashing the loading state.
+  // Skip the first run so we don't double-fetch alongside the mount effect above.
+  const skipFirstReload = useRef(true);
+  useEffect(() => {
+    if (reloadSignal === undefined) return;
+    if (skipFirstReload.current) { skipFirstReload.current = false; return; }
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadSignal]);
+  // Background poll so the educator sees live integrity signals without a page reload.
+  useEffect(() => {
+    const iv = setInterval(() => load(true), 15_000);
+    const onVisibility = () => { if (!document.hidden) load(true); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [load]);
 
   // Coalesce bursts of board activity into a single refetch.
   const reloadTimer = useRef<number | null>(null);
@@ -144,7 +168,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
   if (!data || data.teamCount === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted px-6 text-center">
-        No groups yet. Create groups in the Roster tab. Each group&apos;s board is checked here.
+        No groups yet. Create groups in the Roster tab.
       </div>
     );
   }
@@ -162,20 +186,22 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
       ),
     }))
     .filter((g) => g.flagged.length > 0)
-    .filter((g) => {
-      const q = groupSearch.trim().toLowerCase();
-      if (!q) return true;
-      const words = q.split(/\s+/).filter(Boolean);
-      const haystack = [
-        g.name,
-        ...g.flagged.map((t) => t.title),
-        ...g.flagged.map((t) => t.assignee),
-      ].join(" ").toLowerCase();
-      return words.every((w) => haystack.includes(w));
-    })
+    .filter((g) => !groupSearch.trim() || matchesGroupName(g.name, groupSearch))
     .sort((a, b) =>
       sortOrder === "flagCount" ? b.flagged.length - a.flagged.length : a.name.localeCompare(b.name)
     );
+
+  const groupSuggestion = groupSearch.trim()
+    ? findGroupSuggestion(
+        flaggedGroups.map((g) => g.name),
+        groupSearch,
+        new Set(displayGroups.map((g) => g.name))
+      )
+    : null;
+
+  const groupAutocomplete = groupSearch.trim()
+    ? flaggedGroups.map((g) => g.name).filter((name) => matchesGroupName(name, groupSearch))
+    : flaggedGroups.map((g) => g.name);
 
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 max-w-4xl">
@@ -192,10 +218,7 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
           moved straight to done without passing through
           earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
         </p>
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted flex-shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live
-        </span>
+        <LiveIndicator />
       </div>
 
       {data.totalFlagged === 0 ? (
@@ -220,33 +243,22 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {([
-                { id: "all", label: "All" },
-                { id: "speedRun", label: "Speed-run" },
-                { id: "columnSkip", label: "Skipped column" },
-                { id: "movedByOther", label: "Moved by other" },
-              ] as { id: FlagFilter; label: string }[]).map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFlagFilter(f.id)}
-                  className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
-                    flagFilter === f.id
-                      ? "bg-ink text-paper"
-                      : "bg-ink/8 text-ink/70 hover:bg-ink/12 hover:text-ink"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <SortPills
+              options={[
+                { key: "all", label: "All" },
+                { key: "speedRun", label: "Speed-run" },
+                { key: "columnSkip", label: "Skipped column" },
+                { key: "movedByOther", label: "Moved by other" },
+              ]}
+              value={flagFilter}
+              onChange={(k) => setFlagFilter(k as FlagFilter)}
+            />
             <div className="ml-auto flex items-center gap-3">
-              <input
-                type="text"
+              <GroupSearchBar
                 value={groupSearch}
-                onChange={(e) => setGroupSearch(e.target.value)}
-                placeholder="Search groups…"
-                className="w-36 bg-ink/5 border border-border/50 rounded-lg px-2.5 py-1 text-xs text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-ink/20 transition-all"
+                onChange={setGroupSearch}
+                suggestion={groupSuggestion}
+                suggestions={groupAutocomplete}
               />
               <button
                 onClick={() => setSortOrder((s) => s === "flagCount" ? "alpha" : "flagCount")}
@@ -263,20 +275,15 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount }: Pr
           <div className="space-y-5">
             {displayGroups.map((g) => (
               <section key={g.groupId} className="rounded-2xl border border-border/70 bg-card-bg">
-                <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-border/60">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm font-semibold text-ink truncate">{g.name}</h3>
+                <GroupCardHeader
+                  name={g.name}
+                  badge={
                     <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex-shrink-0">
                       {g.flagged.length} flagged
                     </span>
-                  </div>
-                  <button
-                    onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
-                    className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0"
-                  >
-                    Open board
-                  </button>
-                </div>
+                  }
+                  onOpenBoard={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId })}
+                />
                 <ul className="divide-y divide-border/50">
                   {g.flagged.map((t) => (
                     <li key={t.id} className="px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole } from "@/lib/auth";
+import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { cloneClassSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -13,7 +13,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "class_clone", 5, 60);
@@ -33,7 +33,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         preset: true,
         groups: { orderBy: { order: "asc" } },
-        members: true,
+        members: {
+          select: {
+            userId: true,
+            role: true,
+            groupId: true,
+            displayName: true,
+          },
+        },
       },
     });
     if (!source) return NextResponse.json({ error: "Class not found." }, { status: 404 });
@@ -72,26 +79,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       if (result.data.copyRoster) {
-        await Promise.all(
-          source.members
-            .filter((m) => m.userId !== session.userId)
-            .map(async (m) => {
-              if (m.role === "educator") {
-                return tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "ta" } });
-              }
-              const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;
-              await tx.classMember.create({
-                data: { userId: m.userId, classId: cls.id, role: m.role, groupId: mapped?.groupId ?? null },
-              });
-              if (mapped) {
-                await tx.boardMember.upsert({
-                  where: { userId_boardId: { userId: m.userId, boardId: mapped.boardId } },
-                  update: {},
-                  create: { userId: m.userId, boardId: mapped.boardId, role: "member" },
-                });
-              }
-            })
-        );
+        for (const m of source.members.filter((m) => m.userId !== session.userId)) {
+          if (m.role === "educator") {
+            await tx.classMember.create({ data: { userId: m.userId, classId: cls.id, role: "educator" } });
+            continue;
+          }
+          const mapped = m.groupId ? groupMap.get(m.groupId) : undefined;
+          await tx.classMember.create({
+            data: {
+              userId: m.userId,
+              classId: cls.id,
+              role: m.role,
+              groupId: mapped?.groupId ?? null,
+              displayName: m.displayName ?? null,
+            },
+          });
+          if (mapped) {
+            await tx.boardMember.upsert({
+              where: { userId_boardId: { userId: m.userId, boardId: mapped.boardId } },
+              update: {},
+              create: { userId: m.userId, boardId: mapped.boardId, role: "member" },
+            });
+          }
+        }
+
+        // Clone roster entries so the educator's import data carries forward.
+        // claimedBy is reset — students must re-join the new class.
+        const sourceRosterEntries = await tx.classRosterEntry.findMany({
+          where: { classId: id },
+        });
+        if (sourceRosterEntries.length > 0) {
+          await tx.classRosterEntry.createMany({
+            data: sourceRosterEntries.map((e) => ({
+              classId: cls.id,
+              email: e.email,
+              name: e.name,
+              groupName: e.groupName,
+              claimedBy: null,
+            })),
+          });
+        }
       }
 
       return cls;

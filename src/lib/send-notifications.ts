@@ -43,7 +43,9 @@ export async function sendNotification(userId: string, payload: NotificationPayl
           JSON.stringify({ title: payload.title, body: payload.body, tag: payload.tag })
         )
         .catch(async (err: { statusCode?: number }) => {
-          if (err.statusCode === 404 || err.statusCode === 410) {
+          // 404/410 = subscription gone; 400/403 = permanently invalid (bad/expired VAPID claim, key mismatch).
+          // All are terminal — retrying will never succeed, so remove to stop wasted delivery attempts.
+          if (err.statusCode && [400, 403, 404, 410].includes(err.statusCode)) {
             await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
           }
         })

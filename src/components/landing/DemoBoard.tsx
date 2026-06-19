@@ -15,6 +15,7 @@ import {
   useDraggable,
 } from "@dnd-kit/core";
 import PriorityIcon from "../PriorityIcon";
+import { getPriorityConfig } from "@/lib/priority";
 
 type ColId = "todo" | "doing" | "done";
 
@@ -42,9 +43,6 @@ const COL_META: {
   { id: "done",  label: "Done",        bg: "bg-green-950/30", border: "border-green-800", dot: "bg-green-400", text: "text-green-300" },
 ];
 
-const PRIORITY_LABEL: Record<string, string> = {
-  low: "Low", medium: "Med", high: "High", urgent: "URGENT",
-};
 
 const INITIAL: Card[] = [
   {
@@ -118,7 +116,7 @@ function CardFace({ card, overlay }: { card: Card; overlay?: boolean }) {
       <div className="flex items-center gap-2 mt-2.5 flex-wrap">
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-white">
           <PriorityIcon priority={p} className="w-3 h-3" />
-          {PRIORITY_LABEL[p]}
+          {getPriorityConfig(p).label}
         </span>
 
         {card.deadline && (

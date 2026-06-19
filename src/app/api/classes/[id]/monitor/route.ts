@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getClassRole } from "@/lib/auth";
+import { getVerifiedSession, getClassRole } from "@/lib/auth";
 
 // A task is "stalled" if it has sat in a non-done column without movement for
 // this many days. Surfaced as a help signal, never as a ranking.
@@ -11,7 +11,7 @@ const STALL_DAYS = 3;
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
@@ -21,6 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const groups = await prisma.group.findMany({
       where: { classId: id },
       orderBy: { order: "asc" },
+      take: 200,
       include: {
         board: { include: { columns: { orderBy: { order: "asc" } } } },
         members: {
@@ -49,6 +50,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const now = Date.now();
     const stallMs = STALL_DAYS * 24 * 60 * 60 * 1000;
 
+    function endOfDay(d: Date): number {
+      const r = new Date(d);
+      r.setUTCHours(23, 59, 59, 999);
+      return r.getTime();
+    }
+
     const result = groups.map((g) => {
       const columns = g.board.columns;
       const doneColumnIds = new Set(columns.filter((c) => c.isDone).map((c) => c.id));
@@ -68,7 +75,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           continue;
         }
         // Not in a done column: candidate for help signals.
-        if (t.deadline && t.deadline.getTime() < now) overdue++;
+        if (t.deadline && endOfDay(t.deadline) < now) overdue++;
         const neverMoved = t.columnUpdatedAt.getTime() === t.createdAt.getTime();
         if (!neverMoved && now - t.columnUpdatedAt.getTime() > stallMs) stalled++;
       }

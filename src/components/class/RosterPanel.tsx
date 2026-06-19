@@ -15,6 +15,7 @@ import {
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import Skeleton from "../Skeleton";
+import LiveIndicator from "./LiveIndicator";
 
 interface Member {
   userId: string;
@@ -32,6 +33,7 @@ interface Group {
   order: number;
   boardId: string;
   memberCount: number;
+  taskCount: number;
 }
 
 interface Props {
@@ -156,7 +158,7 @@ function RosterDropdown({
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") { e.stopPropagation(); setOpen(false); }
     };
     document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", keyHandler);
@@ -192,30 +194,32 @@ function RosterDropdown({
       {open && (
         <div
           role="listbox"
-          className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[8rem] max-h-60 overflow-y-auto bg-card-bg border border-border rounded-xl shadow-modal p-1`}
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[8rem] bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden`}
         >
-          {options.map((o) => {
-            const isSelected = o.value === value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => { onPick(o.value); setOpen(false); }}
-                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors ${
-                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                }`}
-              >
-                <span className="truncate">{o.label}</span>
-                {isSelected && (
-                  <svg className="flex-shrink-0 text-accent" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
+          <div className="pb-1 max-h-60 overflow-y-auto no-scrollbar">
+            {options.map((o) => {
+              const isSelected = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => { onPick(o.value); setOpen(false); }}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                    isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
+                  }`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isSelected && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                      <path d="M2 6l3 3 5-5" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -249,6 +253,7 @@ function AssignSelect({
 export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, readOnly = false }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; name: string; groupName: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -257,6 +262,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   // Selected student ids for bulk assignment / distribution.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkTarget, setBulkTarget] = useState("");
+  const [lobbyVisible, setLobbyVisible] = useState(20);
   // Member pending a "kick from class" confirmation (lobby only).
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
   // Group pending a delete confirmation (destructive — wipes the group board).
@@ -265,9 +271,10 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ total: number; matched: number; unmatched: number; groupsCreated: number; invited: number; inviteFailed: number; inviteCapped: number } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingDeleteRef = useRef<number | null>(null);
   const { push } = useToasts();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -284,6 +291,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           const data = await res.json();
           setMembers(data.members || []);
           setGroups(data.groups || []);
+          setPendingInvites(data.pendingInvites || []);
           if (silent) setLoadError(false);
         } else if (!silent) {
           setLoadError(true);
@@ -477,25 +485,53 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
     }
   };
 
-  const deleteGroup = async (groupId: string) => {
+  const deleteGroup = (groupId: string) => {
     const prevGroups = groups;
     const prevMembers = members;
-    // optimistic: remove the group, return its students to the lobby
+    const affectedStudents = members.filter((m) => m.groupId === groupId);
+    const groupName = groups.find((g) => g.id === groupId)?.name ?? "Group";
+
+    // Optimistic: remove from UI immediately
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
     setMembers((prev) => prev.map((m) => (m.groupId === groupId ? { ...m, groupId: null } : m)));
-    try {
-      const res = await tracked(fetch(`/api/classes/${classId}/groups`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId }),
-      }));
-      if (!res.ok) throw new Error("delete failed");
-      onChanged?.();
-    } catch {
-      setGroups(prevGroups);
-      setMembers(prevMembers);
-      push({ title: "Couldn't delete group", description: "Please try again." });
-    }
+
+    // Cancel any in-flight pending delete before scheduling a new one
+    if (pendingDeleteRef.current !== null) window.clearTimeout(pendingDeleteRef.current);
+
+    const n = affectedStudents.length;
+    push({
+      title: `"${groupName}" deleted`,
+      description: n > 0
+        ? `${n} student${n === 1 ? "" : "s"} moved back to waiting.`
+        : "No students were affected.",
+      actionLabel: "Undo",
+      onAction: () => {
+        if (pendingDeleteRef.current !== null) {
+          window.clearTimeout(pendingDeleteRef.current);
+          pendingDeleteRef.current = null;
+        }
+        setGroups(prevGroups);
+        setMembers(prevMembers);
+      },
+    });
+
+    // Fire the actual API call after the undo window (toast actionLabel duration = 6500ms)
+    pendingDeleteRef.current = window.setTimeout(async () => {
+      pendingDeleteRef.current = null;
+      try {
+        const res = await tracked(fetch(`/api/classes/${classId}/groups`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ groupId }),
+        }));
+        if (!res.ok) throw new Error("delete failed");
+        onChanged?.();
+      } catch {
+        setGroups(prevGroups);
+        setMembers(prevMembers);
+        push({ title: "Couldn't delete group", description: "Please try again." });
+      }
+    }, 5500);
   };
 
   const renameGroup = async (groupId: string, name: string) => {
@@ -631,10 +667,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               {showImport ? "Cancel" : "Import CSV"}
             </button>
           )}
-          <span className="flex items-center gap-1.5 text-[11px] text-muted" title="The roster auto-updates as students join">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
+          <LiveIndicator />
         </div>
       </div>
 
@@ -657,18 +690,31 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             <button
               onClick={handleImport}
               disabled={!importFile || importing}
-              className="text-xs px-3 py-1.5 rounded-lg bg-ink text-card-bg disabled:opacity-40 hover:bg-ink/80 transition-colors"
+              className="text-xs px-3 py-1.5 rounded-lg bg-primary text-on-primary disabled:opacity-40 hover:bg-primary/90 transition-colors"
             >
               {importing ? "Importing…" : "Import"}
             </button>
           </div>
           {importError && <p className="text-[11px] text-red-500">{importError}</p>}
           {importResult && (
-            <p className="text-[11px] text-emerald-500">
-              {importResult.total} rows processed — {importResult.matched} matched
-              {importResult.unmatched > 0 && `, ${importResult.unmatched} unmatched (will match when they join)`}
-              {importResult.groupsCreated > 0 && `, ${importResult.groupsCreated} group${importResult.groupsCreated === 1 ? "" : "s"} created`}.
-            </p>
+            <>
+              <p className="text-[11px] text-emerald-500">
+                {importResult.total} rows processed, {importResult.matched} matched
+                {importResult.unmatched > 0 && `, ${importResult.unmatched} unmatched (will match when they join)`}
+                {importResult.groupsCreated > 0 && `, ${importResult.groupsCreated} group${importResult.groupsCreated === 1 ? "" : "s"} created`}
+                {importResult.invited > 0 && `, ${importResult.invited} invite email${importResult.invited === 1 ? "" : "s"} sent`}.
+              </p>
+              {importResult.inviteFailed > 0 && (
+                <p className="text-[11px] text-amber-500 mt-0.5">
+                  {importResult.inviteFailed} invite email{importResult.inviteFailed === 1 ? "" : "s"} failed to send. Check that your email service is configured.
+                </p>
+              )}
+              {importResult.inviteCapped > 0 && (
+                <p className="text-[11px] text-amber-500 mt-0.5">
+                  {importResult.inviteCapped} student{importResult.inviteCapped === 1 ? "" : "s"} were added but not emailed (50-email limit per import). Import again to send the remaining invites.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -742,25 +788,35 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               {lobby.length === 0 ? (
                 <p className="text-[11px] text-muted">Everyone has been placed.</p>
               ) : (
-                lobby.map((m) => (
-                  <div key={m.userId} className="group/chip flex items-center gap-1.5">
-                    {interactive && (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(m.userId)}
-                        onChange={() => toggleSelect(m.userId)}
-                        className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0"><DraggableStudent member={m} disabled={!interactive} onRename={interactive ? (name) => renameStudent(m.userId, name) : undefined} /></div>
-                    {interactive && (
-                      <>
-                        <AssignSelect value={LOBBY} groups={groups} onPick={(gid) => assign(m.userId, gid)} />
-                        <button onClick={() => setConfirmRemove(m)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
-                      </>
-                    )}
-                  </div>
-                ))
+                <>
+                  {lobby.slice(0, lobbyVisible).map((m) => (
+                    <div key={m.userId} className="group/chip flex items-center gap-1.5">
+                      {interactive && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(m.userId)}
+                          onChange={() => toggleSelect(m.userId)}
+                          className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0"><DraggableStudent member={m} disabled={!interactive} onRename={interactive ? (name) => renameStudent(m.userId, name) : undefined} /></div>
+                      {interactive && (
+                        <>
+                          <AssignSelect value={LOBBY} groups={groups} onPick={(gid) => assign(m.userId, gid)} />
+                          <button onClick={() => setConfirmRemove(m)} className="opacity-0 group-hover/chip:opacity-100 text-[11px] text-muted hover:text-red-500 transition-opacity" title="Remove from class">✕</button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {lobby.length > lobbyVisible && (
+                    <button
+                      onClick={() => setLobbyVisible((v) => v + 20)}
+                      className="text-[11px] text-muted hover:text-ink transition-colors mt-1"
+                    >
+                      Show {Math.min(20, lobby.length - lobbyVisible)} more ({lobby.length - lobbyVisible} remaining)
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </DropZone>
@@ -774,6 +830,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                   {interactive ? (
                     <label className="group/rename flex items-center gap-1 min-w-0 flex-1">
                       <input
+                        key={g.name}
                         defaultValue={g.name}
                         onBlur={(e) => { if (e.target.value.trim() !== g.name) renameGroup(g.id, e.target.value); }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
@@ -836,7 +893,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               <button
                 onClick={createGroup}
                 disabled={busy || !newGroupName.trim()}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-ink text-on-primary hover:opacity-95 transition-opacity disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 + Add group
               </button>
@@ -848,6 +905,71 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
           {activeMember ? <StudentChip member={activeMember} dragging /> : null}
         </DragOverlay>
       </DndContext>
+
+      {pendingInvites.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-ink">Invited, not yet joined</h3>
+            <span className="text-[11px] text-muted">{pendingInvites.length}</span>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card-bg divide-y divide-border/50">
+            {pendingInvites.map((p) => (
+              <div key={p.id} className="group/invite flex items-center gap-3 px-4 py-2.5">
+                <div className="w-7 h-7 rounded-full bg-ink/8 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] text-muted">?</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-ink truncate">{p.name}</p>
+                  <p className="text-[11px] text-muted truncate">{p.email}{p.groupName ? ` · ${p.groupName}` : ""}</p>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-600 dark:text-amber-400 flex-shrink-0">Pending</span>
+                {interactive && (
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover/invite:opacity-100 transition-opacity flex-shrink-0">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/classes/${classId}/roster`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ entryId: p.id }),
+                          });
+                          if (res.ok) push({ title: "Invite resent", description: p.email });
+                          else push({ title: "Couldn't resend invite", description: "Please try again." });
+                        } catch {
+                          push({ title: "Couldn't resend invite", description: "Please try again." });
+                        }
+                      }}
+                      className="text-[11px] text-muted hover:text-ink transition-colors"
+                      title="Resend invite email"
+                    >
+                      Resend
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/classes/${classId}/roster`, {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ entryId: p.id }),
+                          });
+                          if (res.ok) setPendingInvites((prev) => prev.filter((x) => x.id !== p.id));
+                          else push({ title: "Couldn't remove invite", description: "Please try again." });
+                        } catch {
+                          push({ title: "Couldn't remove invite", description: "Please try again." });
+                        }
+                      }}
+                      className="text-[11px] text-muted hover:text-red-500 transition-colors"
+                      title="Remove from roster"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={!!confirmRemove}
@@ -871,13 +993,18 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         title="Delete this group?"
         message={
           confirmDeleteGroup
-            ? `"${confirmDeleteGroup.name}" and its board, including all of the group's tasks, will be permanently deleted. Students in it return to waiting. This cannot be undone.`
+            ? (() => {
+                const { name, taskCount, memberCount } = confirmDeleteGroup;
+                const tasks = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
+                const students = memberCount === 1 ? "1 student" : `${memberCount} students`;
+                return `"${name}" will be deleted — ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. You'll have a few seconds to undo.`;
+              })()
             : ""
         }
         confirmLabel="Delete group"
         onClose={() => setConfirmDeleteGroup(null)}
-        onConfirm={async () => {
-          if (confirmDeleteGroup) await deleteGroup(confirmDeleteGroup.id);
+        onConfirm={() => {
+          if (confirmDeleteGroup) deleteGroup(confirmDeleteGroup.id);
         }}
       />
     </div>

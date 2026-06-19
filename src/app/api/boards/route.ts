@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getVerifiedSession } from "@/lib/auth";
 import { createBoardSchema, reorderBoardsSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET all boards the current user is a member of
 export async function GET() {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
@@ -50,7 +50,7 @@ export async function GET() {
 // POST create a new board (with default columns) and add creator as owner
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest) {
     const data = result.data;
 
     // auth: ensure user is authenticated and is a member of all affected boards
-    const session = await getSession();
+    const session = await getVerifiedSession();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
     const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
