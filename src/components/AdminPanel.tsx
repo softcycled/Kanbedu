@@ -148,15 +148,19 @@ export default function AdminPanel() {
                   <span className="text-[9px] text-muted leading-none mb-1 uppercase font-bold">DB Latency</span>
                   <span className="text-xs font-mono font-bold text-ink">{health.latency}</span>
                 </div>
-                {emailStats?.available && emailStats.sent !== undefined && emailStats.limit !== undefined && (
+                {emailStats !== null && (
                   <>
                     <div className="h-3 w-[1px] bg-border/60" />
                     <div className="flex flex-col items-start">
                       <span className="text-[9px] text-muted leading-none mb-1 uppercase font-bold">Email today</span>
-                      <span className={`text-xs font-mono font-bold ${emailStats.warning ? "text-amber-500" : "text-ink"}`}>
-                        {emailStats.sent} / {emailStats.limit}
-                        {emailStats.warning && " !"}
-                      </span>
+                      {emailStats.available && emailStats.sent !== undefined && emailStats.limit !== undefined ? (
+                        <span className={`text-xs font-mono font-bold ${emailStats.warning ? "text-amber-500" : "text-ink"}`}>
+                          {emailStats.sent} / {emailStats.limit}
+                          {emailStats.warning && " !"}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-mono text-muted">N/A</span>
+                      )}
                     </div>
                   </>
                 )}
