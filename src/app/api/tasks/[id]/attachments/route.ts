@@ -6,6 +6,27 @@ import { put } from "@vercel/blob";
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PER_TASK = 20;
 
+// Allowlist of accepted upload types mapped to their valid extensions. Anything
+// not listed is rejected. SVG and HTML are intentionally excluded: served from
+// the blob domain they can execute script (stored XSS). The declared MIME type
+// and the filename extension must agree, so a disguised file (e.g. .html renamed
+// to .png, or text/html sent with a .png name) is rejected.
+const ALLOWED_TYPES: Record<string, string[]> = {
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/gif": [".gif"],
+  "image/webp": [".webp"],
+  "application/pdf": [".pdf"],
+  "text/plain": [".txt"],
+  "text/csv": [".csv"],
+  "application/msword": [".doc"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+  "application/vnd.ms-excel": [".xls"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  "application/vnd.ms-powerpoint": [".ppt"],
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+};
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,6 +102,18 @@ export async function POST(
   if (file.size > MAX_SIZE) return NextResponse.json({ error: "File too large. Max 10MB." }, { status: 400 });
   if (file.size === 0) return NextResponse.json({ error: "File is empty." }, { status: 400 });
 
+  // Type allowlist: the declared MIME type must be allowed and the filename
+  // extension must match it. Rejects executable/markup uploads (SVG, HTML) and
+  // type/extension mismatches.
+  const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+  const allowedExts = ALLOWED_TYPES[file.type];
+  if (!allowedExts || !allowedExts.includes(ext)) {
+    return NextResponse.json(
+      { error: "Unsupported file type. Allowed: images (JPG, PNG, GIF, WebP), PDF, TXT, CSV, and Office documents." },
+      { status: 400 }
+    );
+  }
+
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const blobPath = `attachments/${id}/${Date.now()}-${safeName}`;
 
@@ -92,7 +125,7 @@ export async function POST(
       url: blob.url,
       filename: file.name,
       size: file.size,
-      contentType: file.type || "application/octet-stream",
+      contentType: file.type,
       uploadedBy: session.userId,
     },
     select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
