@@ -5,18 +5,18 @@ import ToastProvider from "@/components/Toasts";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://kanbedu.com"),
-  title: "Kanbedu",
-  description: "Kanban boards built for the classroom",
+  title: "Kanbedu - Project boards. Without the noise.",
+  description: "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers",
   openGraph: {
-    title: "Kanbedu",
-    description: "Kanban boards built for the classroom",
+    title: "Kanbedu - Project boards. Without the noise.",
+    description: "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers",
     siteName: "Kanbedu",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kanbedu",
-    description: "Kanban boards built for the classroom",
+    title: "Kanbedu - Project boards. Without the noise.",
+    description: "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers",
   },
 };
 

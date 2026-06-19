@@ -763,6 +763,10 @@ export default function TaskModal({
     // fire server request in background and reconcile when it completes
     void onAddComment(task.id, trimmed, commentAuthor.trim()).then((serverComment) => {
       setComments((prev) => prev.map((c) => (c.id === localId ? serverComment : c)));
+      // Remove the optimistic activity — board polling never carries activities, so it
+      // would stay stuck forever. Drop it and fetch the real server entry instead.
+      setActivities((prev) => prev.filter((a) => a.id !== localActId));
+      void fetchActivitiesForTask(task.id);
     }).catch((err) => {
       console.error(err);
       setComments((prev) => prev.filter((c) => c.id !== localId));
