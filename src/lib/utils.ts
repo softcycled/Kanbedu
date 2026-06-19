@@ -69,22 +69,6 @@ export function formatDateForInput(date: Date | string | null): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function dateInputToISOString(input: string | null | undefined): string | null {
-  if (!input) return null;
-  // Expecting `YYYY-MM-DD` from <input type="date">. Construct a local Date
-  const parts = String(input).split("-");
-  if (parts.length === 3) {
-    const y = Number(parts[0]);
-    const m = Number(parts[1]);
-    const d = Number(parts[2]);
-    // Use local midnight so conversions are explicit and consistent
-    const dt = new Date(y, m - 1, d);
-    return dt.toISOString();
-  }
-  // Fallback to regular parsing
-  return new Date(input).toISOString();
-}
-
 // "HH:mm" for <input type="time">, or "" when the deadline is date-only.
 export function formatTimeForInput(date: Date | string | null): string {
   if (!date) return "";
