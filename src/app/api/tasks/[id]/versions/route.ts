@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 export async function GET(
   _req: Request,
@@ -16,7 +17,10 @@ export async function GET(
   const taskRow = await prisma.task.findUnique({ where: { id }, select: { columnRel: { select: { boardId: true } } } });
   if (!taskRow || !taskRow.columnRel) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const allowed = await isMemberOfBoard(session.userId, taskRow.columnRel.boardId);
-  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!allowed) {
+    logAuthzDenied(_req, "/api/tasks/[id]/versions", session.userId, "GET cross-tenant");
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const versions = await prisma.taskDescriptionVersion.findMany({
     where: { taskId: id },

@@ -17,19 +17,38 @@ export function timeInColumn(columnUpdatedAt: Date | string): string {
   return `${days}d ${remainingHours}h`;
 }
 
+// A deadline "has a time" when the user explicitly set one. Two stored values are
+// treated as date-only (no time): local midnight 00:00:00 (legacy deadlines saved
+// before time support) and the end-of-day sentinel 23:59:59 (saved for new
+// date-only deadlines). A <input type="time"> only ever emits HH:mm (seconds 0),
+// so the :59 sentinel is unreachable by user input — no collision.
+export function deadlineHasTime(deadline: Date | string | null): boolean {
+  if (!deadline) return false;
+  const d = new Date(deadline);
+  const h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  if (h === 0 && m === 0 && s === 0) return false;
+  if (h === 23 && m === 59 && s === 59) return false;
+  return true;
+}
+
+// The instant a deadline is actually "due" for overdue/severity math.
+// Timed deadlines use their exact instant; date-only deadlines use end of that day
+// so a task due "today" is not overdue until the day fully passes.
+export function effectiveDeadlineMs(deadline: Date | string): number {
+  const d = new Date(deadline);
+  if (deadlineHasTime(d)) return d.getTime();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+}
+
+// "9:00 AM" — only meaningful when deadlineHasTime is true.
+export function formatDeadlineTime(date: Date | string | null): string {
+  if (!date) return "";
+  return new Date(date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
 export function isOverdue(deadline: Date | string | null, completedAt?: Date | string | null): boolean {
   if (!deadline || completedAt) return false;
-
-  // Compare only dates (ignoring time)
-  // A task is overdue only after the entire deadline day has passed
-  const deadlineDate = new Date(deadline);
-  const today = new Date();
-
-  // Reset both to midnight for fair date-only comparison
-  deadlineDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  return deadlineDate < today;
+  return Date.now() > effectiveDeadlineMs(deadline);
 }
 
 export function formatDate(date: Date | string | null): string {
@@ -50,20 +69,36 @@ export function formatDateForInput(date: Date | string | null): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function dateInputToISOString(input: string | null | undefined): string | null {
-  if (!input) return null;
-  // Expecting `YYYY-MM-DD` from <input type="date">. Construct a local Date
-  const parts = String(input).split("-");
-  if (parts.length === 3) {
-    const y = Number(parts[0]);
-    const m = Number(parts[1]);
-    const d = Number(parts[2]);
-    // Use local midnight so conversions are explicit and consistent
-    const dt = new Date(y, m - 1, d);
-    return dt.toISOString();
+// "HH:mm" for <input type="time">, or "" when the deadline is date-only.
+export function formatTimeForInput(date: Date | string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (!deadlineHasTime(d)) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+// Combine a date input (YYYY-MM-DD) and optional time input (HH:mm) into an ISO
+// string. No time -> end-of-day sentinel (23:59:59) so the deadline reads as
+// date-only. Returns null when no date is set (deadline removed).
+export function combineDateTimeToISO(
+  dateStr: string | null | undefined,
+  timeStr: string | null | undefined
+): string | null {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split("-");
+  if (parts.length !== 3) return new Date(dateStr).toISOString();
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (timeStr) {
+    const tp = String(timeStr).split(":");
+    const hh = Number(tp[0] || 0);
+    const mm = Number(tp[1] || 0);
+    return new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
   }
-  // Fallback to regular parsing
-  return new Date(input).toISOString();
+  return new Date(y, m - 1, d, 23, 59, 59, 0).toISOString();
 }
 
 export function formatDateTime(date: Date | string | null): string {
@@ -105,29 +140,42 @@ export function formatDeadlineLabel(deadline: Date | string | null, completedAt?
 
   const now = new Date();
   const d = new Date(deadline);
+  const hasTime = deadlineHasTime(d);
+  // Date-only deadlines are due at end of day; timed ones at their exact instant.
+  const diffMs = effectiveDeadlineMs(d) - now.getTime();
+  const timeSuffix = hasTime ? `, ${formatDeadlineTime(d)}` : "";
 
-  // Use date-only comparison (consistent with isOverdue) — a task is not
-  // overdue until the deadline day has fully passed.
+  // Past (overdue) — time-aware, consistent with isOverdue(): timed deadlines go
+  // overdue at their exact instant, date-only ones once the day has fully passed.
+  if (diffMs < 0) {
+    const absMs = Math.abs(diffMs);
+    const days = Math.floor(absMs / 86_400_000);
+    if (days >= 1) return { label: `Overdue by ${days}d`, severity: "overdue" };
+    const hours = Math.ceil(absMs / 3_600_000);
+    return { label: `Overdue by ${hours}h`, severity: "overdue" };
+  }
+
+  // Day-boundary diff for relative labels.
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const startOfDeadlineDay = new Date(d);
   startOfDeadlineDay.setHours(0, 0, 0, 0);
   const daysUntil = Math.round((startOfDeadlineDay.getTime() - startOfToday.getTime()) / 86_400_000);
 
-  // Past (overdue) — deadline day has fully passed
-  if (daysUntil < 0) {
-    const days = Math.abs(daysUntil);
-    return { label: `Overdue by ${days}d`, severity: "overdue" };
-  }
-
-  // Due today — still valid all day
+  // Due today — show the time when set, else the plain date-only label.
   if (daysUntil === 0) {
-    return { label: "Due today", severity: "due-soon" };
+    return { label: hasTime ? `Due ${formatDeadlineTime(d)}` : "Due today", severity: "due-soon" };
   }
 
   // Due tomorrow
   if (daysUntil === 1) {
-    return { label: "Due tomorrow", severity: "due-soon" };
+    return { label: hasTime ? `Tomorrow, ${formatDeadlineTime(d)}` : "Due tomorrow", severity: "due-soon" };
+  }
+
+  // Timed deadlines within ~2 days show hours for precision.
+  if (hasTime && diffMs <= 48 * 3_600_000) {
+    const hours = Math.ceil(diffMs / 3_600_000);
+    return { label: `Due in ${hours}h`, severity: "due-soon" };
   }
 
   // Within a week show days
@@ -135,6 +183,6 @@ export function formatDeadlineLabel(deadline: Date | string | null, completedAt?
     return { label: `Due in ${daysUntil}d`, severity: "future" };
   }
 
-  // Otherwise show a concise date
-  return { label: formatDate(d), severity: "future" };
+  // Otherwise show a concise date (with time when set)
+  return { label: `${formatDate(d)}${timeSuffix}`, severity: "future" };
 }

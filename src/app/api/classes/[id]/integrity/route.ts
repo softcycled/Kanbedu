@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
+import { logSecurityEvent } from "@/lib/securityLog";
 import { getClassNameOverrides } from "@/lib/classNames";
 
 // Integrity detection thresholds — kept in sync with the per-board analytics
@@ -20,6 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logSecurityEvent({ type: "authz_denied", route: "/api/classes/[id]/integrity", userId: session.userId, detail: "educator-only" });
       return NextResponse.json({ error: "Only educators can view integrity." }, { status: 403 });
     }
 

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { transferOwnershipSchema, removeMemberSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 // Remove a board member and clean up their task assignments on that board.
 async function removeMemberAndCleanAssignees(boardId: string, userId: string) {
@@ -24,6 +25,15 @@ async function removeMemberAndCleanAssignees(boardId: string, userId: string) {
     }
 
     await tx.boardMember.delete({ where: { userId_boardId: { userId, boardId } } });
+
+    // Rotate the board's realtime secret so the removed member can no longer use
+    // the secret they already learned to subscribe to the board channel. Remaining
+    // members re-subscribe with the new secret on their next board refetch. Member
+    // removal is rare, so the brief realtime pause for others is acceptable.
+    await tx.board.update({
+      where: { id: boardId },
+      data: { realtimeSecret: crypto.randomUUID() },
+    });
   });
 }
 
@@ -50,6 +60,7 @@ export async function GET(
 
     const isMember = members.some((m) => m.userId === session.userId);
     if (!isMember) {
+      logAuthzDenied(_request, "/api/boards/[id]/members", session.userId, "GET cross-tenant roster");
       return NextResponse.json({ error: "Unauthorized access to board members." }, { status: 403 });
     }
 

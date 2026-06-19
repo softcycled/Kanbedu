@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { logSecurityEvent } from "@/lib/securityLog";
 
 const COOKIE_NAME = "kanbedu-session";
 const SECRET_RAW = process.env.KANBEDU_JWT_SECRET;
@@ -36,8 +37,13 @@ export async function middleware(req: NextRequest) {
   };
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
+  const clientIp = req.headers.get("x-real-ip") ?? undefined;
   if (!token) {
-    if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isApiRoute) {
+      // Unauthenticated hit on a protected API route — the probing signal.
+      logSecurityEvent({ type: "auth_missing", route: pathname, ip: clientIp });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return loginRedirect();
   }
 
@@ -45,7 +51,10 @@ export async function middleware(req: NextRequest) {
     await jwtVerify(token, SECRET);
   } catch {
     // Invalid or expired token
-    if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isApiRoute) {
+      logSecurityEvent({ type: "auth_invalid", route: pathname, ip: clientIp });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return loginRedirect();
   }
 
@@ -72,6 +81,7 @@ export async function middleware(req: NextRequest) {
       if (referer) { try { candidate = new URL(referer).origin; } catch {} }
     }
     if (!candidate || !allowed.has(normalizeOrigin(candidate))) {
+      logSecurityEvent({ type: "csrf_blocked", route: pathname, ip: clientIp, detail: candidate ?? "no-origin" });
       return NextResponse.json({ error: "Cross-origin request blocked" }, { status: 403 });
     }
   }

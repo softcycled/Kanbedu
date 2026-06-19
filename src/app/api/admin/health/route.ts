@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/auth";
+import { logSecurityEvent } from "@/lib/securityLog";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user?.isAdmin) {
+      logSecurityEvent({ type: "admin_denied", route: "/api/admin/health", userId: session.userId });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

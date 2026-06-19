@@ -32,7 +32,7 @@ export default async function PrivacyPage() {
         <div className="mb-12">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-3">Legal</p>
           <h1 className="text-3xl font-semibold tracking-tight text-ink mb-4">Privacy Policy</h1>
-          <p className="text-sm text-muted">Last updated: 7th June 2026</p>
+          <p className="text-sm text-muted">Last updated: 20th June 2026</p>
         </div>
 
         <div>
@@ -87,7 +87,7 @@ export default async function PrivacyPage() {
 
           <Section title="4. Legal Basis for Processing">
             <p>
-              We process your personal data in accordance with Malaysia&rsquo;s Personal Data Protection Act 2010 (the &ldquo;PDPA&rdquo;) and the data protection principles it sets out, including the General Principle, the Notice and Choice Principle, the Security Principle, and the Retention Principle. By creating an account and providing your data, you consent to us processing it for the purposes described in this policy. You can withdraw your consent at any time as described in Section 11.
+              We process your personal data in accordance with Malaysia&rsquo;s Personal Data Protection Act 2010, as amended by the Personal Data Protection (Amendment) Act 2024 (together, the &ldquo;PDPA&rdquo;), and the data protection principles it sets out, including the General Principle, the Notice and Choice Principle, the Security Principle, and the Retention Principle. By creating an account and providing your data, you consent to us processing it for the purposes described in this policy. You can withdraw your consent at any time as described in Section 11.
             </p>
             <p>
               Where other data protection laws also apply to you, we rely on the following grounds to process your data:
@@ -136,6 +136,9 @@ export default async function PrivacyPage() {
             </ul>
             <p>
               No system is perfectly secure. While we take reasonable precautions, we cannot guarantee absolute security. If you suspect unauthorised access to your account, contact us immediately through the Help panel in the app.
+            </p>
+            <p>
+              In the event of a personal data breach that is likely to cause significant harm, we will notify the Personal Data Protection Commissioner, and affected users where required, in accordance with the PDPA.
             </p>
           </Section>
 
@@ -226,6 +229,9 @@ export default async function PrivacyPage() {
           <Section title="15. Contact">
             <p>
               If you have questions or concerns about this policy or how we handle your data, use the Help &amp; Support panel within the app.
+            </p>
+            <p>
+              Data protection matters, including access, correction, and deletion requests and any breach concerns, are handled by our designated data protection contact, reachable through the Help &amp; Support panel.
             </p>
             <p>
               If you are in Malaysia and believe we have not adequately addressed your concern, you may lodge a complaint with the Personal Data Protection Commissioner (Jabatan Perlindungan Data Peribadi).
