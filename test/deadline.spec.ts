@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  deadlineHasTime,
-  combineDateTimeToISO,
+  dateInputToISOString,
   formatDateForInput,
-  formatTimeForInput,
   isOverdue,
   formatDeadlineLabel,
 } from "../src/lib/utils";
@@ -18,78 +16,53 @@ function dateStrOffset(days: number): string {
   return `${y}-${m}-${dd}`;
 }
 
-describe("deadlineHasTime", () => {
-  it("treats local midnight (legacy date-only) as no time", () => {
-    expect(deadlineHasTime(new Date(2026, 5, 15, 0, 0, 0))).toBe(false);
-  });
-  it("treats the 23:59:59 end-of-day sentinel as no time", () => {
-    expect(deadlineHasTime(new Date(2026, 5, 15, 23, 59, 59))).toBe(false);
-  });
-  it("treats an explicit time as having a time", () => {
-    expect(deadlineHasTime(new Date(2026, 5, 15, 9, 30, 0))).toBe(true);
-  });
-  it("returns false for null", () => {
-    expect(deadlineHasTime(null)).toBe(false);
-  });
-});
-
-describe("combineDateTimeToISO round-trip", () => {
-  it("preserves date and time when a time is set", () => {
-    const iso = combineDateTimeToISO("2026-06-15", "09:30");
+describe("dateInputToISOString", () => {
+  it("round-trips a date input through ISO", () => {
+    const iso = dateInputToISOString("2026-06-15");
     expect(iso).not.toBeNull();
     expect(formatDateForInput(iso)).toBe("2026-06-15");
-    expect(formatTimeForInput(iso)).toBe("09:30");
-    expect(deadlineHasTime(iso!)).toBe(true);
   });
-
-  it("stores a date-only deadline as end-of-day (no time on read back)", () => {
-    const iso = combineDateTimeToISO("2026-06-15", "");
-    expect(iso).not.toBeNull();
-    expect(formatDateForInput(iso)).toBe("2026-06-15");
-    expect(formatTimeForInput(iso)).toBe("");
-    expect(deadlineHasTime(iso!)).toBe(false);
-  });
-
   it("returns null when no date is set (deadline removed)", () => {
-    expect(combineDateTimeToISO("", "09:00")).toBeNull();
-    expect(combineDateTimeToISO(null, null)).toBeNull();
-    expect(combineDateTimeToISO(undefined, "10:00")).toBeNull();
+    expect(dateInputToISOString("")).toBeNull();
+    expect(dateInputToISOString(null)).toBeNull();
+    expect(dateInputToISOString(undefined)).toBeNull();
   });
 });
 
-describe("isOverdue (smart end-of-day default)", () => {
-  it("a date-only deadline for today is not overdue", () => {
-    expect(isOverdue(combineDateTimeToISO(dateStrOffset(0), ""))).toBe(false);
+describe("isOverdue (date-only)", () => {
+  it("a deadline for today is not overdue", () => {
+    expect(isOverdue(dateInputToISOString(dateStrOffset(0)))).toBe(false);
   });
-  it("a date-only deadline for yesterday is overdue", () => {
-    expect(isOverdue(combineDateTimeToISO(dateStrOffset(-1), ""))).toBe(true);
+  it("a deadline for yesterday is overdue", () => {
+    expect(isOverdue(dateInputToISOString(dateStrOffset(-1)))).toBe(true);
   });
-  it("a timed deadline in the past is overdue", () => {
-    expect(isOverdue(new Date(Date.now() - 3_600_000).toISOString())).toBe(true);
-  });
-  it("a timed deadline in the future is not overdue", () => {
-    expect(isOverdue(new Date(Date.now() + 3_600_000).toISOString())).toBe(false);
+  it("a future deadline is not overdue", () => {
+    expect(isOverdue(dateInputToISOString(dateStrOffset(5)))).toBe(false);
   });
   it("a completed task is never overdue", () => {
-    expect(isOverdue(combineDateTimeToISO(dateStrOffset(-5), ""), new Date())).toBe(false);
+    expect(isOverdue(dateInputToISOString(dateStrOffset(-5)), new Date())).toBe(false);
   });
   it("no deadline is never overdue", () => {
     expect(isOverdue(null)).toBe(false);
   });
 });
 
-describe("formatDeadlineLabel", () => {
-  it("includes the time for a far-future timed deadline", () => {
-    const { label, severity } = formatDeadlineLabel(combineDateTimeToISO(dateStrOffset(30), "14:00"));
-    expect(severity).toBe("future");
-    expect(label).toContain(":"); // e.g. "Jul 13, 2026, 2:00 PM"
+describe("formatDeadlineLabel (date-only)", () => {
+  it("today -> Due today", () => {
+    expect(formatDeadlineLabel(dateInputToISOString(dateStrOffset(0))).label).toBe("Due today");
   });
-  it("omits the time for a far-future date-only deadline", () => {
-    const { label, severity } = formatDeadlineLabel(combineDateTimeToISO(dateStrOffset(30), ""));
+  it("tomorrow -> Due tomorrow", () => {
+    expect(formatDeadlineLabel(dateInputToISOString(dateStrOffset(1))).label).toBe("Due tomorrow");
+  });
+  it("a past deadline is overdue severity", () => {
+    expect(formatDeadlineLabel(dateInputToISOString(dateStrOffset(-2))).severity).toBe("overdue");
+  });
+  it("far future is future severity with no time in the label", () => {
+    const { label, severity } = formatDeadlineLabel(dateInputToISOString(dateStrOffset(30)));
     expect(severity).toBe("future");
     expect(label).not.toContain(":");
   });
-  it("returns none severity for no deadline", () => {
+  it("no deadline returns none severity", () => {
     expect(formatDeadlineLabel(null).severity).toBe("none");
   });
 });
