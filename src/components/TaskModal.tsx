@@ -1758,9 +1758,7 @@ export default function TaskModal({
                         value={deadline}
                         onChange={(e) => {
                           userHasEdited.current = true;
-                          const v = e.target.value;
-                          setDeadline(v);
-                          if (!v) setDeadlineTime("");
+                          setDeadline(e.target.value);
                         }}
                         className="sr-only"
                         aria-hidden="true"
