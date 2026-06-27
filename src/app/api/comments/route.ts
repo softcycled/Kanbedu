@@ -57,6 +57,7 @@ export async function POST(req: Request) {
     data: {
       content: data.content,
       author,
+      userId: session.userId,
       taskId: data.taskId,
     },
   });

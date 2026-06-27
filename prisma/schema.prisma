@@ -23,6 +23,7 @@ model User {
   invites             BoardInvite[]
   boards              BoardMember[]
   bugReports          BugReport[]
+  comments            Comment[]
   assignedTasks       Task[]                   @relation("TaskAssignees")
   taskAssignments     TaskAssignee[]
   activities          TaskActivity[]
@@ -202,11 +203,14 @@ model Comment {
   id        String   @id @default(cuid())
   content   String
   author    String   @default("")
+  userId    String?  // null for comments posted before this migration
   createdAt DateTime @default(now())
   taskId    String
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
+  @@index([userId])
 }
 
 model TaskActivity {
