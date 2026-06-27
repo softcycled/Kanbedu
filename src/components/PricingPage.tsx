@@ -8,19 +8,18 @@ import LandingFooter from "./landing/LandingFooter";
 // Strawman tier content pending Jorge's final pricing/feature decisions. Edit
 // the features and price labels here; the page layout reads entirely from this.
 const FREE_FEATURES = [
-  "Unlimited boards",
-  "Real-time sync",
-  "Class boards and groups",
+  "Up to 3 active classes",
+  "Unlimited boards, groups, and students",
+  "Real-time sync across the class",
   "Monitor, Integrity, and Participation panels",
   "50MB attachments per board",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
-  "Larger attachment quota",
-  "Higher group and student caps per class",
-  "Analytics export",
-  "Priority support",
+  "Up to 10 active classes",
+  "Unlimited archived classes for past semesters",
+  "Higher priority support and feedback",
 ];
 
 function Check() {
@@ -108,7 +107,7 @@ export default function PricingPage() {
                 More for lecturers who need it.
               </h1>
               <p className="text-[15px] md:text-[17px] text-muted max-w-md mx-auto leading-relaxed motion-safe:animate-fade-in [animation-delay:120ms]">
-                Kanbedu stays free for students and teachers. Lecturer Pro adds room to scale for larger cohorts.
+                Kanbedu stays free for students and teachers. Lecturer Pro raises the active-class limit and adds unlimited archiving.
               </p>
             </div>
           </section>
