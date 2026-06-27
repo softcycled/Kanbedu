@@ -7,8 +7,9 @@ import LandingFooter from "./landing/LandingFooter";
 
 // Strawman tier content pending Jorge's final pricing/feature decisions. Edit
 // the features and price labels here; the page layout reads entirely from this.
+// The free active-class cap (3) is intentionally omitted until the limit is
+// actually enforced in the backend. Re-add once the gate ships.
 const FREE_FEATURES = [
-  "Up to 3 active classes",
   "Unlimited boards, groups, and students",
   "Real-time sync across the class",
   "Monitor, Integrity, and Participation panels",
