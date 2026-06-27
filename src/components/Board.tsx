@@ -23,6 +23,7 @@ import KanbanColumn from "./KanbanColumn";
 import Skeleton from "./Skeleton";
 import dynamic from "next/dynamic";
 const TaskModal = dynamic(() => import("./TaskModal"), { ssr: false, loading: () => null });
+const TrashPanel = dynamic(() => import("./TrashPanel"), { ssr: false, loading: () => null });
 import TaskCard from "./TaskCard";
 import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
@@ -47,9 +48,13 @@ interface Props {
   // Mobile only: when provided, renders a "<" trigger at the start of the mobile
   // header that opens the app sidebar (the board slides off to reveal it).
   onOpenNav?: () => void;
+  // When true, shows the "Recently deleted" trash entry point. Personal board
+  // owners always; class group boards only for educators/TAs.
+  canViewTrash?: boolean;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false }: Props) {
+  const [trashOpen, setTrashOpen] = useState(false);
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -792,39 +797,23 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       if (!res.ok) throw new Error(`Delete task failed: ${res.status}`);
       broadcastRefresh({ type: "task:delete", taskId: id });
 
-      // Show undo toast (best-effort restore)
+      // Show undo toast. Soft delete means restore brings back the exact same
+      // task (comments, assignees, history, id) rather than recreating a copy.
       toasts.push({
         title: "Task deleted",
         description: prevTask.title,
         actionLabel: "Undo",
         onAction: async () => {
           try {
-            const r = await fetch("/api/tasks", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                title: prevTask.title,
-                column: prevTask.column,
-                description: prevTask.description || undefined,
-                // restore the full assignee set, not just the first assignee
-                assigneeIds: prevTask.assignees?.length
-                  ? prevTask.assignees.map((a) => a.id)
-                  : prevTask.assigneeId
-                  ? [prevTask.assigneeId]
-                  : undefined,
-                priority: prevTask.priority !== "medium" ? prevTask.priority : undefined,
-                deadline: prevTask.deadline ? String(prevTask.deadline) : undefined,
-                tagIds: prevTask.tags?.map((t) => t.id),
-              }),
-            });
+            const r = await fetch(`/api/tasks/${id}/restore`, { method: "POST" });
             if (!r.ok) throw new Error("Restore failed");
             const restored = await r.json();
-            // Merge display-only fields the API doesn't return (assigneeUser name/color)
-            const withDisplay = { ...restored, assigneeUser: prevTask.assigneeUser ?? null };
-            onTasksChange((prev) => [...prev, withDisplay]);
+            const withDisplay = { ...restored, assigneeUser: restored.assigneeUser ?? prevTask.assigneeUser ?? null };
+            onTasksChange((prev) => (prev.some((t) => t.id === restored.id) ? prev : [...prev, withDisplay]));
             broadcastRefresh({ type: "task:create", task: withDisplay });
           } catch (err) {
             console.error("Undo restore failed", err);
+            toasts.push({ title: "Couldn't undo", description: "Please try again." });
           }
         },
       });
@@ -980,6 +969,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </button>
+          {canViewTrash && (
+            <button
+              onClick={() => setTrashOpen(true)}
+              aria-label="Recently deleted"
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-transparent text-muted hover:text-ink transition-colors"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          )}
         </div>
         {headerTrailing}
       </div>
@@ -1056,6 +1056,18 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               </svg>
             </button>
           </div>
+          {canViewTrash && (
+            <button
+              onClick={() => setTrashOpen(true)}
+              title="Recently deleted"
+              aria-label="Recently deleted"
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-border/30 bg-column-bg text-muted/70 hover:text-ink/80 transition-colors flex-shrink-0"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          )}
         </div>
         {headerTrailing}
       </div>
@@ -1182,6 +1194,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
           }}
           onConfirmDelete={handleConfirmDeleteColumn}
           errorMessage={deleteError}
+        />
+      )}
+
+      {canViewTrash && (
+        <TrashPanel
+          boardId={boardId}
+          isOpen={trashOpen}
+          onClose={() => setTrashOpen(false)}
+          onRestored={(task) =>
+            onTasksChange((prev) => (prev.some((t) => t.id === task.id) ? prev : [...prev, task]))
+          }
         />
       )}
     </>

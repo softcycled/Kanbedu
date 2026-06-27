@@ -120,6 +120,7 @@ export default function ClassWorkspace(props: Props) {
           boardName={openBoard.name}
           currentUserId={currentUserId}
           realtimeSecret={openBoard.secret}
+          canViewTrash
         />
       </div>
     );

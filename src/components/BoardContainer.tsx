@@ -550,6 +550,7 @@ export default function BoardContainer({
                 isLoading={isLoadingBoard}
                 currentUserId={currentUserId}
                 onOpenNav={() => setNavOpen(true)}
+                canViewTrash
               />
             </div>
           </>
