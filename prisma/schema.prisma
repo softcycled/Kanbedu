@@ -18,6 +18,7 @@ model User {
   color               String                   @default("#4A90A4")
   createdAt           DateTime                 @default(now())
   passwordChangedAt   DateTime?
+  sessionsValidFrom   DateTime?                // sign-out-everywhere cutoff: tokens issued before this are rejected
   isAdmin             Boolean                  @default(false)
   emailVerified       Boolean                  @default(false)
   invites             BoardInvite[]
