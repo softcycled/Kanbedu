@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { put } from "@vercel/blob";
+import { uploadToGCS, getSignedUrl } from "@/lib/gcs";
 import { logAuthzDenied } from "@/lib/securityLog";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -67,7 +67,16 @@ export async function GET(
     select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
   });
 
-  return NextResponse.json(attachments);
+  // url field may be a GCS object path (new uploads) or a legacy Vercel Blob URL.
+  // Generate a signed URL for GCS paths; pass Blob URLs through unchanged.
+  const withUrls = await Promise.all(
+    attachments.map(async (a) => ({
+      ...a,
+      url: a.url.startsWith("https://") ? a.url : await getSignedUrl(a.url),
+    }))
+  );
+
+  return NextResponse.json(withUrls);
 }
 
 export async function POST(
@@ -130,20 +139,23 @@ export async function POST(
   });
   if ((boardSizeResult._sum.size ?? 0) + file.size > MAX_BOARD_BYTES) {
     return NextResponse.json(
-      { error: "Board storage limit reached (100MB per board)." },
+      { error: "Board storage limit reached (50MB per board)." },
       { status: 400 }
     );
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const blobPath = `attachments/${id}/${Date.now()}-${safeName}`;
+  const objectPath = `attachments/${id}/${Date.now()}-${safeName}`;
 
-  const blob = await put(blobPath, file, { access: "public" });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await uploadToGCS(objectPath, buffer, file.type);
+
+  const signedUrl = await getSignedUrl(objectPath);
 
   const attachment = await prisma.attachment.create({
     data: {
       taskId: id,
-      url: blob.url,
+      url: objectPath,
       filename: file.name,
       size: file.size,
       contentType: file.type,
@@ -152,5 +164,5 @@ export async function POST(
     select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
   });
 
-  return NextResponse.json(attachment, { status: 201 });
+  return NextResponse.json({ ...attachment, url: signedUrl }, { status: 201 });
 }

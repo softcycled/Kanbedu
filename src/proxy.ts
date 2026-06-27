@@ -23,7 +23,7 @@ function buildCsp(nonce: string): string {
     // unsafe-eval only in dev (HMR); nonce replaces unsafe-inline for all inline scripts
     `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
+    "img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://storage.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self'",
     "object-src 'none'",

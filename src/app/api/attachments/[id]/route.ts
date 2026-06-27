@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { deleteFromGCS } from "@/lib/gcs";
 import { del } from "@vercel/blob";
 
 export async function DELETE(
@@ -39,7 +40,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await del(attachment.url);
+  // url is a GCS object path for new uploads, or a legacy Vercel Blob URL
+  if (attachment.url.startsWith("https://")) {
+    await del(attachment.url);
+  } else {
+    await deleteFromGCS(attachment.url);
+  }
+
   await prisma.attachment.delete({ where: { id } });
 
   return NextResponse.json({ ok: true });
