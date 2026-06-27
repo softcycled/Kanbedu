@@ -71,6 +71,13 @@ export default function BoardContainer({
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
   const [taskTotal, setTaskTotal] = useState(initialTaskTotal ?? initialTasks.length);
 
+  // Mobile drawer: the sidebar is a full-screen base layer; the board (main)
+  // slides off to the right to reveal it. Open via the header "<" trigger or a
+  // right-swipe; close via a left-swipe or any sidebar selection.
+  const [navOpen, setNavOpen] = useState(false);
+  const navOpenRef = useRef(navOpen);
+  useEffect(() => { navOpenRef.current = navOpen; }, [navOpen]);
+
   // Classes are owned here (single source of truth) so the sidebar list and the
   // lobby poll read the same data. A student's selected class renders in the
   // main content area; educators/TAs are routed to the dedicated workspace.
@@ -225,6 +232,54 @@ export default function BoardContainer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
+
+  // Mobile swipe: right-swipe anywhere opens the nav, left-swipe closes it.
+  // To preserve horizontal board-column scrolling, a closed-state gesture is
+  // ignored when it begins inside a strip that is scrolled away from its left
+  // origin (so the user scrolls columns instead of opening). Vertical-dominant
+  // swipes are ignored so normal scrolling is unaffected.
+  useEffect(() => {
+    const THRESHOLD = 60;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const startsInScrolledStrip = (target: EventTarget | null): boolean => {
+      let node = target as HTMLElement | null;
+      while (node && node !== document.body) {
+        if (node.scrollLeft > 0 && node.scrollWidth > node.clientWidth) {
+          const overflowX = getComputedStyle(node).overflowX;
+          if (overflowX === "auto" || overflowX === "scroll") return true;
+        }
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1 || !window.matchMedia("(max-width: 767px)").matches) { tracking = false; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = navOpenRef.current || !startsInScrolledStrip(e.target);
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) < THRESHOLD || Math.abs(dy) > Math.abs(dx)) return;
+      if (dx > 0 && !navOpenRef.current) setNavOpen(true);
+      else if (dx < 0 && navOpenRef.current) setNavOpen(false);
+    };
+
+    document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchend", onEnd);
+    };
+  }, []);
 
   const handlePanelChange = useCallback((panel: Panel) => {
     if (panel === "analytics") {
@@ -457,12 +512,16 @@ export default function BoardContainer({
         onClassReorder={handleReorderClasses}
         onBoardHover={prefetchBoard}
         isAdmin={isAdmin}
+        mobileOpen={navOpen}
+        onMobileOpenChange={setNavOpen}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-paper relative z-30 transition-transform duration-300 ease-out ${navOpen ? "translate-x-full md:translate-x-0" : ""}`}
+      >
         {activeClass && (
           <div className="flex-1 overflow-hidden flex flex-col">
-            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} />
+            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} onOpenNav={() => setNavOpen(true)} />
           </div>
         )}
         {!activeClass && activePanel === "board" && (
@@ -490,6 +549,8 @@ export default function BoardContainer({
                 onColumnsChange={setColumns}
                 isLoading={isLoadingBoard}
                 currentUserId={currentUserId}
+                onOpenNav={() => setNavOpen(true)}
+                canViewTrash
               />
             </div>
           </>

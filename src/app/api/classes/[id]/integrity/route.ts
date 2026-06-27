@@ -74,6 +74,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         ? []
         : await prisma.task.findMany({
             where: {
+              deletedAt: null,
               OR: [
                 { column: { in: doneColumnIds } },
                 { column: { in: nonDoneColumnIds }, movedByNonAssignee: true },

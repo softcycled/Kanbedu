@@ -41,7 +41,7 @@ model User {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String // "ASSIGNED" | "COMMENT"
+  type      String // "ASSIGNED" | "COMMENT" | "MOVED" | "COMPLETED" | "REOPENED"
   title     String
   body      String   @default("")
   read      Boolean  @default(false)
@@ -143,6 +143,8 @@ model Task {
   order               Float                    @default(0)
   priority            String                   @default("medium")
   movedByNonAssignee  Boolean                  @default(false)
+  deletedAt           DateTime?                // soft delete: null = live, set = in trash
+  deletedBy           String?                  // userId who deleted, for self-restore auth and trash display
   comments            Comment[]
   assigneeUser        User?                    @relation("TaskAssignees", fields: [assigneeId], references: [id])
   assignees           TaskAssignee[]
@@ -160,6 +162,7 @@ model Task {
   @@index([assigneeId])
   @@index([completedAt])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // Full assignee set for a task (multi-assignee). Task.assigneeId is kept in
@@ -360,4 +363,15 @@ model ClassPreset {
   columns Json // [{ label, order, isDone }]
   tasks   Json // [{ title, description, columnIndex, priority }]
   class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+// Early-access signups for the (unlaunched) Lecturer Pro plan, collected from
+// the pricing page. Public, unauthenticated capture; email is unique.
+model ProWaitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String   @default("pricing") // entry point, in case of future capture surfaces
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

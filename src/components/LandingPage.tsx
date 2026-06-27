@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import EducatorSteps from "./landing/EducatorSteps";
+import LandingNav from "./landing/LandingNav";
+import LandingFooter from "./landing/LandingFooter";
 
 const DemoBoard = dynamic(() => import("./landing/DemoBoard"), { ssr: false, loading: () => <DemoBoardSkeleton /> });
 
@@ -140,27 +142,7 @@ export default function LandingPage() {
       <div className="min-h-screen font-sans antialiased text-ink bg-paper selection:bg-accent/30 selection:text-white">
 
         {/* ── Navigation ──────────────────────────────────────────── */}
-        <nav
-          className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] backdrop-blur-md"
-          style={{ background: "rgba(22,20,18,0.90)" }}
-        >
-          <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
-            <Link href="/landing" className="text-lg font-bold tracking-tight text-ink">
-              kanbedu
-            </Link>
-            <div className="flex items-center gap-5">
-              <Link href="/login" className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150">
-                Log in
-              </Link>
-              <Link
-                href="/login?mode=signup"
-                className="text-sm font-medium px-4 pt-[4px] pb-[8px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-[#FFFFFF] transition-colors duration-150"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        </nav>
+        <LandingNav />
 
         <main>
 
@@ -324,21 +306,7 @@ export default function LandingPage() {
         </main>
 
         {/* ── Footer ──────────────────────────────────────────────── */}
-        <footer
-          className="py-10 px-6"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "#0f0e0c" }}
-        >
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">
-            <span className="text-sm font-semibold text-white/30">kanbedu</span>
-            <div className="flex items-center flex-wrap justify-center sm:justify-end gap-x-5 gap-y-2 text-xs text-white/25">
-              <Link href="/terms"   className="hover:text-white/45 transition-colors">Terms</Link>
-              <Link href="/privacy" className="hover:text-white/45 transition-colors">Privacy</Link>
-              <a href="mailto:support@kanbedu.com" className="hover:text-white/45 transition-colors">Contact</a>
-              <Link href="/credits" className="hover:text-white/45 transition-colors">Credits</Link>
-              <span>© 2026 Kanbedu</span>
-            </div>
-          </div>
-        </footer>
+        <LandingFooter />
 
       </div>
     </div>

@@ -60,7 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const tasks = await prisma.task.findMany({
-      where: { column: { in: allColumnIds } },
+      where: { column: { in: allColumnIds }, deletedAt: null },
       select: { id: true, column: true },
     });
 

@@ -112,7 +112,9 @@ export async function GET(request: NextRequest) {
   const take = parsedTake === 0 ? undefined : (parsedTake !== null ? Math.min(parsedTake, 1000) : 100);
   const skip = parsedSkip !== null ? parsedSkip : 0;
 
-  const where = { columnRel: { boardId } };
+  // deletedAt: null excludes soft-deleted tasks from the board view; they live
+  // in the trash until restored or purged.
+  const where = { columnRel: { boardId }, deletedAt: null };
   const [tasks, total, nameOverrides] = await Promise.all([
     prisma.task.findMany({
       where,

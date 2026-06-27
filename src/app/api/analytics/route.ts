@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Explicit select keeps the payload lean — skips description (up to 50KB
     // per task) and other fields analytics never reads.
     prisma.task.findMany({
-      where: { columnRel: { boardId } },
+      where: { columnRel: { boardId }, deletedAt: null },
       select: {
         id: true,
         title: true,

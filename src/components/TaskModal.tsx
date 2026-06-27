@@ -8,7 +8,7 @@ import {
   isOverdue,
   timeInColumn,
   formatDateForInput,
-  combineDateTimeToISO,
+  dateInputToISOString,
   formatDateTime,
   formatTimeAgo,
   formatDeadlineLabel,
@@ -210,7 +210,7 @@ export default function TaskModal({
       originalTask.current = {
         description: task.description ?? "",
         assigneeIds: taskAssigneeIds.join(","),
-        deadline: combineDateTimeToISO(initialDeadlineDate, ""),
+        deadline: dateInputToISOString(initialDeadlineDate),
       };
 
       // sync comments/activities/attachments on first load for this task
@@ -604,7 +604,7 @@ export default function TaskModal({
       if (originalTask.current) {
         const d = data as any;
         if ("description" in d) originalTask.current.description = d.description ?? "";
-        if ("deadline" in d) originalTask.current.deadline = d.deadline ? formatDateForInput(d.deadline) : "";
+        if ("deadline" in d) originalTask.current.deadline = d.deadline ? dateInputToISOString(formatDateForInput(d.deadline)) : null;
         if ("assigneeIds" in d) originalTask.current.assigneeIds = (d.assigneeIds ?? []).join(",");
       }
       setJustSaved(true);
@@ -646,7 +646,7 @@ export default function TaskModal({
   useEffect(() => {
     if (!task || !isMounted.current || prevTask.current !== task.id) return;
     if (!userHasEdited.current) return;
-    const deadlineValue = combineDateTimeToISO(debouncedDeadline, "");
+    const deadlineValue = dateInputToISOString(debouncedDeadline);
     const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       void handleUpdateWithFeedback(task.id, { deadline: deadlineValue } as Partial<Task>);
@@ -665,7 +665,7 @@ export default function TaskModal({
     if (assigneeIds.join(",") !== (originalTask.current?.assigneeIds ?? "")) {
       (updates as any).assigneeIds = assigneeIds;
     }
-    const deadlineValue = combineDateTimeToISO(deadline, "");
+    const deadlineValue = dateInputToISOString(deadline);
     const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       updates.deadline = deadlineValue;
@@ -903,7 +903,7 @@ export default function TaskModal({
 
   const overdue = isOverdue(task.deadline, task.completedAt);
   // derive semantic deadline info from the local date/time inputs (shows unsaved edits)
-  const deadlineInfo = formatDeadlineLabel(combineDateTimeToISO(deadline, ""), task.completedAt);
+  const deadlineInfo = formatDeadlineLabel(dateInputToISOString(deadline), task.completedAt);
 
   // decide whether to show a muted 'future' status: show only for deadlines within the next 7 days
   let showDeadlineStatus = false;

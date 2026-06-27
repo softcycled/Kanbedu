@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -55,6 +55,10 @@ interface Props {
   onClassReorder: (ids: string[]) => Promise<void>;
   onBoardHover?: (id: string) => void;
   isAdmin?: boolean;
+  // Mobile drawer open state is owned by the shell (BoardContainer) so the board
+  // can slide off to reveal this full-screen sidebar and a header trigger can open it.
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }
 
 function IconBarChart() {
@@ -255,6 +259,8 @@ export default function Sidebar({
   onClassReorder,
   onBoardHover,
   isAdmin = false,
+  mobileOpen,
+  onMobileOpenChange,
 }: Props) {
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -263,40 +269,9 @@ export default function Sidebar({
   const [classModalMode, setClassModalMode] = useState<"options" | "create" | "join">("options");
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedClasses, setShowArchivedClasses] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const mobileOpenRef = useRef(false);
-  useEffect(() => { mobileOpenRef.current = mobileOpen; }, [mobileOpen]);
-
-  // Swipe right from left edge to open; swipe left to close
-  useEffect(() => {
-    const EDGE = 40;
-    const THRESHOLD = 50;
-    let startX = 0;
-    let startY = 0;
-    let tracking = false;
-
-    const onStart = (e: TouchEvent) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      tracking = startX < EDGE || mobileOpenRef.current;
-    };
-    const onEnd = (e: TouchEvent) => {
-      if (!tracking) return;
-      tracking = false;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dy) > Math.abs(dx)) return;
-      if (dx > THRESHOLD && !mobileOpenRef.current) setMobileOpen(true);
-      if (dx < -THRESHOLD && mobileOpenRef.current) setMobileOpen(false);
-    };
-
-    document.addEventListener("touchstart", onStart, { passive: true });
-    document.addEventListener("touchend", onEnd, { passive: true });
-    return () => {
-      document.removeEventListener("touchstart", onStart);
-      document.removeEventListener("touchend", onEnd);
-    };
-  }, []);
+  // Mobile drawer open state is controlled by the shell. Local alias keeps the
+  // existing call sites (which close the drawer after a selection) terse.
+  const setMobileOpen = onMobileOpenChange;
 
   const router = useRouter();
   const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
@@ -738,16 +713,15 @@ export default function Sidebar({
         {sidebarContent}
       </aside>
 
-      {/* Mobile overlay — always mounted, slides in/out with CSS */}
-      <div className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
-        <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-          onClick={() => setMobileOpen(false)}
-        />
-        <aside className={`absolute left-0 top-0 bottom-0 w-64 bg-paper flex flex-col shadow-modal transition-transform duration-250 ease-out ${mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"}`}>
-          {sidebarContent}
-        </aside>
-      </div>
+      {/* Mobile sidebar — full-screen base layer. The board (main) sits on top at
+          a higher z-index and slides off to the right to reveal this. It is only
+          interactive once revealed; otherwise the board fully occludes it. */}
+      <aside
+        className={`fixed inset-0 z-20 bg-paper flex flex-col md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!mobileOpen}
+      >
+        {sidebarContent}
+      </aside>
       <ConfirmModal
         isOpen={confirmSignOut}
         title="Sign out"
