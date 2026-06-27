@@ -6,7 +6,7 @@ import { logAuthzDenied } from "@/lib/securityLog";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PER_TASK = 10;
-const MAX_BOARD_BYTES = 100 * 1024 * 1024; // 100MB total per board
+const MAX_BOARD_BYTES = 50 * 1024 * 1024; // 50MB total per board
 
 // Allowlist of accepted upload types mapped to their valid extensions. Anything
 // not listed is rejected. SVG and HTML are intentionally excluded: served from
