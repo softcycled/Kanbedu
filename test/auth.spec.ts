@@ -55,13 +55,13 @@ vi.mock('@/lib/prisma', () => ({
       deleteMany: vi.fn(),
     },
     // Rate limiter reads the DB ledger; resolve as a fresh bucket so routes
-    // under test never get throttled.
+    // under test never get throttled. The atomic increment path goes through
+    // $queryRaw and returns a single post-increment row.
     rateLimit: {
       findUnique: vi.fn(),
-      upsert: vi.fn().mockResolvedValue({ hits: 1, expiresAt: new Date(Date.now() + 60000) }),
-      update: vi.fn(),
       deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
+    $queryRaw: vi.fn().mockResolvedValue([{ hits: 1, expiresAt: new Date(Date.now() + 60000) }]),
   },
 }));
 
