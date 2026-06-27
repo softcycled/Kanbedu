@@ -15,6 +15,7 @@ Kanbedu is a classroom kanban tool. Educators create classes, assign students to
 - dnd-kit for drag-and-drop. Brevo for email. web-push for notifications
 - Deploy: Vercel. Two env files: `.env` (non-secrets) and `.env.local` (local DB + secrets)
 - Path alias: `@/` = `src/`. Always use this, never relative up-paths
+- **Next.js 16 renamed middleware to proxy**: request interceptor lives in `src/proxy.ts` and must export `proxy` (not `middleware`). The `config` export and matcher stay the same. The old `src/middleware.ts` no longer exists.
 
 ---
 

@@ -45,7 +45,7 @@ function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
   return response;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Generate a fresh nonce for every request
