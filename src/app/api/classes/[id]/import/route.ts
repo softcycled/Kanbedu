@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { parseCSV } from "@/lib/csvParser";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]/import", session.userId, "POST educator-only");
       return NextResponse.json({ error: "Only educators can import rosters." }, { status: 403 });
     }
     if (await isClassArchived(id)) {

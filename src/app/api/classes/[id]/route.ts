@@ -120,6 +120,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]", session.userId, "PATCH educator-only");
       return NextResponse.json({ error: "Only educators can edit a class." }, { status: 403 });
     }
 
@@ -128,6 +129,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
 
     if (result.data.archived !== undefined && role !== "educator") {
+      logAuthzDenied(req, "/api/classes/[id]", session.userId, "PATCH archive owner-only");
       return NextResponse.json({ error: "Only the class owner can archive or unarchive a class." }, { status: 403 });
     }
 
@@ -181,6 +183,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     });
     if (!cls) return NextResponse.json({ error: "Class not found." }, { status: 404 });
     if (cls.ownerId !== session.userId) {
+      logAuthzDenied(_req, "/api/classes/[id]", session.userId, "DELETE owner-only");
       return NextResponse.json({ error: "Only the class owner can delete it." }, { status: 403 });
     }
 

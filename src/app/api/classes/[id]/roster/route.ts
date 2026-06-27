@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { sendClassInviteEmail } from "@/lib/email";
 
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]/roster", session.userId, "POST educator-only");
       return NextResponse.json({ error: "Only educators can manage roster entries." }, { status: 403 });
     }
 
@@ -55,6 +57,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]/roster", session.userId, "DELETE educator-only");
       return NextResponse.json({ error: "Only educators can manage roster entries." }, { status: 403 });
     }
     if (await isClassArchived(id)) {

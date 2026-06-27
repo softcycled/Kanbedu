@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { savePresetSchema, parseBody } from "@/lib/validations";
 import { coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -14,6 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(_req, "/api/classes/[id]/preset", session.userId, "GET educator-only");
       return NextResponse.json({ error: "Only educators can view the preset." }, { status: 403 });
     }
 
@@ -38,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]/preset", session.userId, "PUT educator-only");
       return NextResponse.json({ error: "Only educators can edit the preset." }, { status: 403 });
     }
     if (await isClassArchived(id)) {
