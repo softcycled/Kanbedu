@@ -60,13 +60,33 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const historyCutoff = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
     const allColumnIds = [...columnInfo.keys()];
+    const doneColumnIds = [...columnInfo.entries()].filter(([, v]) => v.isDone).map(([k]) => k);
+    const nonDoneColumnIds = [...columnInfo.entries()].filter(([, v]) => !v.isDone).map(([k]) => k);
 
+    // Only fetch tasks that can actually trigger an integrity flag:
+    // - Done-column tasks: candidates for speed-run and column-skip
+    // - Active-column tasks with movedByNonAssignee: the moved-by-other flag
+    // This skips the bulk of in-progress tasks that would never be flagged,
+    // and uses select (not include) to avoid fetching description and other
+    // unused fields (description alone can be up to 50KB per task).
     const tasks =
       allColumnIds.length === 0
         ? []
         : await prisma.task.findMany({
-            where: { column: { in: allColumnIds } },
-            include: {
+            where: {
+              OR: [
+                { column: { in: doneColumnIds } },
+                { column: { in: nonDoneColumnIds }, movedByNonAssignee: true },
+              ],
+            },
+            select: {
+              id: true,
+              title: true,
+              column: true,
+              createdAt: true,
+              completedAt: true,
+              movedByNonAssignee: true,
+              assigneeId: true,
               assigneeUser: { select: { name: true, handle: true } },
               assignees: {
                 orderBy: { assignedAt: "asc" },
