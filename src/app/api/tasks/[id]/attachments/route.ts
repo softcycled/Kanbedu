@@ -5,7 +5,7 @@ import { put } from "@vercel/blob";
 import { logAuthzDenied } from "@/lib/securityLog";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_PER_TASK = 20;
+const MAX_PER_TASK = 10;
 
 // Allowlist of accepted upload types mapped to their valid extensions. Anything
 // not listed is rejected. SVG and HTML are intentionally excluded: served from
@@ -102,7 +102,7 @@ export async function POST(
 
   const count = await prisma.attachment.count({ where: { taskId: id } });
   if (count >= MAX_PER_TASK) {
-    return NextResponse.json({ error: "Attachment limit reached (max 20 per task)." }, { status: 400 });
+    return NextResponse.json({ error: "Attachment limit reached (max 10 per task)." }, { status: 400 });
   }
 
   const formData = await req.formData();
