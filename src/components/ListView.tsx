@@ -396,14 +396,14 @@ const TaskRow = memo(function TaskRow({ task, columnEntry, members, onClick }: R
             </span>
             {tooltipOpen && (
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50">
-                <div className="flex flex-col gap-1.5 bg-[#1C1917] border border-white/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
+                <div className="flex flex-col gap-1.5 bg-ink border border-paper/10 rounded-xl px-3 py-2 shadow-lg whitespace-nowrap">
                   {members.map((m) => (
                     <div key={m.id} className="flex items-center gap-2">
                       <Avatar name={m.name} color={m.color} size="lg" />
                       <div className="flex flex-col">
-                        <span className="text-[13px] font-semibold text-white leading-tight">{m.name}</span>
+                        <span className="text-[13px] font-semibold text-paper leading-tight">{m.name}</span>
                         {m.handle && (
-                          <span className="text-[11px] text-white/50 leading-tight">@{m.handle}</span>
+                          <span className="text-[11px] text-paper/50 leading-tight">@{m.handle}</span>
                         )}
                       </div>
                     </div>
