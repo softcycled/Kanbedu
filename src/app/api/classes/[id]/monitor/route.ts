@@ -39,7 +39,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       allColumnIds.length === 0
         ? []
         : await prisma.task.findMany({
-            where: { column: { in: allColumnIds } },
+            where: { column: { in: allColumnIds }, deletedAt: null },
             select: { column: true, deadline: true, completedAt: true, columnUpdatedAt: true, createdAt: true },
           });
     const tasksByColumn = new Map<string, typeof allTasks>();

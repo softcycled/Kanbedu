@@ -732,8 +732,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.notification.deleteMany({ where: { taskId: id } });
-    await prisma.task.delete({ where: { id: id } });
+    // Soft delete: keep the row (and its comments, assignees, activity, and
+    // notifications) so it can be fully restored from trash. The 30-day purge
+    // runs lazily on the trash-list endpoint.
+    await prisma.task.update({
+      where: { id: id },
+      data: { deletedAt: new Date(), deletedBy: session.userId },
+    });
 
     // Broadcast the deletion using the realtimeSecret already fetched in the auth query.
     try {
