@@ -143,6 +143,8 @@ model Task {
   order               Float                    @default(0)
   priority            String                   @default("medium")
   movedByNonAssignee  Boolean                  @default(false)
+  deletedAt           DateTime?                // soft delete: null = live, set = in trash
+  deletedBy           String?                  // userId who deleted, for self-restore auth and trash display
   comments            Comment[]
   assigneeUser        User?                    @relation("TaskAssignees", fields: [assigneeId], references: [id])
   assignees           TaskAssignee[]
@@ -160,6 +162,7 @@ model Task {
   @@index([assigneeId])
   @@index([completedAt])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // Full assignee set for a task (multi-assignee). Task.assigneeId is kept in
