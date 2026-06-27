@@ -683,6 +683,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
             <input
               ref={fileInputRef}
               type="file"
+              aria-label="Upload roster CSV"
               accept=".csv,text/csv"
               onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportResult(null); setImportError(null); }}
               className="text-xs text-ink file:mr-2 file:text-xs file:px-2.5 file:py-1 file:rounded-md file:border file:border-border/60 file:bg-card-bg file:text-ink file:cursor-pointer hover:file:bg-column-bg"
@@ -794,6 +795,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                       {interactive && (
                         <input
                           type="checkbox"
+                          aria-label={`Select ${m.name || m.handle || "student"}`}
                           checked={selected.has(m.userId)}
                           onChange={() => toggleSelect(m.userId)}
                           className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
@@ -832,6 +834,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                       <input
                         key={g.name}
                         defaultValue={g.name}
+                        aria-label="Group name"
                         onBlur={(e) => { if (e.target.value.trim() !== g.name) renameGroup(g.id, e.target.value); }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         className="text-sm font-semibold text-ink bg-transparent outline-none focus:bg-column-bg rounded px-1 -ml-1 min-w-0 flex-1"
@@ -863,6 +866,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                         {interactive && (
                           <input
                             type="checkbox"
+                            aria-label={`Select ${m.name || m.handle || "student"}`}
                             checked={selected.has(m.userId)}
                             onChange={() => toggleSelect(m.userId)}
                             className="w-3.5 h-3.5 rounded border-border accent-ink cursor-pointer flex-shrink-0"
@@ -887,6 +891,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") createGroup(); }}
+                aria-label="New group name"
                 placeholder="New group name…"
                 className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink placeholder:text-muted/60 outline-none focus:border-ink/30"
               />

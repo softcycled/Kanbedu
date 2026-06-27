@@ -458,6 +458,7 @@ export default function SettingsPanel({
                     <input
                       autoFocus
                       type="text"
+                      aria-label="Board name"
                       value={nameValue}
                       onChange={(e) => setNameValue(e.target.value)}
                       onKeyDown={(e) => {

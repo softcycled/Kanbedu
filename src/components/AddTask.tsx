@@ -84,6 +84,7 @@ export default function AddTask({ column, onAdd, prominent = false }: Props) {
           onChange={(e) => { setValue(e.target.value); if (isEmpty) setIsEmpty(false); if (saveError) setSaveError(false); }}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
+          aria-label="Task title"
           placeholder="Task title…"
           className={`
             w-full bg-card-bg rounded-xl px-4 py-3
