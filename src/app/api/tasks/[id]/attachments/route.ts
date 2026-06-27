@@ -5,7 +5,8 @@ import { put } from "@vercel/blob";
 import { logAuthzDenied } from "@/lib/securityLog";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_PER_TASK = 20;
+const MAX_PER_TASK = 10;
+const MAX_BOARD_BYTES = 50 * 1024 * 1024; // 50MB total per board
 
 // Allowlist of accepted upload types mapped to their valid extensions. Anything
 // not listed is rejected. SVG and HTML are intentionally excluded: served from
@@ -102,7 +103,7 @@ export async function POST(
 
   const count = await prisma.attachment.count({ where: { taskId: id } });
   if (count >= MAX_PER_TASK) {
-    return NextResponse.json({ error: "Attachment limit reached (max 20 per task)." }, { status: 400 });
+    return NextResponse.json({ error: "Attachment limit reached (max 10 per task)." }, { status: 400 });
   }
 
   const formData = await req.formData();
@@ -119,6 +120,17 @@ export async function POST(
   if (!allowedExts || !allowedExts.includes(ext)) {
     return NextResponse.json(
       { error: "Unsupported file type. Allowed: images (JPG, PNG, GIF, WebP), PDF, TXT, CSV, and Office documents." },
+      { status: 400 }
+    );
+  }
+
+  const boardSizeResult = await prisma.attachment.aggregate({
+    where: { task: { columnRel: { boardId: task.columnRel.boardId } } },
+    _sum: { size: true },
+  });
+  if ((boardSizeResult._sum.size ?? 0) + file.size > MAX_BOARD_BYTES) {
+    return NextResponse.json(
+      { error: "Board storage limit reached (100MB per board)." },
       { status: 400 }
     );
   }

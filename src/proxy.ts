@@ -16,15 +16,47 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
-export async function middleware(req: NextRequest) {
+function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV === "development";
+  return [
+    "default-src 'self'",
+    // unsafe-eval only in dev (HMR); nonce replaces unsafe-inline for all inline scripts
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+// Returns NextResponse.next() with the nonce injected into request headers
+// and the CSP set on the response. All passthrough responses go through here.
+function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  return response;
+}
+
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Generate a fresh nonce for every request
+  const nonce = btoa(crypto.randomUUID());
 
   const isApiRoute = pathname.startsWith("/api/");
   const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
 
   // Allow public routes and static assets
   if (isPublic(pathname) || pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.startsWith("/screenshots/")) {
-    return NextResponse.next();
+    return nextWithNonce(req, nonce);
   }
 
   // Redirect to /login, remembering where the user was headed so they land back
@@ -86,7 +118,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return nextWithNonce(req, nonce);
 }
 
 export const config = {

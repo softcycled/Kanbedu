@@ -102,7 +102,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       }),
       prisma.comment.findMany({
         where: { taskId: { in: taskIds } },
-        select: { taskId: true, author: true, content: true },
+        select: { taskId: true, author: true, userId: true, content: true },
       }),
     ]);
 
@@ -148,7 +148,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     // userId -> { count, words }
     const commentStats = new Map<string, { count: number; words: number }>();
     for (const c of comments) {
-      const uid = authorToUserId.get(c.author);
+      // Use stored userId when available (new comments); fall back to author
+      // string matching for comments posted before the userId migration.
+      const uid = c.userId ?? authorToUserId.get(c.author);
       if (!uid) continue;
       const s = commentStats.get(uid) ?? { count: 0, words: 0 };
       s.count += 1;

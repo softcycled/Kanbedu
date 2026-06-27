@@ -1,19 +1,5 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
-const cspHeader = `
-  default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com;
-  font-src 'self' https://fonts.gstatic.com;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  upgrade-insecure-requests;
-`;
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Prevent Turbopack from bundling Prisma — required so the regenerated
@@ -28,15 +14,13 @@ const nextConfig = {
   // Disable x-powered-by header in production
   poweredByHeader: false,
 
+  // Static security headers (non-CSP). CSP is set per-request in middleware.ts
+  // with a fresh nonce so unsafe-inline is not required for scripts.
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: cspHeader.replace(/\n/g, ''),
-          },
           {
             key: 'X-Frame-Options',
             value: 'DENY',
@@ -52,7 +36,7 @@ const nextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
-          }
+          },
         ],
       },
     ];

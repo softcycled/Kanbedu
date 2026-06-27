@@ -125,7 +125,7 @@ function LoginContent() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
                     autoComplete="name"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-ink/30"
                   />
                 </div>
                 <div>
@@ -144,7 +144,7 @@ function LoginContent() {
                       placeholder="yourhandle"
                       autoComplete="off"
                       maxLength={30}
-                      className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
+                      className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-ink/30"
                     />
                   </div>
                   {handle && (
@@ -176,7 +176,7 @@ function LoginContent() {
                 required
                 autoComplete="email"
                 autoFocus={mode === "login"}
-                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
+                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-ink/30"
               />
             </div>
 
@@ -200,7 +200,7 @@ function LoginContent() {
                 required
                 minLength={mode === "signup" ? 8 : undefined}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-border"
+                className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-colors bg-column-bg text-ink border border-transparent focus:border-ink/30"
               />
             </div>
 

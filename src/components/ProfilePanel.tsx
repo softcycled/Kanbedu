@@ -363,6 +363,12 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSaved, setPwSaved] = useState(false);
 
+  // Delete account state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Handle state
   const [handleValue, setHandleValue] = useState("");
   const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "same">("idle");
@@ -511,6 +517,30 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
     } catch (error) {
       console.error("Logout failed:", error);
       setLoggingOut(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError(null);
+    if (!deletePassword) { setDeleteError("Password is required."); return; }
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/auth/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      if (res.ok) {
+        router.push("/login");
+        router.refresh();
+        return;
+      }
+      const data = await res.json();
+      setDeleteError(data.error ?? "Failed to delete account.");
+    } catch {
+      setDeleteError("Something went wrong.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -751,8 +781,13 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                   </SettingRow>
                 </SectionItem>
                 <SectionItem>
-                  <SettingRow label="Delete account" description="Permanently remove your data" disabled>
-                    <ComingSoonBadge />
+                  <SettingRow label="Delete account" description="Permanently removes your account and all data">
+                    <button
+                      onClick={() => { setDeleteOpen(true); setDeletePassword(""); setDeleteError(null); }}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors"
+                    >
+                      Delete
+                    </button>
                   </SettingRow>
                 </SectionItem>
               </SectionBlock>
@@ -767,6 +802,46 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                 {loggingOut ? "Signing out…" : "Sign out"}
               </button>
             </div>
+
+            {/* Delete account modal */}
+            {deleteOpen && (
+              <div data-modal-open role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
+                <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
+                  <p className="text-sm font-semibold text-ink">Delete account?</p>
+                  <p className="text-xs text-muted mt-1">This permanently deletes your account and all data. This cannot be undone.</p>
+                  <div className="mt-4">
+                    <label className="block text-xs font-medium text-muted mb-1.5">Confirm your password</label>
+                    <input
+                      autoFocus
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
+                      disabled={deleteLoading}
+                      placeholder="Your password"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-red-400 transition-colors"
+                    />
+                    {deleteError && <p className="text-xs text-red-500 mt-2">{deleteError}</p>}
+                  </div>
+                  <div className="flex items-center justify-end gap-2 mt-5">
+                    <button
+                      onClick={() => setDeleteOpen(false)}
+                      disabled={deleteLoading}
+                      className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteLoading || !deletePassword}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {deleteLoading ? "Deleting…" : "Delete account"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
