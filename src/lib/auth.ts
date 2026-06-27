@@ -46,14 +46,18 @@ async function resolveSession(): Promise<{ userId: string; emailVerified: boolea
     if (typeof payload.userId !== "string") return null;
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { passwordChangedAt: true, emailVerified: true } as any,
-    }) as { passwordChangedAt: Date | null; emailVerified: boolean } | null;
+      select: { passwordChangedAt: true, sessionsValidFrom: true, emailVerified: true } as any,
+    }) as { passwordChangedAt: Date | null; sessionsValidFrom: Date | null; emailVerified: boolean } | null;
     if (!user) return null;
-    if (
-      user.passwordChangedAt &&
-      typeof payload.iat === "number" &&
-      payload.iat * 1000 < user.passwordChangedAt.getTime()
-    ) return null;
+    // Reject tokens issued before a password change or a sign-out-everywhere
+    // cutoff. iat is whole seconds; sessionsValidFrom is floored to the second
+    // when set (see revokeAllSessions) so a token re-issued in the same second
+    // compares as equal, not older, and survives.
+    const issuedAtMs = typeof payload.iat === "number" ? payload.iat * 1000 : null;
+    if (issuedAtMs !== null) {
+      if (user.passwordChangedAt && issuedAtMs < user.passwordChangedAt.getTime()) return null;
+      if (user.sessionsValidFrom && issuedAtMs < user.sessionsValidFrom.getTime()) return null;
+    }
     return { userId: payload.userId, emailVerified: user.emailVerified };
   } catch {
     return null;
@@ -83,6 +87,18 @@ export async function destroySession(): Promise<void> {
     sameSite: "lax",
     path: "/",
     maxAge: 0,
+  });
+}
+
+// Invalidate every session for a user by moving the sign-out-everywhere cutoff
+// to now. Tokens issued before this are rejected on their next request. The
+// cutoff is floored to the whole second so a token re-issued in the same second
+// (e.g. the device that triggered the sign-out) is not caught by it.
+export async function revokeAllSessions(userId: string): Promise<void> {
+  const flooredNow = new Date(Math.floor(Date.now() / 1000) * 1000);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { sessionsValidFrom: flooredNow } as any,
   });
 }
 

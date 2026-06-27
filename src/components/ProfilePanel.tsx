@@ -359,6 +359,8 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
   const [saved, setSaved] = useState(false);
   const [hoverColor, setHoverColor] = useState<AvatarColor | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [signingOutAll, setSigningOutAll] = useState(false);
+  const [signedOutAll, setSignedOutAll] = useState(false);
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -520,6 +522,19 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
     } catch (error) {
       console.error("Logout failed:", error);
       setLoggingOut(false);
+    }
+  };
+
+  const handleSignOutAll = async () => {
+    setSigningOutAll(true);
+    setSignedOutAll(false);
+    try {
+      const res = await fetch("/api/auth/logout-all", { method: "POST" });
+      if (res.ok) setSignedOutAll(true);
+    } catch (error) {
+      console.error("Sign out of other devices failed:", error);
+    } finally {
+      setSigningOutAll(false);
     }
   };
 
@@ -786,6 +801,17 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                 <SectionItem>
                   <SettingRow label="Profile picture" description="Upload a custom avatar" disabled>
                     <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Sign out of all other devices" description="Keeps you signed in here and logs out everywhere else">
+                    <button
+                      onClick={handleSignOutAll}
+                      disabled={signingOutAll || signedOutAll}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-muted hover:text-ink hover:border-ink/30 transition-colors disabled:opacity-50"
+                    >
+                      {signedOutAll ? "Other devices signed out" : signingOutAll ? "Signing out…" : "Sign out others"}
+                    </button>
                   </SettingRow>
                 </SectionItem>
                 <SectionItem>
