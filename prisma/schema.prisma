@@ -364,3 +364,14 @@ model ClassPreset {
   tasks   Json // [{ title, description, columnIndex, priority }]
   class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 }
+
+// Early-access signups for the (unlaunched) Lecturer Pro plan, collected from
+// the pricing page. Public, unauthenticated capture; email is unique.
+model ProWaitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String   @default("pricing") // entry point, in case of future capture surfaces
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
