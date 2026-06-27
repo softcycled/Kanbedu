@@ -28,12 +28,13 @@ interface Props {
   // Leaves the class server-side, then clears it from the shell. Returns false
   // if the request failed so the view can surface an error.
   onLeave: (classId: string) => Promise<boolean>;
+  onOpenNav?: () => void;
 }
 
 // A student's class experience rendered INSIDE the main app shell (sidebar +
 // content area), not the dedicated educator workspace. Shows the group board
 // once the student is placed, otherwise a lobby waiting screen.
-export default function StudentClassView({ activeClass, currentUserId, onLeave }: Props) {
+export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
   const { push } = useToasts();
   const [confirmLeave, setConfirmLeave] = useState(false);
 
@@ -83,6 +84,7 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave }
           realtimeSecret={activeClass.realtimeSecret ?? null}
           headerTitle={breadcrumb}
           headerTrailing={leaveButton}
+          onOpenNav={onOpenNav}
         />
       ) : (
         <>

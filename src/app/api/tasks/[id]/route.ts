@@ -389,6 +389,48 @@ export async function PATCH(
           } else {
             void recordActivity(id, session.userId, "MOVE", `Moved from ${fromCol?.label || "Unknown"} to ${toCol?.label || "Unknown"}`);
           }
+
+          // Notify the task's assignees (never the actor) about meaningful column
+          // changes: completed, reopened, or moved by a non-assignee. Routine
+          // in-progress drags by a co-assignee stay silent to avoid push spam.
+          // Notification.type is a free-form string column, so no migration is needed.
+          try {
+            const assigneeIds = new Set<string>((current?.assignees ?? []).map((a: { userId: string }) => a.userId));
+            if (assigneeIds.size === 0 && current?.assigneeId) assigneeIds.add(current.assigneeId);
+            const moverIsAssignee = assigneeIds.has(session.userId);
+            assigneeIds.delete(session.userId);
+
+            let notifyType: "MOVED" | "COMPLETED" | "REOPENED" | null = null;
+            let notifyTitle = "";
+            if (destinationIsDone && !wasInDone) {
+              notifyType = "COMPLETED";
+              notifyTitle = `"${current.title}" was completed`;
+            } else if (!destinationIsDone && wasInDone) {
+              notifyType = "REOPENED";
+              notifyTitle = `"${current.title}" was reopened`;
+            } else if (!moverIsAssignee) {
+              notifyType = "MOVED";
+              notifyTitle = `"${current.title}" was moved to ${toCol?.label ?? "another column"}`;
+            }
+
+            if (notifyType && assigneeIds.size > 0) {
+              const { sendNotification } = await import("@/lib/send-notifications");
+              await Promise.allSettled(
+                [...assigneeIds].map((uid) =>
+                  sendNotification(uid, {
+                    type: notifyType!,
+                    title: notifyTitle,
+                    body: "",
+                    tag: `task-move-${id}`,
+                    taskId: id,
+                    boardId,
+                  })
+                )
+              );
+            }
+          } catch (err) {
+            console.error("[notifications] column-change trigger failed:", err);
+          }
         } catch (err) {
           console.error("Failed to update taskColumnHistory (background):", err);
         }

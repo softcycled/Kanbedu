@@ -14,6 +14,7 @@ interface Props {
   // "Leave class" action inside the single board header row.
   headerTitle?: ReactNode;
   headerTrailing?: ReactNode;
+  onOpenNav?: () => void;
 }
 
 interface BoardCache {
@@ -28,7 +29,7 @@ const boardCache = new Map<string, BoardCache>();
 // Single-board wrapper used inside a class workspace. Mirrors the per-board
 // data plumbing of BoardContainer (load tasks/columns, surgical realtime
 // refresh) for exactly one group board, then renders the shared <Board>.
-export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret, headerTitle, headerTrailing }: Props) {
+export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret, headerTitle, headerTrailing, onOpenNav }: Props) {
   const initialCache = boardCache.get(boardId);
   const isFresh = !!initialCache && Date.now() - initialCache.fetchedAt <= CACHE_TTL_MS;
 
@@ -141,6 +142,7 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         currentUserId={currentUserId}
         headerTitle={headerTitle}
         headerTrailing={headerTrailing}
+        onOpenNav={onOpenNav}
       />
     </div>
   );

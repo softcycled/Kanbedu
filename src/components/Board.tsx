@@ -44,9 +44,12 @@ interface Props {
   // class" action) pinned to the far right of the header row.
   headerTitle?: ReactNode;
   headerTrailing?: ReactNode;
+  // Mobile only: when provided, renders a "<" trigger at the start of the mobile
+  // header that opens the app sidebar (the board slides off to reveal it).
+  onOpenNav?: () => void;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav }: Props) {
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -919,6 +922,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     <>
       {/* ── Mobile header ── */}
       <div className="md:hidden flex-shrink-0 flex items-center gap-2 px-4 pt-4 pb-3.5 border-b border-border/60">
+        {onOpenNav && (
+          <button
+            onClick={onOpenNav}
+            aria-label="Open menu"
+            className="flex items-center justify-center w-8 h-8 -ml-1.5 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors flex-shrink-0"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           {headerTitle ?? (
             <h1 className="text-base font-bold tracking-tight text-ink truncate">{boardName || "Board"}</h1>

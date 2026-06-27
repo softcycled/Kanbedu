@@ -10,7 +10,7 @@ if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
 }
 
 interface NotificationPayload {
-  type: "ASSIGNED" | "COMMENT";
+  type: "ASSIGNED" | "COMMENT" | "MOVED" | "COMPLETED" | "REOPENED";
   title: string;
   body: string;
   taskId?: string;
