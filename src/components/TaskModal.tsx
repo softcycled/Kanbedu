@@ -359,6 +359,10 @@ export default function TaskModal({
     setUploading(true);
     setUploadError(null);
     for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError(`"${file.name}" is too large. Files must be under 10 MB.`);
+        continue;
+      }
       const fd = new FormData();
       fd.append("file", file);
       try {
@@ -369,7 +373,7 @@ export default function TaskModal({
         } else {
           const data = await res.json().catch(() => ({}));
           const msg = data.error ?? "Upload failed.";
-          if (msg.includes("storage full") || msg.includes("storage limit")) {
+          if (msg.includes("storage full") || msg.includes("storage limit") || msg.includes("too large")) {
             setUploadError(msg);
           } else {
             toasts.push({ title: msg });
@@ -2008,7 +2012,7 @@ export default function TaskModal({
                   <p className="text-xs text-red-400 leading-snug">{uploadError}</p>
                 </div>
               ) : (
-                <p className="text-[11px] text-muted/50 mb-3">10 MB per file · 100 MB per board</p>
+                <p className="text-[11px] text-muted/50 mb-3">100 MB per board</p>
               )}
               {attachments.length > 0 ? (
                 <div className="space-y-2">
