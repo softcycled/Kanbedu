@@ -127,7 +127,7 @@ export default function PricingPage() {
                 </div>
                 <Link
                   href="/login?mode=signup"
-                  className="block w-full text-center text-sm font-semibold px-5 py-2.5 rounded-full border border-white/15 text-ink hover:border-white/30 hover:bg-white/[0.04] transition-colors"
+                  className="block w-full text-center text-sm font-semibold px-6 py-2.5 rounded-full border border-white/15 text-ink hover:border-white/30 hover:bg-white/[0.04] transition-colors"
                 >
                   Get started
                 </Link>

@@ -169,7 +169,7 @@ export default function LandingPage() {
                   </Link>
                   <Link
                     href="/login"
-                    className="w-full sm:w-auto text-sm text-muted hover:text-ink transition-colors px-6 py-2.5 border border-white/10 rounded-full hover:border-white/20"
+                    className="w-full sm:w-auto text-sm font-semibold text-muted hover:text-ink transition-colors px-6 py-2.5 border border-white/15 rounded-full hover:border-white/30 hover:bg-white/[0.04]"
                   >
                     Sign in
                   </Link>
@@ -296,7 +296,7 @@ export default function LandingPage() {
               </p>
               <Link
                 href="/login?mode=signup"
-                className="inline-block bg-[#EBEBEB] text-[#161412] px-7 py-3 rounded-full text-sm font-semibold hover:bg-white transition-colors"
+                className="inline-block bg-[#EBEBEB] text-[#161412] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-white transition-colors"
               >
                 Sign Up
               </Link>

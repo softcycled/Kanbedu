@@ -15,12 +15,13 @@ export default function LandingNav() {
           <Link href="/pricing" className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150">
             Pricing
           </Link>
+          <div className="hidden sm:block w-0.5 h-4 bg-white/20" />
           <Link href="/login" className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150">
             Log in
           </Link>
           <Link
             href="/login?mode=signup"
-            className="text-sm font-medium px-4 pt-[4px] pb-[8px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-[#FFFFFF] transition-colors duration-150"
+            className="text-sm font-semibold px-4 py-[6px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-white transition-colors"
           >
             Sign Up
           </Link>
