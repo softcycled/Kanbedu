@@ -7,6 +7,7 @@ import { matchesGroupName, findGroupSuggestion } from "@/lib/groupSearch";
 import GroupSearchBar from "./GroupSearchBar";
 import SortPills from "./SortPills";
 import GroupCardHeader from "./GroupCardHeader";
+import LiveIndicator from "./LiveIndicator";
 
 interface ParticipationMember {
   userId: string;
@@ -211,6 +212,9 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
   const groupSuggestion = searchTrimmed
     ? findGroupSuggestion(groups.map((g) => g.name), searchTrimmed, new Set(filtered.map((g) => g.name)))
     : null;
+  const groupAutocomplete = searchTrimmed
+    ? groups.map((g) => g.name).filter((name) => matchesGroupName(name, searchTrimmed))
+    : groups.map((g) => g.name);
 
   const totalWords = groups.reduce((s, g) => s + g.members.reduce((ms, m) => ms + m.descWordsAdded + m.commentWords, 0), 0);
   const totalComments = groups.reduce((s, g) => s + g.members.reduce((ms, m) => ms + m.commentCount, 0), 0);
@@ -227,6 +231,7 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
         <div className="flex items-center gap-4 flex-shrink-0 text-xs text-muted">
           <span><span className="font-semibold text-ink">{totalWords.toLocaleString()}</span> words</span>
           <span><span className="font-semibold text-ink">{totalComments.toLocaleString()}</span> comments</span>
+          <LiveIndicator />
         </div>
       </div>
 
@@ -247,12 +252,13 @@ export default function ParticipationPanel({ classId, onOpenBoard, reloadSignal 
             value={search}
             onChange={setSearch}
             suggestion={groupSuggestion}
+            suggestions={groupAutocomplete}
           />
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted py-4">No groups match this search.</p>
+        <p className="text-sm text-muted py-4">No groups match &ldquo;{searchTrimmed}&rdquo;.</p>
       ) : (
         <div className="space-y-5">
           {filtered.map((g) => (

@@ -67,7 +67,9 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       await navigator.clipboard.writeText(joinUrl);
       setCopyMsg(true);
       setTimeout(() => setCopyMsg(false), 1500);
-    } catch { /* ignore */ }
+    } catch {
+      push({ title: "Couldn't copy link", description: "Select the link and copy it manually." });
+    }
   };
 
   const doClone = async () => {

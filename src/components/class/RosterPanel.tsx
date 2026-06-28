@@ -671,6 +671,12 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
         </div>
       </div>
 
+      {interactive && (
+        <p className="text-xs text-muted max-w-xl mb-5">
+          Drag students into groups or use the assign menu. New members wait here until you place them.
+        </p>
+      )}
+
       {/* CSV import panel */}
       {interactive && showImport && (
         <div className="mb-5 rounded-xl border border-border/60 bg-column-bg/40 p-4 space-y-3">
@@ -848,7 +854,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                         <button onClick={() => moveGroup(g.id, 1)} disabled={gi === groups.length - 1} className="text-[11px] text-muted hover:text-ink disabled:opacity-25 disabled:hover:text-muted" title="Move right">▶</button>
                       </>
                     )}
-                    <button onClick={() => onOpenBoard({ id: g.id, name: g.name, boardId: g.boardId })} className="text-[11px] text-muted hover:text-ink" title="Open board">Open</button>
+                    <button onClick={() => onOpenBoard({ id: g.id, name: g.name, boardId: g.boardId })} className="text-[11px] text-muted hover:text-ink whitespace-nowrap" title="Open board">Open board</button>
                     {interactive && (
                       <button onClick={() => setConfirmDeleteGroup(g)} className="text-[11px] text-muted hover:text-red-500" title="Delete group">✕</button>
                     )}
@@ -997,7 +1003,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                 const { name, taskCount, memberCount } = confirmDeleteGroup;
                 const tasks = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
                 const students = memberCount === 1 ? "1 student" : `${memberCount} students`;
-                return `"${name}" will be deleted — ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. You'll have a few seconds to undo.`;
+                return `"${name}" will be deleted. ${tasks} and ${students} ${memberCount === 1 ? "loses" : "lose"} their board and return to waiting. You'll have a few seconds to undo.`;
               })()
             : ""
         }
