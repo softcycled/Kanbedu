@@ -13,14 +13,14 @@ const FREE_FEATURES = [
   "Unlimited boards, groups, and students",
   "Real-time sync across the class",
   "Monitor, Integrity, and Participation panels",
-  "50MB attachments per board",
+  "Task comments, priorities, and due dates",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
   "Up to 10 active classes",
   "Unlimited archived classes for past semesters",
-  "Higher priority support and feedback",
+  "Early access to new features",
 ];
 
 function Check() {
@@ -169,7 +169,7 @@ export default function PricingPage() {
 
             <p className="text-center text-xs text-muted/60 mt-10 max-w-md mx-auto">
               Questions about Lecturer Pro? Email{" "}
-              <a href="mailto:support@kanbedu.com" className="underline hover:text-muted transition-colors">support@kanbedu.com</a>.
+              <a href="mailto:kanbeduapp@gmail.com" className="underline hover:text-muted transition-colors">kanbeduapp@gmail.com</a>.
             </p>
           </section>
         </main>

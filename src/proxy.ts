@@ -10,7 +10,7 @@ if (!SECRET_RAW) {
 const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 // Routes that don't require authentication
-const PUBLIC_PATHS = ["/login", "/landing", "/terms", "/privacy", "/credits", "/api/auth/", "/invite/", "/verify-email/", "/forgot-password", "/reset-password/", "/check-email", "/opengraph-image"];
+const PUBLIC_PATHS = ["/login", "/landing", "/pricing", "/terms", "/privacy", "/credits", "/api/auth/", "/api/waitlist", "/invite/", "/verify-email/", "/forgot-password", "/reset-password/", "/check-email", "/opengraph-image"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
