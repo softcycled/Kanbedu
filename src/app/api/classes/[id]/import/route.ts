@@ -9,8 +9,9 @@ import { sendClassInviteEmail } from "@/lib/email";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const MAX_ROSTER_ROWS = 100;
 // Safety cap: never send more than this many invite emails in a single import.
-// Brevo free tier is 300/day — one large class import could exhaust the daily quota.
-const MAX_INVITE_EMAILS = 50;
+// Matches MAX_ROSTER_ROWS so a full 100-student import sends all invites in one shot.
+// Brevo free tier is 300/day — importing more than one large class in a day risks the cap.
+const MAX_INVITE_EMAILS = 100;
 
 // POST: import a CSV roster into a class.
 // Accepts multipart/form-data with a "file" field (.csv).

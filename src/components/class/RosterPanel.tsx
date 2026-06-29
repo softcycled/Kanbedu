@@ -39,6 +39,7 @@ interface Group {
 interface Props {
   classId: string;
   ownerId: string;
+  role: "educator" | "ta";
   onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
   onChanged?: () => void;
   // When the class is archived the roster is view-only.
@@ -250,7 +251,7 @@ function AssignSelect({
   );
 }
 
-export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, readOnly = false }: Props) {
+export default function RosterPanel({ classId, ownerId, role, onOpenBoard, onChanged, readOnly = false }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; name: string; groupName: string | null }[]>([]);
@@ -647,6 +648,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
 
   const activeMember = members.find((m) => m.userId === activeId) || null;
   const interactive = !readOnly;
+  const canDeleteGroup = interactive && role === "educator";
 
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6">
@@ -717,7 +719,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
               )}
               {importResult.inviteCapped > 0 && (
                 <p className="text-[11px] text-amber-500 mt-0.5">
-                  {importResult.inviteCapped} student{importResult.inviteCapped === 1 ? "" : "s"} were added but not emailed (50-email limit per import). Import again to send the remaining invites.
+                  {importResult.inviteCapped} student{importResult.inviteCapped === 1 ? "" : "s"} were added but not emailed (100-email limit per import). Import again to send the remaining invites.
                 </p>
               )}
             </>
@@ -856,7 +858,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
                       </>
                     )}
                     <button onClick={() => onOpenBoard({ id: g.id, name: g.name, boardId: g.boardId })} className="text-[11px] text-muted hover:text-ink whitespace-nowrap" title="Open board">Open board</button>
-                    {interactive && (
+                    {canDeleteGroup && (
                       <button onClick={() => setConfirmDeleteGroup(g)} className="text-[11px] text-muted hover:text-red-500" title="Delete group">✕</button>
                     )}
                   </div>

@@ -11,6 +11,11 @@ async function requireEducator(userId: string, classId: string) {
   return role === "educator" || role === "ta";
 }
 
+async function requireOwnerEducator(userId: string, classId: string) {
+  const role = await getClassRole(userId, classId);
+  return role === "educator";
+}
+
 const archivedError = () =>
   NextResponse.json({ error: "This class is archived. Unarchive it to make changes." }, { status: 403 });
 
@@ -137,8 +142,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const rl3 = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl3.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    if (!(await requireEducator(session.userId, id))) {
-      return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
+    if (!(await requireOwnerEducator(session.userId, id))) {
+      return NextResponse.json({ error: "Only educators can delete groups." }, { status: 403 });
     }
     if (await isClassArchived(id)) return archivedError();
 

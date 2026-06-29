@@ -180,6 +180,7 @@ export default function ClassWorkspace(props: Props) {
           <RosterPanel
             classId={classId}
             ownerId={ownerId}
+            role={props.role === "ta" ? "ta" : "educator"}
             onOpenBoard={openGroupBoard}
             onChanged={() => setGroupsVersion((v) => v + 1)}
             readOnly={archived}

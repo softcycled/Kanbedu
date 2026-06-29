@@ -138,20 +138,20 @@ describe('POST /api/classes/[id]/import', () => {
     expect(body.inviteFailed).toBe(1);
   });
 
-  it('caps invite emails at 50 per import and reports inviteCapped', async () => {
+  it('caps invite emails at 100 per import and reports inviteCapped', async () => {
     mockGetVerifiedSession.mockResolvedValue({ userId: 'u1' });
     mockGetClassRole.mockResolvedValue('educator');
 
     const rows = ['name,email'];
-    for (let i = 1; i <= 60; i++) rows.push(`Student ${i},student${i}@test.com`);
+    for (let i = 1; i <= 100; i++) rows.push(`Student ${i},student${i}@test.com`);
     const form = new FormData();
     form.append('file', csvFile(rows.join('\n')));
     const res = await POST(makeRequest(form) as any, { params: Promise.resolve({ id: 'c1' }) } as any);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.total).toBe(60);
-    expect(body.inviteCapped).toBe(10); // 60 - 50 cap
-    expect(mockSendClassInviteEmail).toHaveBeenCalledTimes(50);
+    expect(body.total).toBe(100);
+    expect(body.inviteCapped).toBe(0); // 100 rows, cap is 100 — no overage
+    expect(mockSendClassInviteEmail).toHaveBeenCalledTimes(100);
   });
 
   it('returns 400 when CSV has no email column', async () => {
