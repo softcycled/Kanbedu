@@ -357,8 +357,8 @@ export default function TaskModal({
     const files = Array.from(e.target.files);
     e.target.value = "";
     setUploading(true);
-    setUploadError(null);
     for (const file of files) {
+      setUploadError(null);
       if (file.size > 10 * 1024 * 1024) {
         setUploadError(`"${file.name}" is too large. Files must be under 10 MB.`);
         continue;

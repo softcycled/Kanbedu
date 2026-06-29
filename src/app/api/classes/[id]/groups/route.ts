@@ -85,9 +85,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (ids.some((gid) => !ownedIds.has(gid))) {
         return NextResponse.json({ error: "Invalid group list." }, { status: 400 });
       }
-      await prisma.$transaction(
-        ids.map((gid, index) => prisma.group.update({ where: { id: gid }, data: { order: index } }))
-      );
+      await prisma.$transaction(async (tx) => {
+        for (let index = 0; index < ids.length; index++) {
+          await tx.group.update({ where: { id: ids[index] }, data: { order: index } });
+        }
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -100,17 +102,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const group = await prisma.group.findFirst({ where: { id: groupId, classId: id } });
     if (!group) return NextResponse.json({ error: "Group not found." }, { status: 404 });
 
-    const updated = await prisma.group.update({
-      where: { id: groupId },
-      data: {
-        ...(result.data.name !== undefined ? { name: result.data.name } : {}),
-        ...(result.data.order !== undefined ? { order: result.data.order } : {}),
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const g = await tx.group.update({
+        where: { id: groupId },
+        data: {
+          ...(result.data.name !== undefined ? { name: result.data.name } : {}),
+          ...(result.data.order !== undefined ? { order: result.data.order } : {}),
+        },
+      });
+      if (result.data.name !== undefined) {
+        await tx.board.update({ where: { id: group.boardId }, data: { name: result.data.name } });
+      }
+      return g;
     });
-    // Keep the group's board name in sync with the group name.
-    if (result.data.name !== undefined) {
-      await prisma.board.update({ where: { id: group.boardId }, data: { name: result.data.name } });
-    }
 
     return NextResponse.json({ id: updated.id, name: updated.name, order: updated.order, boardId: updated.boardId });
   } catch (error) {

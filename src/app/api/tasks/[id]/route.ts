@@ -46,7 +46,7 @@ export async function GET(
   // Authorization: ensure the requesting user is a member of the task's board
   const authStart = Date.now();
   const taskAuth = await prisma.task.findUnique({
-    where: { id: id },
+    where: { id: id, deletedAt: null },
     select: {
       columnRel: {
         select: {

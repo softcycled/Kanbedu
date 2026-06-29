@@ -20,6 +20,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (role !== "educator" && role !== "ta") {
       return NextResponse.json({ error: "Only educators can manage roster entries." }, { status: 403 });
     }
+    if (await isClassArchived(id)) {
+      return NextResponse.json({ error: "This class is archived. Unarchive it to make changes." }, { status: 403 });
+    }
 
     const raw = await req.json().catch(() => ({}));
     const entryId = typeof raw?.entryId === "string" ? raw.entryId : null;

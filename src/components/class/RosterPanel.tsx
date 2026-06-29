@@ -768,6 +768,7 @@ export default function RosterPanel({ classId, ownerId, onOpenBoard, onChanged, 
       )}
 
       <DndContext
+        id="roster-dnd"
         sensors={interactive ? sensors : []}
         onDragStart={(e: DragStartEvent) => setActiveId(e.active.id as string)}
         onDragEnd={handleDragEnd}
