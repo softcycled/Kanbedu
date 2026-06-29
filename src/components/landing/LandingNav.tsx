@@ -10,11 +10,22 @@ export default function LandingNav() {
 
   useEffect(() => {
     if (!open) return;
-    function handler(e: MouseEvent) {
+    // Lock body scroll while menu is open
+    document.body.style.overflow = "hidden";
+    function onMouse(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    // Close if viewport grows past mobile breakpoint (e.g. rotation to landscape)
+    function onResize() {
+      if (window.innerWidth >= 640) setOpen(false);
+    }
+    document.addEventListener("mousedown", onMouse);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("mousedown", onMouse);
+      window.removeEventListener("resize", onResize);
+    };
   }, [open]);
 
   return (
