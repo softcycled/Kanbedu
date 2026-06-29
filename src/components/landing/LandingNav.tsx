@@ -27,12 +27,17 @@ export default function LandingNav() {
     function onResize() {
       if (window.innerWidth >= 640) setOpen(false);
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onMouse);
     window.addEventListener("resize", onResize);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = "";
       document.removeEventListener("mousedown", onMouse);
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
@@ -67,7 +72,7 @@ export default function LandingNav() {
             <div className="sm:hidden" ref={hamburgerRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
-                aria-label="Menu"
+                aria-label={open ? "Close menu" : "Menu"}
                 className="flex flex-col justify-center items-center w-8 h-8 gap-[5px] text-muted hover:text-ink transition-colors"
               >
                 <span className={`block w-5 h-[1.5px] bg-current transition-all duration-200 origin-center ${open ? "rotate-45 translate-y-[6.5px]" : ""}`} />
