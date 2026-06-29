@@ -12,7 +12,7 @@ export default function LandingNav() {
           kanbedu
         </Link>
         <div className="flex items-center gap-5">
-          <Link href="/pricing" className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150">
+          <Link href="/pricing" className="text-sm text-muted hover:text-ink transition-colors duration-150">
             Pricing
           </Link>
           <div className="hidden sm:block w-0.5 h-4 bg-white/20" />
