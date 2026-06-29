@@ -6,16 +6,24 @@ import { useState, useEffect, useRef } from "react";
 // Shared marketing top nav, used by the landing and pricing pages.
 export default function LandingNav() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    // Lock body scroll while menu is open
     document.body.style.overflow = "hidden";
     function onMouse(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      // mousedown fires before click. If we call setOpen(false) here while
+      // the user is tapping a link inside the overlay, the overlay unmounts
+      // before the click event fires and navigation never happens.
+      // Skip the close when mousedown lands inside either the hamburger or
+      // the overlay — the links' own onClick handlers close the menu instead.
+      if (
+        hamburgerRef.current?.contains(e.target as Node) ||
+        overlayRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
     }
-    // Close if viewport grows past mobile breakpoint (e.g. rotation to landscape)
     function onResize() {
       if (window.innerWidth >= 640) setOpen(false);
     }
@@ -40,7 +48,6 @@ export default function LandingNav() {
           </Link>
 
           <div className="flex items-center gap-5">
-            {/* Desktop nav links */}
             <Link href="/pricing" className="hidden sm:block text-sm text-muted hover:text-ink transition-colors duration-150">
               Pricing
             </Link>
@@ -56,9 +63,8 @@ export default function LandingNav() {
               Sign Up
             </Link>
 
-            {/* Mobile hamburger — overlay is a sibling of <nav>, not a child,
-                so it escapes the backdrop-blur stacking context */}
-            <div className="sm:hidden" ref={ref}>
+            {/* Mobile hamburger */}
+            <div className="sm:hidden" ref={hamburgerRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
                 aria-label="Menu"
@@ -73,11 +79,14 @@ export default function LandingNav() {
         </div>
       </nav>
 
-      {/* Full-screen mobile menu — rendered outside <nav> to avoid the
-          backdrop-filter stacking context that would let page content bleed through.
-          z-[60] puts it above the nav (z-50) so nothing can show through. */}
+      {/* Full-screen mobile menu — sibling of <nav> so it escapes the
+          backdrop-filter stacking context. overlayRef lets the mousedown
+          handler distinguish overlay taps (let click fire) from outside taps
+          (close immediately). */}
       {open && (
         <div
+          ref={overlayRef}
+          onClick={() => setOpen(false)}
           className="fixed inset-x-0 bottom-0 z-[60] flex flex-col px-6 pt-10 sm:hidden"
           style={{ top: 72, background: "#161412" }}
         >
