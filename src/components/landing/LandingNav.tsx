@@ -74,11 +74,12 @@ export default function LandingNav() {
       </nav>
 
       {/* Full-screen mobile menu — rendered outside <nav> to avoid the
-          backdrop-filter stacking context that would let page content bleed through */}
+          backdrop-filter stacking context that would let page content bleed through.
+          z-[60] puts it above the nav (z-50) so nothing can show through. */}
       {open && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40 flex flex-col px-6 pt-10 sm:hidden"
-          style={{ top: 72, background: "rgba(22,20,18,0.97)" }}
+          className="fixed inset-x-0 bottom-0 z-[60] flex flex-col px-6 pt-10 sm:hidden"
+          style={{ top: 72, background: "#161412" }}
         >
           <Link
             href="/pricing"
