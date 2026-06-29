@@ -120,11 +120,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await Promise.all(
-      data.ids.map((id: string, index: number) =>
-        prisma.board.update({ where: { id }, data: { order: index } })
-      )
-    );
+    await prisma.$transaction(async (tx) => {
+      for (let index = 0; index < data.ids.length; index++) {
+        await tx.board.update({ where: { id: data.ids[index] }, data: { order: index } });
+      }
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to reorder boards:", error);

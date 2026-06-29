@@ -141,14 +141,13 @@ export async function PATCH(request: NextRequest) {
     });
     if ((boardAuth?.members?.length ?? 0) === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const updated = await prisma.$transaction(
-      data.columns.map((col: any) =>
-        prisma.column.update({
-          where: { id: col.id },
-          data: { order: col.order },
-        })
-      )
-    );
+    const updated: { id: string; order: number }[] = [];
+    await prisma.$transaction(async (tx) => {
+      for (const col of data.columns) {
+        const u = await tx.column.update({ where: { id: col.id }, data: { order: col.order } });
+        updated.push(u);
+      }
+    });
 
     try {
       if (boardAuth?.realtimeSecret) await broadcastToBoard(boardAuth.realtimeSecret);
