@@ -37,6 +37,13 @@ export default function LandingNav() {
             Log in
           </Link>
 
+          <Link
+            href="/login?mode=signup"
+            className="text-sm font-semibold px-4 py-[6px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-white transition-colors"
+          >
+            Sign Up
+          </Link>
+
           {/* Mobile hamburger */}
           <div className="relative sm:hidden" ref={ref}>
             <button
@@ -70,13 +77,6 @@ export default function LandingNav() {
               </div>
             )}
           </div>
-
-          <Link
-            href="/login?mode=signup"
-            className="text-sm font-semibold px-4 py-[6px] rounded-full bg-[#EBEBEB] text-[#161412] hover:bg-white transition-colors"
-          >
-            Sign Up
-          </Link>
         </div>
       </div>
     </nav>
