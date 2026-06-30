@@ -25,7 +25,7 @@ export async function DELETE(
             select: {
               board: {
                 select: {
-                  members: { where: { userId: session.userId }, select: { id: true }, take: 1 },
+                  members: { where: { userId: session.userId }, select: { id: true, role: true }, take: 1 },
                 },
               },
             },
@@ -36,8 +36,12 @@ export async function DELETE(
   });
 
   if (!attachment) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!attachment.task.columnRel?.board?.members?.length) {
+  const member = attachment.task.columnRel?.board?.members?.[0];
+  if (!member) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (attachment.uploadedBy !== session.userId && member.role !== "owner") {
+    return NextResponse.json({ error: "Only the uploader or board owner can delete attachments." }, { status: 403 });
   }
 
   // url is a GCS object path for new uploads, or a legacy Vercel Blob URL
