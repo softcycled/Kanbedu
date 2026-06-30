@@ -79,7 +79,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
     let groupBoardId: string | null = null;
     if (rosterEntry?.groupName) {
       const group = await prisma.group.findFirst({
-        where: { classId: cls.id, name: rosterEntry.groupName },
+        where: { classId: cls.id, name: { equals: rosterEntry.groupName, mode: "insensitive" } },
         select: { id: true, boardId: true },
       });
       groupId = group?.id ?? null;

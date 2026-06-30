@@ -77,9 +77,10 @@ function LoginContent() {
       }
 
       if (mode === "signup") {
-        // If the user came from a protected link (e.g. a class invite), send them
-        // straight there — they're already signed in; email verification is non-blocking.
-        window.location.href = next || `/check-email?email=${encodeURIComponent(email)}`;
+        // Pre-verified (invited via CSV): skip the check-email screen entirely.
+        // Otherwise, send them to verify unless there's a ?next= destination waiting.
+        const alreadyVerified = !!data.emailVerified;
+        window.location.href = alreadyVerified || next ? (next || "/") : `/check-email?email=${encodeURIComponent(email)}`;
       } else {
         window.location.href = next || "/";
       }
