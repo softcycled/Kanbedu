@@ -30,6 +30,22 @@ export default function ConfirmModal({
     if (isOpen) confirmRef.current?.focus();
   }, [isOpen]);
 
+  // Escape closes the dialog and background scroll is locked while it's open.
+  // stopPropagation keeps the Esc from bubbling to ClassWorkspace's handler.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !processing) { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, processing, onClose]);
+
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
@@ -50,8 +66,14 @@ export default function ConfirmModal({
     : "px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50";
 
   return (
-    <div data-modal-open role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
-      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
+    <div
+      data-modal-open
+      role="dialog"
+      aria-modal="true"
+      onClick={() => { if (!processing) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in"
+    >
+      <div onClick={(e) => e.stopPropagation()} className="bg-card-bg rounded-2xl shadow-modal w-full max-w-sm motion-safe:animate-modal-in p-6">
         {title && <p className="text-sm font-semibold text-ink">{title}</p>}
         <p className="text-xs text-muted mt-1">{message}</p>
         <div className="flex items-center justify-end gap-2 mt-5">

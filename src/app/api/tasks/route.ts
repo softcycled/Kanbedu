@@ -45,9 +45,11 @@ export async function PUT(req: Request) {
 
   const validUpdates = result.data.filter(({ id }) => validTaskIds.has(id));
 
-  await prisma.$transaction(
-    validUpdates.map(({ id, order }) => prisma.task.update({ where: { id }, data: { order } }))
-  );
+  await prisma.$transaction(async (tx) => {
+    for (const { id, order } of validUpdates) {
+      await tx.task.update({ where: { id }, data: { order } });
+    }
+  });
 
   // Group updates by board and broadcast surgical reorder payload to each
   const updatesByBoard = new Map<string, { id: string; order: number }[]>();

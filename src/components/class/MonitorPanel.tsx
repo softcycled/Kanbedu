@@ -169,6 +169,9 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
                   new Set(groups.filter((g) => matchesGroupName(g.name, search)).map((g) => g.name))
                 )
               : null}
+            suggestions={search.trim()
+              ? groups.map((g) => g.name).filter((name) => matchesGroupName(name, search))
+              : groups.map((g) => g.name)}
           />
           <LiveIndicator />
         </div>

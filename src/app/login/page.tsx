@@ -18,6 +18,8 @@ function LoginContent() {
 
   useEffect(() => {
     if (searchParams.get("mode") === "signup") setMode("signup");
+    const nextParam = safeNext(searchParams.get("next"));
+    if (nextParam?.startsWith("/class/join/")) setMode("signup");
     const errorParam = searchParams.get("error");
     if (errorParam) {
       if (errorParam === "auth_failed") setError("Authentication failed.");
@@ -27,7 +29,7 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
-  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "rate-limited">("idle");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,9 +42,11 @@ function LoginContent() {
       try {
         const res = await fetch(`/api/auth/handle-check?handle=${encodeURIComponent(handle)}`);
         const data = await res.json();
-        setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
+        if (res.status === 429) setHandleStatus("rate-limited");
+        else if (!res.ok) setHandleStatus("idle"); // unexpected server error — don't show misleading "invalid format" message
+        else setHandleStatus(data.available ? "available" : data.error ? "invalid" : "taken");
       } catch { setHandleStatus("idle"); }
-    }, 400);
+    }, 700);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [handle, mode]);
 
@@ -52,6 +56,8 @@ function LoginContent() {
 
     if (mode === "signup") {
       if (!handle) { setError("Please choose a username."); return; }
+      if (handleStatus === "checking") { setError("Still checking username availability, please wait a moment."); return; }
+      if (handleStatus === "rate-limited") { setError("Too many requests right now. Wait a moment and try again."); return; }
       if (handleStatus !== "available") { setError("Please choose a valid, available username."); return; }
     }
 
@@ -77,9 +83,15 @@ function LoginContent() {
       }
 
       if (mode === "signup") {
-        // If the user came from a protected link (e.g. a class invite), send them
-        // straight there — they're already signed in; email verification is non-blocking.
-        window.location.href = next || `/check-email?email=${encodeURIComponent(email)}`;
+        // Pre-verified (invited via CSV): skip the check-email screen entirely.
+        // If they came from a class join link, auto-fire the join so they land
+        // directly on the board without a manual "Join class" click.
+        const alreadyVerified = !!data.emailVerified;
+        if (alreadyVerified && next?.startsWith("/class/join/")) {
+          window.location.href = next + "?auto=1";
+        } else {
+          window.location.href = alreadyVerified || next ? (next || "/") : `/check-email?email=${encodeURIComponent(email)}`;
+        }
       } else {
         window.location.href = next || "/";
       }
@@ -140,7 +152,7 @@ function LoginContent() {
                       id="signup-handle"
                       type="text"
                       value={handle}
-                      onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                      onChange={(e) => { setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "")); if (error) setError(""); }}
                       placeholder="yourhandle"
                       autoComplete="off"
                       maxLength={30}
@@ -150,12 +162,13 @@ function LoginContent() {
                   {handle && (
                     <p className={`text-xs mt-1.5 ${
                       handleStatus === "available" ? "text-green-600"
-                        : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
+                        : handleStatus === "taken" || handleStatus === "invalid" || handleStatus === "rate-limited" ? "text-red-500"
                         : "text-muted"
                     }`}>
                       {handleStatus === "available" ? `@${handle} is available`
                         : handleStatus === "taken" ? "That username is already taken"
-                        : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
+                        : handleStatus === "invalid" ? "2-30 chars, lowercase letters, numbers, underscores only"
+                        : handleStatus === "rate-limited" ? "Too many requests, try again in a moment"
                         : "Checking..."}
                     </p>
                   )}

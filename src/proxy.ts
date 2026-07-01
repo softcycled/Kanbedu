@@ -10,7 +10,7 @@ if (!SECRET_RAW) {
 const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 // Routes that don't require authentication
-const PUBLIC_PATHS = ["/login", "/landing", "/terms", "/privacy", "/credits", "/api/auth/", "/invite/", "/verify-email/", "/forgot-password", "/reset-password/", "/check-email", "/opengraph-image"];
+const PUBLIC_PATHS = ["/login", "/landing", "/pricing", "/terms", "/privacy", "/credits", "/api/auth/login", "/api/auth/signup", "/api/auth/handle-check", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/resend-verification", "/api/auth/verify-email", "/api/waitlist", "/invite/", "/verify-email/", "/forgot-password", "/reset-password/", "/check-email", "/opengraph-image"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
@@ -23,7 +23,7 @@ function buildCsp(nonce: string): string {
     // unsafe-eval only in dev (HMR); nonce replaces unsafe-inline for all inline scripts
     `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
+    "img-src 'self' blob: data: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://storage.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self'",
     "object-src 'none'",

@@ -13,7 +13,7 @@ export default function LandingFooter() {
           <Link href="/pricing" className="hover:text-white/45 transition-colors">Pricing</Link>
           <Link href="/terms" className="hover:text-white/45 transition-colors">Terms</Link>
           <Link href="/privacy" className="hover:text-white/45 transition-colors">Privacy</Link>
-          <a href="mailto:support@kanbedu.com" className="hover:text-white/45 transition-colors">Contact</a>
+          <a href="mailto:kanbeduapp@gmail.com" className="hover:text-white/45 transition-colors">Contact</a>
           <Link href="/credits" className="hover:text-white/45 transition-colors">Credits</Link>
           <span>© 2026 Kanbedu</span>
         </div>

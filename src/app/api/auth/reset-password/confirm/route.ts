@@ -6,7 +6,7 @@ import { resetPasswordConfirmSchema, parseBody } from "@/lib/validations";
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
-  const limit = await checkRateLimit(ip, "reset_confirm", 5, 15);
+  const limit = await checkRateLimit(ip, "reset_confirm", 100, 15);
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   }

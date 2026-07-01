@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   const { code } = await params;
   try {
     const ip = getClientIp(req);
-    const limit = await checkRateLimit(ip, "class_join_check", 60, 15);
+    const limit = await checkRateLimit(ip, "class_join_check", 300, 15);
     if (!limit.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
@@ -35,9 +35,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
   try {
     const session = await getSessionFull();
     if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-    if (!session.emailVerified) {
-      return NextResponse.json({ error: "Please verify your email to join a class.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
-    }
 
     const limit = await checkRateLimit(session.userId, "class-join", 30, 60);
     if (!limit.allowed) {
@@ -72,11 +69,17 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
         })
       : null;
 
+    // Students who were invited by email already proved they own the address —
+    // the invite email IS the verification. Everyone else still needs emailVerified.
+    if (!session.emailVerified && !rosterEntry) {
+      return NextResponse.json({ error: "Please verify your email to join a class.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
+    }
+
     let groupId: string | null = null;
     let groupBoardId: string | null = null;
     if (rosterEntry?.groupName) {
       const group = await prisma.group.findFirst({
-        where: { classId: cls.id, name: rosterEntry.groupName },
+        where: { classId: cls.id, name: { equals: rosterEntry.groupName, mode: "insensitive" } },
         select: { id: true, boardId: true },
       });
       groupId = group?.id ?? null;
@@ -110,11 +113,20 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ co
           data: { claimedBy: session.userId },
         });
       }
+
+      // Auto-verify the email — receiving and clicking the invite already proved
+      // they own this address, so no separate verification step is needed.
+      if (!session.emailVerified && rosterEntry) {
+        await tx.user.update({
+          where: { id: session.userId },
+          data: { emailVerified: true },
+        });
+      }
     });
 
     return NextResponse.json({ message: "You have joined the class.", classId: cls.id, name: cls.name });
   } catch (error) {
-    console.error("Failed to join class:", error);
+    console.error("Failed to join class.", error);
     return NextResponse.json({ error: "Failed to join class." }, { status: 500 });
   }
 }

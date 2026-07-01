@@ -14,7 +14,7 @@ const nextConfig = {
   // Disable x-powered-by header in production
   poweredByHeader: false,
 
-  // Static security headers (non-CSP). CSP is set per-request in middleware.ts
+  // Static security headers (non-CSP). CSP is set per-request in proxy.ts
   // with a fresh nonce so unsafe-inline is not required for scripts.
   async headers() {
     return [

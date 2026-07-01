@@ -12,6 +12,11 @@ async function requireEducator(userId: string, classId: string) {
   return role === "educator" || role === "ta";
 }
 
+async function requireOwnerEducator(userId: string, classId: string) {
+  const role = await getClassRole(userId, classId);
+  return role === "educator";
+}
+
 const archivedError = () =>
   NextResponse.json({ error: "This class is archived. Unarchive it to make changes." }, { status: 403 });
 
@@ -88,9 +93,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (ids.some((gid) => !ownedIds.has(gid))) {
         return NextResponse.json({ error: "Invalid group list." }, { status: 400 });
       }
-      await prisma.$transaction(
-        ids.map((gid, index) => prisma.group.update({ where: { id: gid }, data: { order: index } }))
-      );
+      await prisma.$transaction(async (tx) => {
+        for (let index = 0; index < ids.length; index++) {
+          await tx.group.update({ where: { id: ids[index] }, data: { order: index } });
+        }
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -103,17 +110,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const group = await prisma.group.findFirst({ where: { id: groupId, classId: id } });
     if (!group) return NextResponse.json({ error: "Group not found." }, { status: 404 });
 
-    const updated = await prisma.group.update({
-      where: { id: groupId },
-      data: {
-        ...(result.data.name !== undefined ? { name: result.data.name } : {}),
-        ...(result.data.order !== undefined ? { order: result.data.order } : {}),
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const g = await tx.group.update({
+        where: { id: groupId },
+        data: {
+          ...(result.data.name !== undefined ? { name: result.data.name } : {}),
+          ...(result.data.order !== undefined ? { order: result.data.order } : {}),
+        },
+      });
+      if (result.data.name !== undefined) {
+        await tx.board.update({ where: { id: group.boardId }, data: { name: result.data.name } });
+      }
+      return g;
     });
-    // Keep the group's board name in sync with the group name.
-    if (result.data.name !== undefined) {
-      await prisma.board.update({ where: { id: group.boardId }, data: { name: result.data.name } });
-    }
 
     return NextResponse.json({ id: updated.id, name: updated.name, order: updated.order, boardId: updated.boardId });
   } catch (error) {
@@ -136,9 +145,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const rl3 = await checkRateLimit(session.userId, "api_write", 300, 15);
     if (!rl3.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
-    if (!(await requireEducator(session.userId, id))) {
-      logAuthzDenied(req, "/api/classes/[id]/groups", session.userId, "DELETE educator-only");
-      return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
+    if (!(await requireOwnerEducator(session.userId, id))) {
+      logAuthzDenied(req, "/api/classes/[id]/groups", session.userId, "DELETE owner-only");
+      return NextResponse.json({ error: "Only educators can delete groups." }, { status: 403 });
     }
     if (await isClassArchived(id)) return archivedError();
 

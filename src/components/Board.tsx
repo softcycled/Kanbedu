@@ -753,9 +753,9 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       broadcastRefresh({ type: "task:create", task: newTask });
     } catch (error) {
       console.error("Failed to add task:", error);
-      // Rollback optimistic insert
       onTasksChange((prev) => prev.filter((t) => t.id !== tempId));
-      toasts.push({ title: "Could not add task", description: "Please try again." });
+      const is429 = error instanceof Error && error.message.includes(": 429");
+      toasts.push({ title: "Could not add task", description: is429 ? "You're going too fast. Wait a moment." : "Please try again." });
     }
   }, [broadcastRefresh, onTasksChange, toasts]);
 
@@ -781,7 +781,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     } catch (error) {
       console.error("Failed to update task:", error);
       if (prevTask) onTasksChange((prev) => prev.map((t) => (t.id === id ? prevTask : t)));
-      toasts.push({ title: "Could not save changes", description: "Please try again." });
+      const is429 = error instanceof Error && error.message.includes(": 429");
+      toasts.push({ title: "Could not save changes", description: is429 ? "You're going too fast. Wait a moment." : "Please try again." });
     }
   }, [broadcastRefresh, onTasksChange, toasts]);
 

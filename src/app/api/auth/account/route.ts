@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession, verifyPassword, destroySession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { del } from "@vercel/blob";
+import { deleteFromGCS } from "@/lib/gcs";
 
 export async function DELETE(req: Request) {
   const session = await getVerifiedSession();
@@ -108,9 +109,13 @@ export async function DELETE(req: Request) {
     }
   }
 
-  // Delete Vercel Blob files (fire-and-forget per-file so one failure doesn't block the rest)
+  // Delete stored files — url is a GCS object path for new uploads, Vercel Blob URL for legacy
   if (attachmentUrls.length > 0) {
-    await Promise.allSettled(attachmentUrls.map((url) => del(url)));
+    await Promise.allSettled(
+      attachmentUrls.map((url) =>
+        url.startsWith("https://") ? del(url) : deleteFromGCS(url)
+      )
+    );
   }
 
   // Remove FK relations that don't have onDelete: Cascade on the User side

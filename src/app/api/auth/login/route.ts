@@ -8,10 +8,10 @@ export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
     
-    // 1. IP-based rate limiting (5 attempts per 15 min per IP)
-    const ipLimit = await checkRateLimit(ip, "login_ip", 5, 15);
+    // IP rate limit raised for shared campus networks — per-email lockout below handles brute force
+    const ipLimit = await checkRateLimit(ip, "login_ip", 300, 15);
     if (!ipLimit.allowed) {
-      return NextResponse.json({ error: "Too many requests from this IP. Try again in 15 minutes." }, { status: 429 });
+      return NextResponse.json({ error: "Too many login attempts from this network. Try again in 15 minutes." }, { status: 429 });
     }
 
     const raw = await req.json();

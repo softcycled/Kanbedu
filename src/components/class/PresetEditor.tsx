@@ -16,23 +16,27 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
   const [columns, setColumns] = useState<PColumn[]>([]);
   const [tasks, setTasks] = useState<PTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     fetch(`/api/classes/${classId}/preset`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { columns: [], tasks: [] }))
+      .then((r) => { if (!r.ok) throw new Error("load failed"); return r.json(); })
       .then((data) => {
         if (cancelled) return;
         setColumns(data.columns || []);
         setTasks(data.tasks || []);
         setLoading(false);
       })
-      .catch(() => { if (!cancelled) setLoading(false); });
+      .catch(() => { if (!cancelled) { setLoadError(true); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [classId]);
+  }, [classId, reloadKey]);
 
   const markDirty = () => { setSaved(false); setError(null); };
 
@@ -89,6 +93,14 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-10 rounded-lg" />
         ))}
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-muted">
+        <p>Failed to load preset.</p>
+        <button onClick={() => setReloadKey((k) => k + 1)} className="text-xs underline">Retry</button>
       </div>
     );
   }

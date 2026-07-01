@@ -125,14 +125,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid ids." }, { status: 400 });
     }
 
-    await prisma.$transaction(
-      ids.map((classId, index) =>
-        prisma.classMember.updateMany({
-          where: { userId: session.userId, classId },
+    await prisma.$transaction(async (tx) => {
+      for (let index = 0; index < ids.length; index++) {
+        await tx.classMember.updateMany({
+          where: { userId: session.userId, classId: ids[index] },
           data: { order: index },
-        })
-      )
-    );
+        });
+      }
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

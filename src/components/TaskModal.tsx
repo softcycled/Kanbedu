@@ -140,6 +140,7 @@ export default function TaskModal({
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -357,6 +358,11 @@ export default function TaskModal({
     e.target.value = "";
     setUploading(true);
     for (const file of files) {
+      setUploadError(null);
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError(`"${file.name}" is too large. Files must be under 10 MB.`);
+        continue;
+      }
       const fd = new FormData();
       fd.append("file", file);
       try {
@@ -366,7 +372,12 @@ export default function TaskModal({
           setAttachments((prev) => [...prev, attachment]);
         } else {
           const data = await res.json().catch(() => ({}));
-          toasts.push({ title: data.error ?? "Upload failed." });
+          const msg = data.error ?? "Upload failed.";
+          if (msg.includes("storage full") || msg.includes("storage limit") || msg.includes("too large")) {
+            setUploadError(msg);
+          } else {
+            toasts.push({ title: msg });
+          }
         }
       } catch {
         toasts.push({ title: "Upload failed." });
@@ -1975,7 +1986,7 @@ export default function TaskModal({
 
             {/* Attachments */}
             <div className="px-8 md:px-10 py-8 border-b border-border/30">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-1">
                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted">
                   Attachments{attachments.length > 0 && <span className="normal-case font-normal ml-1">({attachments.length})</span>}
                 </label>
@@ -1995,6 +2006,14 @@ export default function TaskModal({
                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.csv"
                 />
               </div>
+              {uploadError ? (
+                <div className="flex items-start gap-2 mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <svg className="flex-shrink-0 mt-0.5 text-red-400" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <p className="text-xs text-red-400 leading-snug">{uploadError}</p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted/50 mb-3">100 MB per board</p>
+              )}
               {attachments.length > 0 ? (
                 <div className="space-y-2">
                   {attachments.map((a) => {
@@ -2174,7 +2193,7 @@ export default function TaskModal({
             ) : saveError ? (
               <>
                 <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                <p className="text-xs text-red-500">Could not save — please try again</p>
+                <p className="text-xs text-red-500">Could not save, please try again</p>
               </>
             ) : (
               <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -46,6 +46,47 @@ interface Props {
 }
 
 type Tab = "monitor" | "integrity" | "participation" | "roster" | "preset" | "settings";
+
+function TabBar({ tabs, tab, setTab, setVisitedTabs }: {
+  tabs: { id: Tab; label: string }[];
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  setVisitedTabs: React.Dispatch<React.SetStateAction<Set<Tab>>>;
+}) {
+  const navRef = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const onScroll = () => setScrolled(el.scrollLeft > 8);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div className="flex-shrink-0 relative border-b border-border/60">
+      <nav ref={navRef} className="flex items-center gap-1 px-3 md:px-10 overflow-x-auto no-scrollbar">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              setTab(t.id);
+              setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
+            }}
+            className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+              tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      {scrolled && <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-paper to-transparent md:hidden" />}
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-paper to-transparent md:hidden" />
+    </div>
+  );
+}
 
 
 export default function ClassWorkspace(props: Props) {
@@ -105,15 +146,21 @@ export default function ClassWorkspace(props: Props) {
   if (openBoard) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
-        <header className="flex-shrink-0 flex items-center justify-between px-6 md:px-10 pt-6 pb-4 border-b border-border/60">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="flex-shrink-0 flex items-center justify-between px-4 md:px-10 pt-4 md:pt-6 pb-4 border-b border-border/60">
+          {/* Mobile: compact back button — board has its own title row */}
+          <button onClick={() => setOpenBoard(null)} className="flex items-center gap-1.5 min-w-0 md:hidden text-sm font-medium text-muted hover:text-ink transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M15 18l-6-6 6-6"/></svg>
+            <span className="truncate">{name}</span>
+          </button>
+          {/* Desktop: full breadcrumb */}
+          <div className="hidden md:flex items-center gap-3 min-w-0">
             <Link href="/" className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity">kanbedu</Link>
             <span className="text-muted">/</span>
             <button onClick={() => setOpenBoard(null)} className="text-base font-semibold text-ink/60 hover:text-ink transition-colors truncate">{name}</button>
             <span className="text-muted">/</span>
             <span className="text-base font-semibold text-ink truncate">{openBoard.name}</span>
           </div>
-          <button onClick={() => setOpenBoard(null)} className="text-sm text-muted hover:text-ink transition-colors flex-shrink-0">Back</button>
+          <button onClick={() => setOpenBoard(null)} className="hidden md:block text-sm text-muted hover:text-ink transition-colors flex-shrink-0">Back</button>
         </header>
         <GroupBoardView
           boardId={openBoard.boardId}
@@ -139,25 +186,7 @@ export default function ClassWorkspace(props: Props) {
     <div className="flex flex-col h-screen overflow-hidden">
       {header}
 
-      <div className="flex-shrink-0 relative border-b border-border/60">
-        <nav className="flex items-center gap-1 px-3 md:px-10 overflow-x-auto no-scrollbar">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setTab(t.id);
-                setVisitedTabs((prev) => prev.has(t.id) ? prev : new Set([...prev, t.id]));
-              }}
-              className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
-                tab === t.id ? "border-ink text-ink font-medium" : "border-transparent text-muted hover:text-ink"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-paper to-transparent md:hidden" />
-      </div>
+      <TabBar tabs={tabs} tab={tab} setTab={setTab} setVisitedTabs={setVisitedTabs} />
 
       {archived && (
         <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-2 text-[11px] font-medium bg-amber-50 border-b border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
@@ -180,6 +209,7 @@ export default function ClassWorkspace(props: Props) {
           <RosterPanel
             classId={classId}
             ownerId={ownerId}
+            role={props.role === "ta" ? "ta" : "educator"}
             onOpenBoard={openGroupBoard}
             onChanged={() => setGroupsVersion((v) => v + 1)}
             readOnly={archived}

@@ -116,7 +116,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       // MOVE (non-done→non-done), COMPLETE (→done), REOPEN (done→non-done).
       const moveActivities = await prisma.taskActivity.findMany({
         where: { taskId: { in: movedByTaskIds }, type: { in: ["MOVE", "COMPLETE", "REOPEN"] } },
-        include: { user: { select: { name: true, handle: true } } },
+        select: { taskId: true, userId: true, createdAt: true, user: { select: { name: true, handle: true } } },
         orderBy: { createdAt: "desc" },
       });
       for (const act of moveActivities) {

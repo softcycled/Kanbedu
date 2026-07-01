@@ -214,9 +214,9 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
 
       <div className="flex items-start justify-between gap-4 mb-5">
         <p className="text-xs text-muted max-w-xl">
-          Tasks that may have been completed dishonestly, finished suspiciously fast,
-          moved straight to done without passing through
-          earlier columns, or marked done by someone other than the assignee. Signals to check, not proof.
+          Tasks that look completed dishonestly: finished suspiciously fast, jumped
+          straight to done, or marked done by someone other than the assignee.
+          Signals to check, not proof.
         </p>
         <LiveIndicator />
       </div>
@@ -270,7 +270,11 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
           </div>
 
           {displayGroups.length === 0 ? (
-            <p className="text-sm text-muted py-4">No groups match this filter.</p>
+            <p className="text-sm text-muted py-4">
+              {groupSearch.trim()
+                ? <>No groups match &ldquo;{groupSearch.trim()}&rdquo;.</>
+                : "No groups match this filter."}
+            </p>
           ) : (
           <div className="space-y-5">
             {displayGroups.map((g) => (

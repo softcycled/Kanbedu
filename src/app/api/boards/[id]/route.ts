@@ -77,7 +77,7 @@ export async function DELETE(
     if (groupBoard) {
       const { getClassRole } = await import("@/lib/auth");
       const classRole = await getClassRole(session.userId, groupBoard.classId);
-      if (classRole !== "educator" && classRole !== "ta") {
+      if (classRole !== "educator") {
         return NextResponse.json({ error: "Class group boards can only be deleted by an educator." }, { status: 403 });
       }
     }
