@@ -43,7 +43,8 @@ function LoginContent() {
         const res = await fetch(`/api/auth/handle-check?handle=${encodeURIComponent(handle)}`);
         const data = await res.json();
         if (res.status === 429) setHandleStatus("rate-limited");
-        else setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
+        else if (!res.ok) setHandleStatus("idle"); // unexpected server error — don't show misleading "invalid format" message
+        else setHandleStatus(data.available ? "available" : data.error ? "invalid" : "taken");
       } catch { setHandleStatus("idle"); }
     }, 700);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -151,7 +152,7 @@ function LoginContent() {
                       id="signup-handle"
                       type="text"
                       value={handle}
-                      onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                      onChange={(e) => { setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "")); if (error) setError(""); }}
                       placeholder="yourhandle"
                       autoComplete="off"
                       maxLength={30}
