@@ -45,7 +45,7 @@ function LoginContent() {
         if (res.status === 429) setHandleStatus("rate-limited");
         else setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
       } catch { setHandleStatus("idle"); }
-    }, 400);
+    }, 700);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [handle, mode]);
 

@@ -31,6 +31,11 @@ function ClassJoinContent() {
         setStatus("verify-email");
         return;
       }
+      if (res.status === 429) {
+        setMessage("Too many requests. Wait a moment and try again.");
+        setStatus("error");
+        return;
+      }
       if (!res.ok) {
         setMessage(data.error || "Failed to join.");
         setStatus("error");
@@ -51,6 +56,11 @@ function ClassJoinContent() {
       try {
         const res = await fetch(`/api/classes/join/${code}`);
         const data = await res.json();
+        if (res.status === 429) {
+          setMessage("Too many requests. Wait a moment and refresh the page.");
+          setStatus("error");
+          return;
+        }
         if (!res.ok) {
           setMessage(data.error || "Invalid class code.");
           setStatus("error");

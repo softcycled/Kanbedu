@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   const { code } = await params;
   try {
     const ip = getClientIp(req);
-    const limit = await checkRateLimit(ip, "class_join_check", 60, 15);
+    const limit = await checkRateLimit(ip, "class_join_check", 300, 15);
     if (!limit.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }

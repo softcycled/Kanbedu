@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     // Rate limit signups per IP to block bots — raised for shared campus/classroom networks
     const ipLimit = await checkRateLimit(ip, "signup_ip", 100, 60);
     if (!ipLimit.allowed) {
-      return NextResponse.json({ error: "Too many accounts created from this IP. Please try again later." }, { status: 429 });
+      return NextResponse.json({ error: "Too many signups from this network. Please try again later or contact your educator." }, { status: 429 });
     }
 
     const raw = await req.json();
