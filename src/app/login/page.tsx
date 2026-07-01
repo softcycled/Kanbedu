@@ -29,7 +29,7 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
-  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "rate-limited">("idle");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,7 +42,8 @@ function LoginContent() {
       try {
         const res = await fetch(`/api/auth/handle-check?handle=${encodeURIComponent(handle)}`);
         const data = await res.json();
-        setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
+        if (res.status === 429) setHandleStatus("rate-limited");
+        else setHandleStatus(data.error ? "invalid" : data.available ? "available" : "taken");
       } catch { setHandleStatus("idle"); }
     }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -54,6 +55,8 @@ function LoginContent() {
 
     if (mode === "signup") {
       if (!handle) { setError("Please choose a username."); return; }
+      if (handleStatus === "checking") { setError("Still checking username availability, please wait a moment."); return; }
+      if (handleStatus === "rate-limited") { setError("Too many requests right now. Wait a moment and try again."); return; }
       if (handleStatus !== "available") { setError("Please choose a valid, available username."); return; }
     }
 
@@ -158,12 +161,13 @@ function LoginContent() {
                   {handle && (
                     <p className={`text-xs mt-1.5 ${
                       handleStatus === "available" ? "text-green-600"
-                        : handleStatus === "taken" || handleStatus === "invalid" ? "text-red-500"
+                        : handleStatus === "taken" || handleStatus === "invalid" || handleStatus === "rate-limited" ? "text-red-500"
                         : "text-muted"
                     }`}>
                       {handleStatus === "available" ? `@${handle} is available`
                         : handleStatus === "taken" ? "That username is already taken"
-                        : handleStatus === "invalid" ? "2–30 chars, lowercase letters, numbers, underscores only"
+                        : handleStatus === "invalid" ? "2-30 chars, lowercase letters, numbers, underscores only"
+                        : handleStatus === "rate-limited" ? "Too many requests, try again in a moment"
                         : "Checking..."}
                     </p>
                   )}

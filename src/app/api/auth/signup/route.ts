@@ -10,8 +10,8 @@ export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
     
-    // Strict rate limit: Max 5 signups per IP per hour to prevent bot mass-creation
-    const ipLimit = await checkRateLimit(ip, "signup_ip", 5, 60);
+    // Rate limit signups per IP to block bots — raised for shared campus/classroom networks
+    const ipLimit = await checkRateLimit(ip, "signup_ip", 100, 60);
     if (!ipLimit.allowed) {
       return NextResponse.json({ error: "Too many accounts created from this IP. Please try again later." }, { status: 429 });
     }
