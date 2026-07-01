@@ -68,7 +68,7 @@ function ClassJoinContent() {
             setMessage(joinData.message);
             setClassId(joinData.classId);
             setStatus("done");
-            setTimeout(() => router.push(`/class/${joinData.classId}`), 1200);
+            setTimeout(() => router.push(`/class/${joinData.classId}`), 600);
           } else if (joinRes.status === 403 && joinData.code === "EMAIL_NOT_VERIFIED") {
             setStatus("verify-email");
           } else {

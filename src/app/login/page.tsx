@@ -80,9 +80,14 @@ function LoginContent() {
 
       if (mode === "signup") {
         // Pre-verified (invited via CSV): skip the check-email screen entirely.
-        // Otherwise, send them to verify unless there's a ?next= destination waiting.
+        // If they came from a class join link, auto-fire the join so they land
+        // directly on the board without a manual "Join class" click.
         const alreadyVerified = !!data.emailVerified;
-        window.location.href = alreadyVerified || next ? (next || "/") : `/check-email?email=${encodeURIComponent(email)}`;
+        if (alreadyVerified && next?.startsWith("/class/join/")) {
+          window.location.href = next + "?auto=1";
+        } else {
+          window.location.href = alreadyVerified || next ? (next || "/") : `/check-email?email=${encodeURIComponent(email)}`;
+        }
       } else {
         window.location.href = next || "/";
       }
