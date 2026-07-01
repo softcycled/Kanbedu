@@ -109,6 +109,9 @@ export const updateTaskSchema = z.object({
   deadline: z.string().nullable().optional(),
   movedByNonAssignee: z.boolean().optional(),
   tagIds: z.array(z.string()).optional(),
+  // Client sets this to true only on blur/close to write a description history
+  // entry. Auto-saves omit it (default false) to avoid noisy history.
+  recordHistory: z.boolean().optional(),
 });
 
 // -- Comments --

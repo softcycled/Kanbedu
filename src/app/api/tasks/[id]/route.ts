@@ -317,6 +317,7 @@ export async function PATCH(
   // Only bump updatedAt for meaningful field changes, not order/position changes
   const CONTENT_FIELDS = ["title", "description", "assigneeId", "assigneeIds", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
+  delete updateData.recordHistory; // client flag, not a DB field
 
   // movedByNonAssignee is server-computed — reject any client-supplied value.
   delete updateData.movedByNonAssignee;
@@ -529,7 +530,7 @@ export async function PATCH(
       const postUpdateWork: Promise<unknown>[] = [];
       if (body.title) postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`));
       if (body.priority) postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
-      if (body.description !== undefined) {
+      if (body.description !== undefined && body.recordHistory === true) {
         postUpdateWork.push(prisma.taskDescriptionVersion.create({ data: { taskId: id, userId: session.userId, content: body.description } }));
         postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", "Updated the description"));
       }
@@ -597,7 +598,7 @@ export async function PATCH(
       if (body.priority && body.priority !== current.priority) {
         postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
       }
-      if (body.description !== undefined && body.description !== current.description) {
+      if (body.description !== undefined && body.recordHistory === true) {
         postUpdateWork.push(
           prisma.taskDescriptionVersion.create({
             data: { taskId: id, userId: session.userId, content: body.description },

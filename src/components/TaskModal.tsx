@@ -168,6 +168,7 @@ export default function TaskModal({
 
   const prevTask = useRef<string | null>(null);
   const originalTask = useRef<{ description?: string; assigneeIds?: string; deadline?: string | null } | null>(null);
+  const descriptionLastRecordedRef = useRef<string>("");
   const isMounted = useRef(false);
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
@@ -213,6 +214,7 @@ export default function TaskModal({
         assigneeIds: taskAssigneeIds.join(","),
         deadline: dateInputToISOString(initialDeadlineDate),
       };
+      descriptionLastRecordedRef.current = task.description ?? "";
 
       // sync comments/activities/attachments on first load for this task
       setComments(task.comments ?? []);
@@ -680,6 +682,19 @@ export default function TaskModal({
     const originalDeadline = originalTask.current?.deadline ?? null;
     if (deadlineValue !== originalDeadline) {
       updates.deadline = deadlineValue;
+    }
+
+    // Record a description history entry when the user finishes editing
+    // (blur or close). The debounced auto-save skips history; this is the
+    // one place that commits it.
+    if (description !== descriptionLastRecordedRef.current) {
+      if (!("description" in updates)) {
+        // Content already auto-saved; send it again so the server has the
+        // value for the history entry (same content, negligible extra write).
+        updates.description = description;
+      }
+      (updates as any).recordHistory = true;
+      descriptionLastRecordedRef.current = description;
     }
 
     // Send all pending updates in background (do not block UI/closing)
