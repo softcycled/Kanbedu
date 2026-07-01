@@ -18,6 +18,8 @@ function LoginContent() {
 
   useEffect(() => {
     if (searchParams.get("mode") === "signup") setMode("signup");
+    const nextParam = safeNext(searchParams.get("next"));
+    if (nextParam?.startsWith("/class/join/")) setMode("signup");
     const errorParam = searchParams.get("error");
     if (errorParam) {
       if (errorParam === "auth_failed") setError("Authentication failed.");
