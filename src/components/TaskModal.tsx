@@ -37,7 +37,10 @@ interface Props {
   boardMembers?: import("@/lib/types").BoardMemberData[];
   columns?: import("@/lib/types").ColumnData[];
   onClose: () => void;
-  onUpdate: (id: string, data: Partial<Task>) => Promise<void>;
+  // Resolves true on success, false on failure. onUpdate handles its own
+  // failure UI (revert + toast) internally and does not throw, so callers
+  // that need to know whether the write actually landed must check this.
+  onUpdate: (id: string, data: Partial<Task>) => Promise<boolean>;
   onDelete: (id: string) => Promise<void>;
   onAddComment: (taskId: string, content: string, author: string) => Promise<Comment>;
   boardId: string;
@@ -169,6 +172,10 @@ export default function TaskModal({
   const prevTask = useRef<string | null>(null);
   const originalTask = useRef<{ description?: string; assigneeIds?: string; deadline?: string | null } | null>(null);
   const descriptionLastRecordedRef = useRef<string>("");
+  const historyStaleRef = useRef(false);
+  const skipNextBlurFlushRef = useRef(false);
+  const wasClosedRef = useRef(false);
+  const flushUpdatesRef = useRef<(() => void) | null>(null);
   const isMounted = useRef(false);
   const userHasEdited = useRef(false);
   const isEditingTitleRef = useRef(isEditingTitle);
@@ -180,10 +187,19 @@ export default function TaskModal({
   useEffect(() => { activitiesRef.current = activities; }, [activities]);
 
   useEffect(() => {
-    if (!task) return;
+    if (!task) {
+      // Modal closed while the component stays mounted (task prop cleared).
+      // Force a full re-sync on reopen even if it's the same task id — the
+      // server content may have changed while it was closed.
+      wasClosedRef.current = true;
+      return;
+    }
 
-    // Only sync everything when switching to a new task id - otherwise do a minimal, non-destructive sync
-    if (task.id !== prevTask.current) {
+    // Only sync everything when switching to a new task id (or reopening
+    // after being closed) - otherwise do a minimal, non-destructive sync
+    const idChanged = task.id !== prevTask.current;
+    if (idChanged || wasClosedRef.current) {
+      wasClosedRef.current = false;
       prevTask.current = task.id;
       userHasEdited.current = false;
       previousFocusRef.current = document.activeElement as HTMLElement;
@@ -199,6 +215,8 @@ export default function TaskModal({
       setOptimisticTagIds(null);
       setShowActivity(false);
       setShowHistory(false);
+      setVersions([]);
+      historyStaleRef.current = false;
       const taskAssigneeIds = task.assignees?.length
         ? task.assignees.map((a) => a.id)
         : task.assigneeId
@@ -214,7 +232,15 @@ export default function TaskModal({
         assigneeIds: taskAssigneeIds.join(","),
         deadline: dateInputToISOString(initialDeadlineDate),
       };
-      descriptionLastRecordedRef.current = task.description ?? "";
+      // Only reset the history baseline for a genuinely new task. Reopening
+      // the same task after a close must not clobber a pending retry (e.g. a
+      // recordHistory write that failed earlier this session) - the server
+      // dedupes redundant recordHistory sends against the latest version row,
+      // so leaving this stale is safe; resetting it would silently drop the
+      // pending write.
+      if (idChanged) {
+        descriptionLastRecordedRef.current = task.description ?? "";
+      }
 
       // sync comments/activities/attachments on first load for this task
       setComments(task.comments ?? []);
@@ -488,10 +514,27 @@ export default function TaskModal({
   useEffect(() => {
     isMounted.current = true;
     return () => {
+      // Flush any pending description/assignee/deadline edits before tearing
+      // down — board switches and navigation don't go through handleClose,
+      // so without this a pending edit (and its history entry) is silently
+      // lost. Must run before isMounted flips false since flushUpdates gates
+      // on it.
+      flushUpdatesRef.current?.();
       isMounted.current = false;
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
       if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
     };
+  }, []);
+
+  // Flush pending edits when the tab/app goes to the background. Covers tab
+  // switches, app backgrounding, and (in most browsers) tab close — cases the
+  // unmount cleanup above doesn't reach because the component stays mounted.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") flushUpdatesRef.current?.();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   // Auto-resize textarea to match content height — min-h class handles the floor
@@ -608,22 +651,43 @@ export default function TaskModal({
     setSaveError(false);
     if (saveErrorTimeoutRef.current) window.clearTimeout(saveErrorTimeoutRef.current);
     try {
-      await onUpdate(id, data);
+      // onUpdate (Board.tsx's handleUpdateTask) handles its own failure UI
+      // internally (revert optimistic state + toast) and resolves false
+      // rather than throwing, so it must be checked explicitly here — a
+      // try/catch alone would never observe the failure.
+      const success = await onUpdate(id, data);
       if (!isMounted.current) return;
+      if (!success) {
+        setSaveError(true);
+        saveErrorTimeoutRef.current = window.setTimeout(() => setSaveError(false), 5000);
+        return;
+      }
       // Refresh the saved baseline for the fields we just persisted so later
       // autosaves and the flush-on-close don't re-send unchanged values
-      // (which would create duplicate description-version history entries and
-      // redundant "Updated the description" activity records).
+      // (redundant writes, and for description a redundant "Updated the
+      // description" activity).
       if (originalTask.current) {
         const d = data as any;
         if ("description" in d) originalTask.current.description = d.description ?? "";
         if ("deadline" in d) originalTask.current.deadline = d.deadline ? dateInputToISOString(formatDateForInput(d.deadline)) : null;
         if ("assigneeIds" in d) originalTask.current.assigneeIds = (d.assigneeIds ?? []).join(",");
       }
+      // Only advance the history baseline once the recordHistory request has
+      // actually succeeded. Advancing it eagerly (before the request fires)
+      // meant a failed save silently dropped the history entry for good,
+      // since the next flush would see no diff and never retry it.
+      const d2 = data as any;
+      if (d2.recordHistory === true && "description" in d2) {
+        descriptionLastRecordedRef.current = d2.description ?? "";
+        historyStaleRef.current = true;
+      }
       setJustSaved(true);
       if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
       savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);
     } catch (err) {
+      // Safety net for an unexpected throw (onUpdate is not expected to
+      // throw in normal operation - see above). Board.tsx has not shown a
+      // toast in this path, so it's still correct to show one here.
       console.error("Update failed", err);
       if (!isMounted.current) return;
       setSaveError(true);
@@ -686,7 +750,9 @@ export default function TaskModal({
 
     // Record a description history entry when the user finishes editing
     // (blur or close). The debounced auto-save skips history; this is the
-    // one place that commits it.
+    // one place that requests it. descriptionLastRecordedRef only advances
+    // once the request actually succeeds (see handleUpdateWithFeedback), so
+    // a failed save is retried on the next flush instead of being lost.
     if (description !== descriptionLastRecordedRef.current) {
       if (!("description" in updates)) {
         // Content already auto-saved; send it again so the server has the
@@ -694,7 +760,6 @@ export default function TaskModal({
         updates.description = description;
       }
       (updates as any).recordHistory = true;
-      descriptionLastRecordedRef.current = description;
     }
 
     // Send all pending updates in background (do not block UI/closing)
@@ -702,6 +767,10 @@ export default function TaskModal({
       void handleUpdateWithFeedback(task.id, updates);
     }
   }, [task, description, assigneeIds, deadline, handleUpdateWithFeedback]);
+
+  useEffect(() => {
+    flushUpdatesRef.current = flushUpdates;
+  }, [flushUpdates]);
 
   const handleClose = useCallback(() => {
     setConfirmDelete(false);
@@ -1433,7 +1502,10 @@ export default function TaskModal({
             onClick={() => {
               const next = !showHistory;
               setShowHistory(next);
-              if (next && versions.length === 0) void fetchVersionsDeduped();
+              if (next && (versions.length === 0 || historyStaleRef.current)) {
+                historyStaleRef.current = false;
+                void fetchVersionsDeduped();
+              }
             }}
             className="flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-ink transition-colors w-full text-left"
           >
@@ -1964,12 +2036,23 @@ export default function TaskModal({
                         // Revert description only — do NOT clear userHasEdited globally:
                         // other fields (deadline, assignee) may have unsaved edits that
                         // would be silently dropped by the debounced-save guards.
+                        // Skip the blur-triggered flush below: unmounting this textarea
+                        // fires a native blur whose closure still holds the pre-revert
+                        // text (React hasn't re-rendered yet), which would otherwise
+                        // persist and history-record the content just discarded. The
+                        // next real flush (close, or another field's blur) correctly
+                        // picks up the reverted `description` state instead.
+                        skipNextBlurFlushRef.current = true;
                         setDescription(descriptionOriginalRef.current);
                         setIsEditingDescription(false);
                       }
                     }}
                     onBlur={() => {
                       setIsEditingDescription(false);
+                      if (skipNextBlurFlushRef.current) {
+                        skipNextBlurFlushRef.current = false;
+                        return;
+                      }
                       void flushUpdates();
                     }}
                     placeholder="Write a detailed description..."

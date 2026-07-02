@@ -759,10 +759,13 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
   }, [broadcastRefresh, onTasksChange, toasts]);
 
-  const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
+  const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>): Promise<boolean> => {
     const prevTask = tasksRef.current.find((t) => t.id === id);
-    // Optimistic update locally
-    onTasksChange((prev) => prev.map((t) => (t.id === id ? { ...t, ...data, updatedAt: new Date() } : t)));
+    // Optimistic update locally — strip client-only flags first (recordHistory
+    // is not a Task field; spreading it in would leave an untyped property on
+    // the task). The flag itself still needs to reach the server below.
+    const { recordHistory: _recordHistory, ...optimisticData } = data as Partial<Task> & { recordHistory?: boolean };
+    onTasksChange((prev) => prev.map((t) => (t.id === id ? { ...t, ...optimisticData, updatedAt: new Date() } : t)));
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: "PATCH",
@@ -778,11 +781,17 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       onTasksChange((prev) => prev.map((t) => (t.id === id ? updatedTask : t)));
       setSelectedTask((prev) => (prev?.id === id ? updatedTask : prev));
       broadcastRefresh({ type: "task:update", task: updatedTask });
+      return true;
     } catch (error) {
       console.error("Failed to update task:", error);
       if (prevTask) onTasksChange((prev) => prev.map((t) => (t.id === id ? prevTask : t)));
       const is429 = error instanceof Error && error.message.includes(": 429");
       toasts.push({ title: "Could not save changes", description: is429 ? "You're going too fast. Wait a moment." : "Please try again." });
+      // Caller (e.g. TaskModal) uses this to decide whether it's safe to
+      // advance its own "already saved" baselines — this function already
+      // handles its own UI recovery (revert + toast), so callers should not
+      // also throw/toast on this failure, just skip their success bookkeeping.
+      return false;
     }
   }, [broadcastRefresh, onTasksChange, toasts]);
 

@@ -202,6 +202,21 @@ export async function GET(
   return new NextResponse(bodyString, { headers: { "Content-Type": "application/json" } });
 }
 
+// Write a description history entry plus its activity record, skipping the
+// insert when the content matches the latest recorded version. This is the
+// server-side backstop against duplicate no-op entries: clients can re-send
+// recordHistory with unchanged content (stale baselines, retries, multi-tab).
+async function recordDescriptionHistory(taskId: string, userId: string, content: string) {
+  const latest = await prisma.taskDescriptionVersion.findFirst({
+    where: { taskId },
+    orderBy: { createdAt: "desc" },
+    select: { content: true },
+  });
+  if (latest?.content === content) return;
+  await prisma.taskDescriptionVersion.create({ data: { taskId, userId, content } });
+  await recordActivity(taskId, userId, "UPDATE", "Updated the description");
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -317,14 +332,16 @@ export async function PATCH(
   // Only bump updatedAt for meaningful field changes, not order/position changes
   const CONTENT_FIELDS = ["title", "description", "assigneeId", "assigneeIds", "deadline", "priority"];
   const updateData: Record<string, unknown> = { ...body };
-  delete updateData.recordHistory; // client flag, not a DB field
 
-  // movedByNonAssignee is server-computed — reject any client-supplied value.
-  delete updateData.movedByNonAssignee;
+  // Fields that must never reach the Prisma update payload: recordHistory is a
+  // client-only flag, movedByNonAssignee is server-computed (set below), and
+  // assigneeIds/tagIds map to junction/relation ops rather than Task columns.
+  for (const field of ["recordHistory", "movedByNonAssignee", "assigneeIds", "tagIds"]) {
+    delete updateData[field];
+  }
 
   // Assignee set change: replace junction rows atomically and mirror the first
-  // assignee onto assigneeId for legacy paths. assigneeIds is not a Task column.
-  delete updateData.assigneeIds;
+  // assignee onto assigneeId for legacy paths.
   if (newAssigneeIds !== null) {
     updateData.assigneeId = newAssigneeIds[0] ?? null;
     updateData.assignees = {
@@ -478,7 +495,6 @@ export async function PATCH(
       if (toConnect.length) tagOps.connect = toConnect.map((id: string) => ({ id }));
       if (toDisconnect.length) tagOps.disconnect = toDisconnect.map((id: string) => ({ id }));
     }
-    delete updateData.tagIds;
   }
 
   const hasContentChange = CONTENT_FIELDS.some((f) => f in body);
@@ -531,8 +547,7 @@ export async function PATCH(
       if (body.title) postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Renamed to "${body.title}"`));
       if (body.priority) postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
       if (body.description !== undefined && body.recordHistory === true) {
-        postUpdateWork.push(prisma.taskDescriptionVersion.create({ data: { taskId: id, userId: session.userId, content: body.description } }));
-        postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", "Updated the description"));
+        postUpdateWork.push(recordDescriptionHistory(id, session.userId, body.description));
       }
       if (assigneeSetChanged) postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));
       if (body.tagIds !== undefined) postUpdateWork.push(recordActivity(id, session.userId, "TAG", "Updated tags"));
@@ -599,12 +614,7 @@ export async function PATCH(
         postUpdateWork.push(recordActivity(id, session.userId, "UPDATE", `Changed priority to ${body.priority}`));
       }
       if (body.description !== undefined && body.recordHistory === true) {
-        postUpdateWork.push(
-          prisma.taskDescriptionVersion.create({
-            data: { taskId: id, userId: session.userId, content: body.description },
-          }),
-          recordActivity(id, session.userId, "UPDATE", "Updated the description")
-        );
+        postUpdateWork.push(recordDescriptionHistory(id, session.userId, body.description));
       }
       if (body.assigneeIds !== undefined) {
         postUpdateWork.push(recordActivity(id, session.userId, "ASSIGNEE", "Changed assignees"));

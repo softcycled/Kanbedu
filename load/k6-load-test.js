@@ -15,10 +15,9 @@
 
 import http from "k6/http";
 import { check, sleep } from "k6";
+import { envConfig, login, headersFor } from "./k6-common.js";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
-const EMAIL = __ENV.TEST_EMAIL || "loadtest@example.com";
-const PASSWORD = __ENV.TEST_PASSWORD || "changeme";
+const { BASE_URL, EMAIL, PASSWORD } = envConfig();
 
 export const options = {
   // Ramp to 300 concurrent virtual users to validate the trial-scale target.
@@ -35,25 +34,12 @@ export const options = {
   },
 };
 
-// Log in once per VU init to get a session cookie. The middleware enforces an
-// Origin allowlist on mutations, so send an Origin matching BASE_URL.
 export function setup() {
-  const res = http.post(
-    `${BASE_URL}/api/auth/login`,
-    JSON.stringify({ email: EMAIL, password: PASSWORD }),
-    { headers: { "Content-Type": "application/json", Origin: BASE_URL } }
-  );
-  check(res, { "login succeeded": (r) => r.status === 200 });
-  // Return the session cookie so VUs can reuse it.
-  const cookie = res.cookies["kanbedu-session"];
-  return { sessionCookie: cookie && cookie[0] ? cookie[0].value : "" };
+  return login(BASE_URL, EMAIL, PASSWORD);
 }
 
 export default function (data) {
-  const headers = {
-    Cookie: `kanbedu-session=${data.sessionCookie}`,
-    Origin: BASE_URL,
-  };
+  const headers = headersFor(data.sessionCookie, BASE_URL);
 
   // Hot read path: list boards.
   const boards = http.get(`${BASE_URL}/api/boards`, { headers });
