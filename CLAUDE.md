@@ -123,7 +123,7 @@ For big actions (push to main, deploys): respond "Yes, boss?" first, wait for ex
 
 **Orphaned server (Windows):** `taskkill` on the npm wrapper can leave the `next-server` child alive on port 3000. Check with `netstat -ano | grep ":3000"`, verify with `Get-CimInstance Win32_Process` before killing.
 
-**Rate limit:** Signup is rate-limited 5/IP/hour, local resolves as "unknown". Clear `RateLimit` table before repeated test logins.
+**Rate limit:** Signup is 100/IP/hour, login_ip 300/15min, handle_check 200/15min (raised for shared campus networks). Local dev resolves as "unknown" so all local test users share one bucket and can still exhaust it. Clear `RateLimit` table before heavy testing sessions.
 
 **Latency:** Neon baseline is 18-19ms/query. This is good. Don't try to fix it. Prisma Accelerate and Neon HTTP adapter were both tried and reverted — don't suggest them again.
 
