@@ -80,8 +80,20 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: cloneName.trim() || undefined, term: cloneTerm.trim() || undefined, copyRoster }),
       });
-      if (!res.ok) throw new Error("clone failed");
       const cls = await res.json();
+      if (!res.ok) {
+        if (cls.code === "CLASS_LIMIT_REACHED") {
+          push({
+            title: "Free plan limit reached",
+            description: "Delete an existing class to free up a slot, or join the Pro waitlist.",
+            actionLabel: "View Pro waitlist",
+            onAction: () => router.push("/pricing"),
+          });
+          setCloning(false);
+          return;
+        }
+        throw new Error("clone failed");
+      }
       router.push(`/class/${cls.id}`);
     } catch {
       push({ title: "Couldn't clone class", description: "Please try again." });

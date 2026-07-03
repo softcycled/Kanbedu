@@ -1,5 +1,9 @@
 import type { Prisma } from "@prisma/client";
 
+// Free plan cap: active (non-archived) classes an educator may own at once.
+// No paid tier is purchasable yet, so this currently applies to every user.
+export const FREE_ACTIVE_CLASS_LIMIT = 3;
+
 // Shape of a class preset (stored as JSON on ClassPreset).
 export interface PresetColumn {
   label: string;

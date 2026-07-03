@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { createClassSchema, parseBody } from "@/lib/validations";
-import { DEFAULT_PRESET } from "@/lib/classBoards";
+import { DEFAULT_PRESET, FREE_ACTIVE_CLASS_LIMIT } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET: list every class the current user belongs to (any role).
@@ -79,6 +79,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     const data = result.data;
+
+    // Free plan cap: 3 active (non-archived) classes per educator. No paid tier
+    // is purchasable yet, so this currently applies to every user.
+    const activeClassCount = await prisma.class.count({
+      where: { ownerId: session.userId, archived: false },
+    });
+    if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
+          code: "CLASS_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
 
     const created = await prisma.$transaction(async (tx) => {
       const cls = await tx.class.create({
