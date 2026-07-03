@@ -25,9 +25,8 @@ scripts
 # Local-only working docs (roadmap, QA scripts, audit notes) — never committed
 docs-local/
 
-# Claude Code — ignore machine-specific files, track memory (project knowledge)
+# Claude Code — ignore machine-specific files, track memory + skills (project knowledge)
 .claude/settings.local.json
-.claude/skills/
 .claude/worktrees/
 # .claude/memory/ is intentionally NOT ignored — it's the git-tracked knowledge base
 .qa/

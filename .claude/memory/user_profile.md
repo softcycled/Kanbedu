@@ -7,6 +7,10 @@ metadata:
   originSessionId: bd7102ab-40cc-4034-bcdf-845c2101a180
 ---
 
+Name: Jorge. 18 years old (turns 19 around October 2026). First-time founder, Malaysian. Payment setup status as of 2026-07-03: has a Touch 'n Go eWallet, no debit/credit card yet, unsure about bank account -- needs a bank account before any payment provider can pay out.
+
+**Business goal (stated 2026-07-03):** RM10k/month personal revenue before turning 22 (~mid-2029). Kanbedu is attempt #1; may be one of multiple ventures contributing to that number.
+
 Self-described as having no technical coding background. Does not need to be treated as a developer.
 
 Strong instincts on product direction and what needs to be fixed or improved. Excellent UI/UX design sensibility.

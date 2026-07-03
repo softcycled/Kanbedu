@@ -29,8 +29,17 @@ Never sacrifice stability for elegance — Kanbedu has real users.
 ## Session ritual — ALWAYS
 - **Session start:** Read `project_changelog.md` before doing any work. (MEMORY.md is auto-loaded.)
 - **After every meaningful change:** Update `project_changelog.md` immediately — don't wait for session end. 1-2 plain-English lines per task.
+- **Proactive context hygiene:** Whenever something in the codebase contradicts a memory file (wrong commit hash, stale status, missing model, removed feature), fix the memory file on the spot -- don't wait to be asked. The goal is that memory files always reflect current reality so no session ever starts from stale information.
 - **Changelog entries should not re-explain what Kanbedu is or basic architecture** — that's already covered in `project_context.md` / `codebase_reference.md`. Only log what's actually new: decisions made, bugs found/fixed/rejected-and-why, things deliberately left alone, anything the next session needs to know to avoid redoing work or re-asking settled questions. Skip filler like "ran an audit" with no real findings — say what was checked and that it came back clean, not a play-by-play.
 - **One line per fix/feature, commit hash inline — not a root-cause essay.** `git log`/`git show <hash>` is authoritative for "what exactly changed and why" (the commit message already has it); the changelog is an index pointing there, not a duplicate. If multiple small fixes happen in one session, group them into ONE dated entry with one bullet each, don't give each its own multi-paragraph section. (Caught drifting into 4-6 line entries per tiny CSS fix on 2026-06-16 — cost real tokens for zero benefit since it just restated the commit message. Compressed retroactively; don't repeat it.)
+
+## Reviewing pulled branches
+When merging or pulling in code from another branch or collaborator, always break it down into three buckets:
+1. **What users will actually see/feel** -- visible UI changes, new features, behaviour changes
+2. **Invisible backend/infra stuff** -- security, logging, tests, SEO, config
+3. **Things that need a product decision** -- features that conflict with product philosophy or need the user to approve
+
+User is in charge of product philosophy and vision. Surface anything in bucket 3 immediately before it lands.
 
 ## Autonomy
 - **UI/UX decisions** the user can see → ask 1-2 confirming questions with concrete choices first. This held up well all through 2026-06-16 (empty-state message, dropdown styling, search bar styling, "did you mean" scope) — keep doing it.
@@ -61,6 +70,10 @@ When one of these comes up: explain the issue, the proposed solution, the risk, 
 
 ## No em-dashes
 Never use em-dashes (—) in any written content, copy, changelogs, or UI text. It reads as AI-generated. Rewrite the sentence instead.
+**Applies to UI string literals too** -- check any JSX text before writing it, not just prose. Violated once in ParticipationPanel description copy (2026-06-18), caught by user.
+
+## Big actions: confirm first, then act
+Before doing anything with high blast radius (push to main, deployments, destructive ops), respond with "Yes, boss?" or equivalent short confirmation, let the user explicitly say go. Don't interpret a single-word command ("jarvis.") as blanket authorization -- user wants the cinematic beat, not a silent auto-execute. (Learned 2026-06-18 -- user said "jarvis." expecting a "yes, boss?" exchange before the push.)
 
 ## UI — no statement pills on landing pages
 - Don't add rounded text pills with claims/facts on landing pages ("New", "Free", "Beta", "AI-powered").
@@ -71,6 +84,9 @@ Never use em-dashes (—) in any written content, copy, changelogs, or UI text. 
 - If user is on a weak model for a complex task, say so directly. No sugarcoating.
 - **Model guide:** Fable 5 = planning big features; Opus 4.8 xhigh = default for all coding/architecture; Sonnet 4.6 = implementation subagents; Haiku = trivial only.
 - **Big feature workflow:** Plan with Fable 5 / Opus 4.8 xhigh → execute with Sonnet subagents.
+
+## Verify before asserting -- especially about tooling/config
+When asked "why did X require my approval" or similar questions about the *environment* (permissions, settings, tooling behavior), read the actual settings/config files before answering. On 2026-07-03, guessed that a permission prompt was caused by "your permission mode" without checking -- turned out `.claude/settings.local.json` and the user-level `settings.json` both already had `bypassPermissions` correctly configured, and the user had in fact set it up correctly. Answering wrong on something checkable is worse than saying "let me check" first. This applies broadly: don't explain away an observed behavior with a plausible-sounding guess when the actual file/log/state is one Read call away.
 
 ## Session hygiene
 - Short focused sessions > long sprawling ones.
