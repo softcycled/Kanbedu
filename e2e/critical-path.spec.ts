@@ -3,6 +3,11 @@ import { test, expect } from "@playwright/test";
 // Critical path tests — if any of these fail, something fundamental is broken.
 // Run with: npx playwright test (dev server must be running on localhost:3000)
 
+// Requires the authenticated educator session from global.setup.
+test.beforeEach(() => {
+  test.skip(!process.env.QA_EMAIL || !process.env.QA_PASSWORD, "QA_EMAIL/QA_PASSWORD not set");
+});
+
 // Navigate to the first educator class via the sidebar "teaching" button
 async function openFirstClass(page: import("@playwright/test").Page) {
   await page.goto("/");
