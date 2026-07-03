@@ -25,9 +25,9 @@ scripts
 # Local-only working docs (roadmap, QA scripts, audit notes) — never committed
 docs-local/
 
-# Claude Code — ignore machine-specific files, track memory + skills (project knowledge)
-.claude/settings.local.json
-.claude/worktrees/
+# Claude Code — fully local, never committed (AI context lives in the private kanbedu-brain repo)
+.claude/
+PLAYBOOK.md
 # .claude/memory/ is intentionally NOT ignored — it's the git-tracked knowledge base
 .qa/
 e2e/.auth/
