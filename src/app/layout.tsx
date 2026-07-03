@@ -13,11 +13,20 @@ export const metadata: Metadata = {
     description: "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers.",
     siteName: "Kanbedu",
     type: "website",
+    images: [
+      {
+        url: "/screenshots/RealPreview.png",
+        width: 1896,
+        height: 860,
+        alt: "Kanbedu classroom kanban board",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Kanbedu",
     description: "A lightweight Kanban board platform for student group projects. Built for students, designed for lecturers and teachers.",
+    images: ["/screenshots/RealPreview.png"],
   },
 };
 
@@ -33,6 +42,7 @@ export default async function RootLayout({
       <head>
         <script
           type="application/ld+json"
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",

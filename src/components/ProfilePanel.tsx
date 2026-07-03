@@ -321,15 +321,18 @@ function NameInput({
   value,
   onChange,
   onSave,
-  saving
+  saving,
+  id
 }: {
   value: string;
   onChange: (val: string) => void;
   onSave: () => void;
   saving: boolean;
+  id?: string;
 }) {
   return (
     <input
+      id={id}
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -356,6 +359,8 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
   const [saved, setSaved] = useState(false);
   const [hoverColor, setHoverColor] = useState<AvatarColor | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [signingOutAll, setSigningOutAll] = useState(false);
+  const [signedOutAll, setSignedOutAll] = useState(false);
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -520,6 +525,19 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
     }
   };
 
+  const handleSignOutAll = async () => {
+    setSigningOutAll(true);
+    setSignedOutAll(false);
+    try {
+      const res = await fetch("/api/auth/logout-all", { method: "POST" });
+      if (res.ok) setSignedOutAll(true);
+    } catch (error) {
+      console.error("Sign out of other devices failed:", error);
+    } finally {
+      setSigningOutAll(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     setDeleteError(null);
     if (!deletePassword) { setDeleteError("Password is required."); return; }
@@ -663,8 +681,9 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
 
                 <SectionItem>
                   <div className="py-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">Display name</label>
+                    <label htmlFor="profile-name" className="block text-xs font-medium text-muted mb-1.5">Display name</label>
                     <NameInput
+                      id="profile-name"
                       value={name}
                       onChange={setName}
                       onSave={handleSave}
@@ -682,10 +701,11 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
 
                 <SectionItem>
                   <div className="py-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">Username</label>
+                    <label htmlFor="profile-username" className="block text-xs font-medium text-muted mb-1.5">Username</label>
                     <div className="relative mb-3">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted select-none">@</span>
                       <input
+                        id="profile-username"
                         type="text"
                         value={handleValue}
                         onChange={(e) => setHandleValue(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
@@ -721,7 +741,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
 
                 <SectionItem>
                   <div className="py-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">Email address</label>
+                    <p className="block text-xs font-medium text-muted mb-1.5">Email address</p>
                     <p className="text-sm text-ink/70 px-3 py-2 border border-border bg-border/30 rounded-lg">
                       {profile?.email ?? "…"}
                     </p>
@@ -739,6 +759,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       type="password"
                       value={pwCurrent}
                       onChange={(e) => setPwCurrent(e.target.value)}
+                      aria-label="Current password"
                       placeholder="Current password"
                       className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
                     />
@@ -746,6 +767,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       type="password"
                       value={pwNew}
                       onChange={(e) => setPwNew(e.target.value)}
+                      aria-label="New password"
                       placeholder="New password"
                       className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
                     />
@@ -754,6 +776,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                       value={pwConfirm}
                       onChange={(e) => setPwConfirm(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handlePasswordChange()}
+                      aria-label="Confirm new password"
                       placeholder="Confirm new password"
                       className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-paper text-ink placeholder-muted/50 outline-none focus:border-ink/30 transition-colors"
                     />
@@ -778,6 +801,17 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                 <SectionItem>
                   <SettingRow label="Profile picture" description="Upload a custom avatar" disabled>
                     <ComingSoonBadge />
+                  </SettingRow>
+                </SectionItem>
+                <SectionItem>
+                  <SettingRow label="Sign out of all other devices" description="Keeps you signed in here and logs out everywhere else">
+                    <button
+                      onClick={handleSignOutAll}
+                      disabled={signingOutAll || signedOutAll}
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-border text-muted hover:text-ink hover:border-ink/30 transition-colors disabled:opacity-50"
+                    >
+                      {signedOutAll ? "Other devices signed out" : signingOutAll ? "Signing out…" : "Sign out others"}
+                    </button>
                   </SettingRow>
                 </SectionItem>
                 <SectionItem>
@@ -810,8 +844,9 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                   <p className="text-sm font-semibold text-ink">Delete account?</p>
                   <p className="text-xs text-muted mt-1">This permanently deletes your account and all data. This cannot be undone.</p>
                   <div className="mt-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">Confirm your password</label>
+                    <label htmlFor="delete-confirm-password" className="block text-xs font-medium text-muted mb-1.5">Confirm your password</label>
                     <input
+                      id="delete-confirm-password"
                       autoFocus
                       type="password"
                       value={deletePassword}

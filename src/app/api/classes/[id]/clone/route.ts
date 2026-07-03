@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { cloneClassSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator") {
+      logAuthzDenied(req, "/api/classes/[id]/clone", session.userId, "POST educator-only");
       return NextResponse.json({ error: "Only educators can clone a class." }, { status: 403 });
     }
 

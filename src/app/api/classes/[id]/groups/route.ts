@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { createGroupSchema, updateGroupSchema, parseBody } from "@/lib/validations";
 import { createGroupBoard, coercePreset } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     if (!(await requireEducator(session.userId, id))) {
+      logAuthzDenied(req, "/api/classes/[id]/groups", session.userId, "POST educator-only");
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
     if (await isClassArchived(id)) return archivedError();
@@ -76,6 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!rl2.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     if (!(await requireEducator(session.userId, id))) {
+      logAuthzDenied(req, "/api/classes/[id]/groups", session.userId, "PATCH educator-only");
       return NextResponse.json({ error: "Only educators can manage groups." }, { status: 403 });
     }
     if (await isClassArchived(id)) return archivedError();
@@ -143,6 +146,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!rl3.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
 
     if (!(await requireOwnerEducator(session.userId, id))) {
+      logAuthzDenied(req, "/api/classes/[id]/groups", session.userId, "DELETE owner-only");
       return NextResponse.json({ error: "Only educators can delete groups." }, { status: 403 });
     }
     if (await isClassArchived(id)) return archivedError();

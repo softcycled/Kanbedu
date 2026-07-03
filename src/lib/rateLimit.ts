@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 // Returns the real client IP from trusted Vercel headers.
@@ -46,35 +47,39 @@ export async function checkRateLimit(
       .catch(() => {});
   }
 
-  const record = await prisma.rateLimit.findUnique({
-    where: { identifier_route: { identifier, route } },
-  });
-
-  if (!record || record.expiresAt < now) {
-    // Record doesn't exist or is expired, reset the bucket
-    const expiresAt = new Date(now.getTime() + windowMinutes * 60000);
-    const newRecord = await prisma.rateLimit.upsert({
-      where: { identifier_route: { identifier, route } },
-      update: { hits: 1, expiresAt },
-      create: { identifier, route, hits: 1, expiresAt },
-    });
-    return { allowed: true, remaining: limit - 1, resetDate: newRecord.expiresAt };
-  }
-
-  // Record exists and is active. Check if limit is exceeded.
-  if (record.hits >= limit) {
-    return { allowed: false, remaining: 0, resetDate: record.expiresAt };
-  }
-
+  // Read-only peek: report the current bucket without consuming a hit.
   if (!increment) {
-    return { allowed: true, remaining: limit - record.hits, resetDate: record.expiresAt };
+    const record = await prisma.rateLimit.findUnique({
+      where: { identifier_route: { identifier, route } },
+    });
+    if (!record || record.expiresAt < now) {
+      return { allowed: true, remaining: limit, resetDate: new Date(now.getTime() + windowMinutes * 60000) };
+    }
+    return { allowed: record.hits < limit, remaining: Math.max(0, limit - record.hits), resetDate: record.expiresAt };
   }
 
-  // Increment hits
-  const updated = await prisma.rateLimit.update({
-    where: { id: record.id },
-    data: { hits: { increment: 1 } },
-  });
+  const newExpiry = new Date(now.getTime() + windowMinutes * 60000);
 
-  return { allowed: true, remaining: limit - updated.hits, resetDate: updated.expiresAt };
+  // Atomic check-and-increment in a single statement. The INSERT creates the
+  // bucket; on conflict it increments hits, resetting the window if it has
+  // already expired. Postgres takes a row lock on the conflicting row, so
+  // concurrent callers are serialized and each gets a distinct post-increment
+  // hit count. This closes the read-then-write race the previous two-step
+  // (findUnique then update) implementation had, where parallel requests could
+  // all read the same count and overshoot the limit.
+  const rows = await prisma.$queryRaw<{ hits: number; expiresAt: Date }[]>`
+    INSERT INTO "RateLimit" ("id", "identifier", "route", "hits", "expiresAt")
+    VALUES (${randomUUID()}, ${identifier}, ${route}, 1, ${newExpiry})
+    ON CONFLICT ("identifier", "route") DO UPDATE SET
+      "hits" = CASE WHEN "RateLimit"."expiresAt" < ${now} THEN 1 ELSE "RateLimit"."hits" + 1 END,
+      "expiresAt" = CASE WHEN "RateLimit"."expiresAt" < ${now} THEN ${newExpiry} ELSE "RateLimit"."expiresAt" END
+    RETURNING "hits", "expiresAt";
+  `;
+
+  const row = rows[0];
+  const hits = Number(row.hits);
+  // Allowed when this request's own hit count is within the limit. The first
+  // `limit` requests in a window get hits 1..limit (allowed); the rest exceed
+  // it (denied) without extending the window.
+  return { allowed: hits <= limit, remaining: Math.max(0, limit - hits), resetDate: row.expiresAt };
 }

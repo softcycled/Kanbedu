@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole, isClassArchived } from "@/lib/auth";
+import { logAuthzDenied } from "@/lib/securityLog";
 import { updateMemberSchema, assignMembersSchema, parseBody } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -51,6 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const role = await getClassRole(session.userId, id);
     if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(req, "/api/classes/[id]/members", session.userId, "PATCH educator-only");
       return NextResponse.json({ error: "Only educators can manage members." }, { status: 403 });
     }
 
@@ -131,6 +133,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // TAs can assign students to groups or remove them, but only educators
     // can promote/demote members — otherwise a TA could grant TA privileges.
     if (newRole !== undefined && role !== "educator") {
+      logAuthzDenied(req, "/api/classes/[id]/members", session.userId, "PATCH role-change educator-only");
       return NextResponse.json({ error: "Only educators can change member roles." }, { status: 403 });
     }
 

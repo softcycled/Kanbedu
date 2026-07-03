@@ -153,8 +153,8 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
           <button onClick={() => setCloneOpen(true)} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">Clone class…</button>
         ) : (
           <div className="rounded-xl border border-border/70 bg-card-bg p-4 space-y-2">
-            <input value={cloneName} onChange={(e) => setCloneName(e.target.value)} placeholder="New class name" className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
-            <input value={cloneTerm} onChange={(e) => setCloneTerm(e.target.value)} placeholder="New term (e.g. Spring 2027)" className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
+            <input value={cloneName} onChange={(e) => setCloneName(e.target.value)} aria-label="New class name" placeholder="New class name" className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
+            <input value={cloneTerm} onChange={(e) => setCloneTerm(e.target.value)} aria-label="New term" placeholder="New term (e.g. Spring 2027)" className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30" />
             <label className="flex items-center gap-2 text-xs text-ink/80">
               <input type="checkbox" checked={copyRoster} onChange={(e) => setCopyRoster(e.target.checked)} />
               Also copy the current roster into the same groups
