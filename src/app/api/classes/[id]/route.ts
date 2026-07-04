@@ -133,6 +133,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Only the class owner can archive or unarchive a class." }, { status: 403 });
     }
 
+    // Archiving (not unarchiving) is a Pro feature. No paid tier is purchasable
+    // yet, so this currently blocks everyone.
+    if (result.data.archived === true) {
+      return NextResponse.json(
+        {
+          error: "Archiving classes is a Pro feature. Join the Pro waitlist to unlock it.",
+          code: "PRO_FEATURE",
+        },
+        { status: 403 }
+      );
+    }
+
     // Archived classes are read-only: detail edits (name/term) are rejected
     // unless the same request also unarchives. Toggling archived is always OK.
     const editingDetails = result.data.name !== undefined || result.data.term !== undefined;

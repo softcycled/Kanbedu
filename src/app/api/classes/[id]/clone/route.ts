@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { logAuthzDenied } from "@/lib/securityLog";
 import { cloneClassSchema, parseBody } from "@/lib/validations";
-import { createGroupBoard, coercePreset } from "@/lib/classBoards";
+import { createGroupBoard, coercePreset, FREE_ACTIVE_CLASS_LIMIT } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // POST: clone a class for a new semester. Copies the preset and the group
@@ -29,6 +29,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const raw = await req.json().catch(() => ({}));
     const result = parseBody(cloneClassSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    const activeClassCount = await prisma.class.count({
+      where: { ownerId: session.userId, archived: false },
+    });
+    if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
+          code: "CLASS_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
 
     const source = await prisma.class.findUnique({
       where: { id },

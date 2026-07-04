@@ -9,7 +9,7 @@ export async function getBrevoTodayStats(): Promise<{ sent: number; limit: numbe
   try {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const res = await fetch(
-      `https://api.brevo.com/v3/smtp/statistics/reports?startDate=${today}&endDate=${today}&days=1`,
+      `https://api.brevo.com/v3/smtp/statistics/reports?startDate=${today}&endDate=${today}`,
       { headers: { "api-key": process.env.BREVO_API_KEY }, next: { revalidate: 0 } }
     );
     if (!res.ok) return null;
