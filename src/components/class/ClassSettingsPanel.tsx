@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import ConfirmModal from "../ConfirmModal";
+import ProGateModal from "../ProGateModal";
 import { useToasts } from "../Toasts";
 
 interface Props {
@@ -24,6 +25,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
   const [copyMsg, setCopyMsg] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showProGate, setShowProGate] = useState(false);
 
   // Clone dialog state
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -45,12 +47,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         if (data?.code === "PRO_FEATURE") {
-          push({
-            title: "Pro feature",
-            description: data.error,
-            actionLabel: "View Pro waitlist",
-            onAction: () => router.push("/pricing"),
-          });
+          setShowProGate(true);
           return false;
         }
         throw new Error("patch failed");
@@ -69,9 +66,8 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
 
   const toggleArchive = async () => {
     const next = !isArchived;
-    setIsArchived(next);
     const ok = await patch({ archived: next }, next ? "Archived" : "Unarchived");
-    if (!ok) setIsArchived(!next); // revert on failure
+    if (ok) setIsArchived(next); // only flip once the server confirms
   };
 
   const copyInvite = async () => {
@@ -195,14 +191,9 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       <section className="border-t border-border/60 pt-6">
         <h3 className="text-sm font-semibold text-ink mb-3">Archive &amp; Delete</h3>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative group">
-            <button disabled className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink/40 bg-card-bg cursor-not-allowed">
-              {isArchived ? "Unarchive class" : "Archive class"}
-            </button>
-            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md text-[11px] bg-ink text-on-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-              Coming soon
-            </span>
-          </div>
+          <button onClick={toggleArchive} className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-ink bg-card-bg hover:bg-column-bg transition-colors">
+            {isArchived ? "Unarchive class" : "Archive class"}
+          </button>
           <button onClick={() => setConfirmDelete(true)} className="px-4 py-2 rounded-xl text-sm font-medium border border-red-300 text-red-600 bg-card-bg hover:bg-red-50 transition-colors">
             Delete class
           </button>
@@ -218,6 +209,13 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         confirmLabel="Delete class"
         onClose={() => setConfirmDelete(false)}
         onConfirm={doDelete}
+      />
+
+      <ProGateModal
+        isOpen={showProGate}
+        title="Archiving is a Pro feature"
+        description="Archiving hides a finished class and keeps it out of your active list without deleting anything. It's part of Lecturer Pro. Join the Pro waitlist to unlock it."
+        onClose={() => setShowProGate(false)}
       />
     </div>
   );

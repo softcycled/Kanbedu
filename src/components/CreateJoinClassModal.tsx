@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import ProGateModal from "./ProGateModal";
 
 interface Props {
   isOpen: boolean;
@@ -97,9 +97,21 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
     router.push(`/class/join/${c}`);
   };
 
+  if (mode === "limit") {
+    return (
+      <ProGateModal
+        isOpen
+        title="Free plan limit reached"
+        description="Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to unlock more."
+        onClose={onClose}
+        onBack={() => setMode("options")}
+      />
+    );
+  }
+
   return (
     <div data-modal-open role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in">
-      <div className={`bg-card-bg rounded-2xl shadow-modal w-full ${mode === "limit" ? "max-w-sm" : "max-w-md"} motion-safe:animate-modal-in p-6 relative`}>
+      <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md motion-safe:animate-modal-in p-6 relative">
         <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 p-1 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </button>
@@ -127,19 +139,6 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setMode("options")} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors disabled:opacity-50">Back</button>
               <button onClick={submitCreate} disabled={loading} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50">{loading ? "Creating…" : "Create"}</button>
-            </div>
-          </div>
-        )}
-
-        {mode === "limit" && (
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Free plan limit reached</h2>
-            <p className="text-sm text-muted mt-2 leading-relaxed">
-              Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to unlock more.
-            </p>
-            <div className="flex items-center justify-end gap-2 mt-5">
-              <button onClick={() => setMode("options")} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors">Back</button>
-              <Link href="/pricing" onClick={onClose} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors">Join Pro waitlist</Link>
             </div>
           </div>
         )}
