@@ -127,6 +127,8 @@ For big actions (push to main, deploys): respond "Yes, boss?" first, wait for ex
 
 **Latency:** Neon baseline is 18-19ms/query. This is good. Don't try to fix it. Prisma Accelerate and Neon HTTP adapter were both tried and reverted — don't suggest them again.
 
+**Stale static image after overwriting the same path:** Overwriting a file under `public/` (e.g. swapping a screenshot) can keep serving the old bytes through `next/image` in a running `next dev` session, even after confirming the new file on disk and the raw static route are correct, even with browser HTTP cache disabled, even after restarting the dev server. Deleting only `.next/cache/images` is not enough — it's Turbopack's whole build cache holding a stale reference. Fix: stop the server, delete the entire `.next` directory (not just the images subfolder), then restart.
+
 ---
 
 ## Copy rules
