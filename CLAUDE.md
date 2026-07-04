@@ -9,7 +9,7 @@ Kanbedu is a classroom kanban tool. Educators create classes, assign students to
 ## Stack
 
 - Next.js 16 App Router, React 18, TypeScript strict
-- Neon PostgreSQL + Prisma 5. Schema at `prisma/schema.prisma`
+- Neon PostgreSQL + Prisma 6. Schema at `prisma/schema.prisma`
 - Custom JWT auth (`jose`). No next-auth. Cookie: `kanbedu-session`, 30-day TTL
 - Tailwind CSS 3 + CSS variable tokens. No shadcn/radix — fully custom components
 - dnd-kit for drag-and-drop. Brevo for email. web-push for notifications
