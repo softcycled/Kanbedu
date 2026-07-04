@@ -92,6 +92,7 @@ function WaitlistForm() {
 }
 
 export default function PricingPage() {
+  const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
   return (
     <div className="dark">
       <div className="min-h-screen font-sans antialiased text-ink bg-paper selection:bg-accent/30 selection:text-white">
@@ -112,25 +113,45 @@ export default function PricingPage() {
             </div>
           </section>
 
+          {/* ── Billing toggle ───────────────────────────────────── */}
+          <div className="flex justify-center pb-10 px-6">
+            <div className="inline-flex items-center rounded-full border border-white/10 p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setBilling("monthly")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  billing === "monthly" ? "bg-white/[0.08] text-ink" : "text-muted"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBilling("yearly")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  billing === "yearly" ? "bg-white/[0.08] text-ink" : "text-muted"
+                }`}
+              >
+                Yearly
+                <span className="text-xs text-muted">2 months free</span>
+              </button>
+            </div>
+          </div>
+
           {/* ── Tiers ─────────────────────────────────────────────── */}
           <section className="pb-32 px-6">
-            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-5 items-start motion-safe:animate-fade-in [animation-delay:200ms]">
+            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-5 items-stretch motion-safe:animate-fade-in [animation-delay:200ms]">
 
               {/* Free */}
-              <div className="rounded-2xl border border-white/[0.08] p-7 bg-white/[0.02]">
+              <div className="rounded-2xl border border-white/[0.08] p-7 bg-white/[0.02] flex flex-col">
                 <p className="text-sm font-semibold text-ink">Free</p>
                 <p className="text-xs text-muted mt-1">For students and educators</p>
-                <div className="mt-5 mb-6">
+                <div className="mt-5 mb-6 min-h-[72px]">
                   <span className="text-4xl font-bold tracking-tight text-ink">Free</span>
                   <span className="text-sm text-muted ml-1.5">forever</span>
+                  <p className="text-xs text-muted mt-2">No credit card. No time limit.</p>
                 </div>
-                <Link
-                  href="/login?mode=signup"
-                  className="block w-full text-center text-sm font-semibold px-6 py-2.5 rounded-full border border-white/15 text-ink hover:border-white/30 hover:bg-white/[0.04] transition-colors"
-                >
-                  Get started
-                </Link>
-                <ul className="mt-7 space-y-3">
+                <ul className="space-y-3">
                   {FREE_FEATURES.map((f) => (
                     <li key={f} className="flex items-start gap-2.5 text-sm text-muted">
                       <span className="text-muted/70"><Check /></span>
@@ -138,22 +159,41 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
+                <div className="mt-auto pt-8">
+                  <Link
+                    href="/login?mode=signup"
+                    className="block w-full text-center text-sm font-semibold px-6 py-2.5 rounded-full border border-white/15 text-ink hover:border-white/30 hover:bg-white/[0.04] transition-colors"
+                  >
+                    Get started
+                  </Link>
+                </div>
               </div>
 
               {/* Lecturer Pro (highlighted via border + glow, no pill) */}
-              <div className="relative rounded-2xl border border-white/20 p-7 overflow-hidden">
+              <div className="relative rounded-2xl border border-white/20 p-7 overflow-hidden flex flex-col">
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{ background: "radial-gradient(ellipse 70% 55% at 50% 0%, rgba(124,58,237,0.12), transparent 70%)" }}
                 />
-                <div className="relative">
+                <div className="relative flex flex-col flex-1">
                   <p className="text-sm font-semibold text-ink">Lecturer Pro</p>
                   <p className="text-xs text-muted mt-1">Early access via the waitlist</p>
-                  <div className="mt-5 mb-6">
-                    <span className="text-4xl font-bold tracking-tight text-ink">Coming soon</span>
+                  <div key={billing} className="mt-5 mb-6 min-h-[72px] motion-safe:animate-fade-in">
+                    {billing === "yearly" ? (
+                      <>
+                        <span className="text-4xl font-bold tracking-tight text-ink">RM190</span>
+                        <span className="text-sm text-muted ml-1.5">/year</span>
+                        <p className="text-xs text-muted mt-2">Two months free. You don&apos;t pay for semester breaks.</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold tracking-tight text-ink">RM19</span>
+                        <span className="text-sm text-muted ml-1.5">/month</span>
+                        <p className="text-xs text-muted mt-2">Billed monthly</p>
+                      </>
+                    )}
                   </div>
-                  <WaitlistForm />
-                  <ul className="mt-7 space-y-3">
+                  <ul className="space-y-3">
                     {PRO_FEATURES.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-muted">
                         <span className="text-ink/80"><Check /></span>
@@ -161,6 +201,10 @@ export default function PricingPage() {
                       </li>
                     ))}
                   </ul>
+                  <div className="mt-auto pt-8">
+                    <p className="text-xs text-muted mb-3">Coming soon</p>
+                    <WaitlistForm />
+                  </div>
                 </div>
               </div>
 
