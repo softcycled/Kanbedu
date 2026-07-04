@@ -42,7 +42,19 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("patch failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.code === "PRO_FEATURE") {
+          push({
+            title: "Pro feature",
+            description: data.error,
+            actionLabel: "View Pro waitlist",
+            onAction: () => router.push("/pricing"),
+          });
+          return false;
+        }
+        throw new Error("patch failed");
+      }
       setSavedMsg(msg);
       setTimeout(() => setSavedMsg(null), 2000);
       router.refresh();
