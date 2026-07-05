@@ -26,6 +26,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Only educators can clone a class." }, { status: 403 });
     }
 
+    // Cloning (like archiving) is a Pro feature. No paid tier is purchasable
+    // yet, so this currently blocks everyone; flip when Pro billing exists.
+    const CLONING_UNLOCKED = false;
+    if (!CLONING_UNLOCKED) {
+      return NextResponse.json(
+        {
+          error: "Cloning classes is a Pro feature. Join the Pro waitlist to unlock it.",
+          code: "PRO_FEATURE",
+        },
+        { status: 403 }
+      );
+    }
+
     const raw = await req.json().catch(() => ({}));
     const result = parseBody(cloneClassSchema, raw);
     if (!result.data) return NextResponse.json({ error: result.error }, { status: 400 });

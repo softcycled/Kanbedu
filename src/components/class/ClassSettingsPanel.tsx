@@ -25,7 +25,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
   const [copyMsg, setCopyMsg] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showProGate, setShowProGate] = useState(false);
+  const [proGate, setProGate] = useState<null | { title: string; description: string }>(null);
 
   // Clone dialog state
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -47,7 +47,10 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         if (data?.code === "PRO_FEATURE") {
-          setShowProGate(true);
+          setProGate({
+            title: "Archiving is a Pro feature",
+            description: "Archiving hides a finished class and keeps it out of your active list without deleting anything. It's part of Lecturer Pro. Join the Pro waitlist to unlock it.",
+          });
           return false;
         }
         throw new Error("patch failed");
@@ -90,12 +93,18 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       });
       const cls = await res.json();
       if (!res.ok) {
+        if (cls.code === "PRO_FEATURE") {
+          setProGate({
+            title: "Cloning is a Pro feature",
+            description: "Cloning copies this class's groups and preset into a fresh class for the new semester. It's part of Lecturer Pro. Join the Pro waitlist to unlock it.",
+          });
+          setCloning(false);
+          return;
+        }
         if (cls.code === "CLASS_LIMIT_REACHED") {
-          push({
+          setProGate({
             title: "Free plan limit reached",
-            description: "Delete an existing class to free up a slot, or join the Pro waitlist.",
-            actionLabel: "View Pro waitlist",
-            onAction: () => router.push("/pricing"),
+            description: "Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to unlock more.",
           });
           setCloning(false);
           return;
@@ -212,10 +221,10 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
       />
 
       <ProGateModal
-        isOpen={showProGate}
-        title="Archiving is a Pro feature"
-        description="Archiving hides a finished class and keeps it out of your active list without deleting anything. It's part of Lecturer Pro. Join the Pro waitlist to unlock it."
-        onClose={() => setShowProGate(false)}
+        isOpen={proGate !== null}
+        title={proGate?.title ?? ""}
+        description={proGate?.description ?? ""}
+        onClose={() => setProGate(null)}
       />
     </div>
   );
