@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { createClassSchema, parseBody } from "@/lib/validations";
-import { DEFAULT_PRESET, FREE_ACTIVE_CLASS_LIMIT } from "@/lib/classBoards";
+import { DEFAULT_PRESET, FREE_ACTIVE_CLASS_LIMIT, ClassLimitReachedError } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 // GET: list every class the current user belongs to (any role).
@@ -81,36 +81,48 @@ export async function POST(request: NextRequest) {
     const data = result.data;
 
     // Free plan cap: 3 active (non-archived) classes per educator. No paid tier
-    // is purchasable yet, so this currently applies to every user.
-    const activeClassCount = await prisma.class.count({
-      where: { ownerId: session.userId, archived: false },
-    });
-    if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
-          code: "CLASS_LIMIT_REACHED",
-        },
-        { status: 403 }
-      );
-    }
+    // is purchasable yet, so this currently applies to every user. Counted and
+    // created inside the same serializable transaction so two simultaneous
+    // requests can't both read a stale under-the-limit count and both slip
+    // through (Postgres aborts the loser with P2034; we retry it once).
+    const runCreate = () =>
+      prisma.$transaction(
+        async (tx) => {
+          const activeClassCount = await tx.class.count({
+            where: { ownerId: session.userId, archived: false },
+          });
+          if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
+            throw new ClassLimitReachedError();
+          }
 
-    const created = await prisma.$transaction(async (tx) => {
-      const cls = await tx.class.create({
-        data: { name: data.name, term: data.term ?? null, ownerId: session.userId },
-      });
-      await tx.classMember.create({
-        data: { userId: session.userId, classId: cls.id, role: "educator" },
-      });
-      await tx.classPreset.create({
-        data: {
-          classId: cls.id,
-          columns: DEFAULT_PRESET.columns as unknown as Prisma.InputJsonValue,
-          tasks: DEFAULT_PRESET.tasks as unknown as Prisma.InputJsonValue,
+          const cls = await tx.class.create({
+            data: { name: data.name, term: data.term ?? null, ownerId: session.userId },
+          });
+          await tx.classMember.create({
+            data: { userId: session.userId, classId: cls.id, role: "educator" },
+          });
+          await tx.classPreset.create({
+            data: {
+              classId: cls.id,
+              columns: DEFAULT_PRESET.columns as unknown as Prisma.InputJsonValue,
+              tasks: DEFAULT_PRESET.tasks as unknown as Prisma.InputJsonValue,
+            },
+          });
+          return cls;
         },
-      });
-      return cls;
-    });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      );
+
+    let created;
+    try {
+      created = await runCreate();
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+        created = await runCreate();
+      } else {
+        throw err;
+      }
+    }
 
     return NextResponse.json(
       {
@@ -124,6 +136,15 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof ClassLimitReachedError) {
+      return NextResponse.json(
+        {
+          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
+          code: "CLASS_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
     console.error("Failed to create class:", error);
     return NextResponse.json({ error: "Failed to create class." }, { status: 500 });
   }

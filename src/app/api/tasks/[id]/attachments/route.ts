@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getVerifiedSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { uploadToGCS, getSignedUrl } from "@/lib/gcs";
+import { uploadToGCS, getSignedUrl, deleteFromGCS } from "@/lib/gcs";
 import { logAuthzDenied } from "@/lib/securityLog";
+
+class AttachmentLimitError extends Error {}
+class BoardStorageLimitError extends Error {}
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PER_TASK = 10;
@@ -151,18 +155,67 @@ export async function POST(
   await uploadToGCS(objectPath, buffer, file.type);
 
   const signedUrl = await getSignedUrl(objectPath);
+  const boardId = task.columnRel.boardId;
 
-  const attachment = await prisma.attachment.create({
-    data: {
-      taskId: id,
-      url: objectPath,
-      filename: file.name,
-      size: file.size,
-      contentType: file.type,
-      uploadedBy: session.userId,
-    },
-    select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
-  });
+  // The checks above are a fast-fail for the common case, but the upload to
+  // GCS takes long enough that two concurrent uploads can both pass them and
+  // both still be under the cap when they get here. Re-check inside a
+  // serializable transaction right before the insert so the count/size cap
+  // can't be overshot; clean up the now-orphaned GCS object if this upload
+  // loses the race.
+  const runInsert = () =>
+    prisma.$transaction(
+      async (tx) => {
+        const recount = await tx.attachment.count({ where: { taskId: id } });
+        if (recount >= MAX_PER_TASK) throw new AttachmentLimitError();
+
+        const boardSize = await tx.attachment.aggregate({
+          where: { task: { columnRel: { boardId } } },
+          _sum: { size: true },
+        });
+        if ((boardSize._sum.size ?? 0) + file.size > MAX_BOARD_BYTES) throw new BoardStorageLimitError();
+
+        return tx.attachment.create({
+          data: {
+            taskId: id,
+            url: objectPath,
+            filename: file.name,
+            size: file.size,
+            contentType: file.type,
+            uploadedBy: session.userId,
+          },
+          select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+  let attachment;
+  try {
+    try {
+      attachment = await runInsert();
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+        attachment = await runInsert();
+      } else {
+        throw err;
+      }
+    }
+  } catch (error) {
+    if (error instanceof AttachmentLimitError) {
+      await deleteFromGCS(objectPath).catch(() => {});
+      return NextResponse.json({ error: "Attachment limit reached (max 10 per task)." }, { status: 400 });
+    }
+    if (error instanceof BoardStorageLimitError) {
+      await deleteFromGCS(objectPath).catch(() => {});
+      return NextResponse.json(
+        { error: "Board storage full (100 MB limit). Delete some attachments from this board to free up space." },
+        { status: 400 }
+      );
+    }
+    await deleteFromGCS(objectPath).catch(() => {});
+    throw error;
+  }
 
   return NextResponse.json({ ...attachment, url: signedUrl }, { status: 201 });
 }

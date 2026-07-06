@@ -4,6 +4,10 @@ import type { Prisma } from "@prisma/client";
 // No paid tier is purchasable yet, so this currently applies to every user.
 export const FREE_ACTIVE_CLASS_LIMIT = 3;
 
+// Thrown from inside the create/clone transactions when the cap is hit, so the
+// route can tell "over the limit" apart from a real DB failure in its catch block.
+export class ClassLimitReachedError extends Error {}
+
 // Shape of a class preset (stored as JSON on ClassPreset).
 export interface PresetColumn {
   label: string;
