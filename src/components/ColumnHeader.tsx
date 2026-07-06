@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { resolveColumnPalette, COLUMN_PALETTE } from "@/lib/columnPalette";
+import { DropdownMenu, DropdownItem, DropdownDivider } from "./ui/DropdownMenu";
 
 interface Props {
   columnId: string;
@@ -39,7 +40,7 @@ export default function ColumnHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<"main" | "color">("main");
   const inputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   const colors = resolveColumnPalette(color, columnIndex);
 
@@ -73,24 +74,6 @@ export default function ColumnHeader({
   useEffect(() => {
     if (!isEditing) setEditValue(label);
   }, [label, isEditing]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
 
   const openMenu = () => {
     setMenuView("main");
@@ -152,10 +135,13 @@ export default function ColumnHeader({
       </span>
 
       {/* ⋯ options menu */}
-      <div ref={menuRef} className="relative flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="relative flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
         <button
           type="button"
+          ref={menuTriggerRef}
           aria-label="Column options"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           title="Column options"
           draggable={false}
           onClick={(e) => { e.stopPropagation(); menuOpen ? closeMenu() : openMenu(); }}
@@ -168,85 +154,61 @@ export default function ColumnHeader({
           </svg>
         </button>
 
-        {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            {menuView === "main" ? (
-              <>
-                {/* Change color */}
-                {onSetColor && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => setMenuView("color")}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                  >
-                    <span>Change color</span>
+        <DropdownMenu open={menuOpen} onClose={closeMenu} anchorRef={menuTriggerRef} align="right" className="w-48">
+          {menuView === "main" ? (
+            <>
+              {/* Change color */}
+              {onSetColor && (
+                <DropdownItem onClick={() => setMenuView("color")}>
+                  <span className="flex items-center justify-between w-full">
+                    Change color
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted flex-shrink-0">
                       <path d="M4 2l4 4-4 4" />
                     </svg>
-                  </button>
-                )}
-                <div className="border-t border-border" />
-                {/* Mark as Done — only shown for non-done columns */}
-                {!isDone && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={(e) => { e.stopPropagation(); onSetDone(); closeMenu(); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                  >
-                    Mark as Done
-                  </button>
-                )}
-                {/* Delete */}
-                {isDynamic && !isDone && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={(e) => { e.stopPropagation(); onDelete(); closeMenu(); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-column-bg transition-colors"
-                  >
-                    Delete column
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Color picker — named list, like tagging */}
-                <button
-                  type="button"
-                  onClick={() => setMenuView("main")}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-muted hover:text-ink hover:bg-column-bg transition-colors border-b border-border"
+                  </span>
+                </DropdownItem>
+              )}
+              <DropdownDivider />
+              {/* Mark as Done — only shown for non-done columns */}
+              {!isDone && (
+                <DropdownItem onClick={() => { onSetDone(); closeMenu(); }}>
+                  Mark as Done
+                </DropdownItem>
+              )}
+              {/* Delete */}
+              {isDynamic && !isDone && (
+                <DropdownItem danger onClick={() => { onDelete(); closeMenu(); }}>
+                  Delete column
+                </DropdownItem>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Color picker — named list, like tagging */}
+              <button
+                type="button"
+                onClick={() => setMenuView("main")}
+                className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-muted hover:text-ink hover:bg-ink/5 rounded-lg transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                  <path d="M8 2L4 6l4 4" />
+                </svg>
+                <span className="font-medium">Color</span>
+              </button>
+              <DropdownDivider />
+              {COLUMN_PALETTE.map((p) => (
+                <DropdownItem
+                  key={p.name}
+                  selected={color === p.name}
+                  icon={<span className={`w-3 h-3 rounded-full flex-shrink-0 ${p.dot}`} />}
+                  onClick={() => pickColor(color === p.name ? null : p.name)}
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                    <path d="M8 2L4 6l4 4" />
-                  </svg>
-                  <span className="font-medium">Color</span>
-                </button>
-                {COLUMN_PALETTE.map((p) => (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() => pickColor(color === p.name ? null : p.name)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                  >
-                    <span className={`w-3 h-3 rounded-full flex-shrink-0 ${p.dot}`} />
-                    <span className="capitalize flex-1 text-left">{p.name}</span>
-                    {color === p.name && (
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                        <path d="M2 6l3 3 5-5" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        )}
+                  <span className="capitalize">{p.name}</span>
+                </DropdownItem>
+              ))}
+            </>
+          )}
+        </DropdownMenu>
       </div>
     </div>
   );
