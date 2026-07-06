@@ -46,16 +46,16 @@ export default function ReliabilityUpdatePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-ink mb-2">Shared board column renames</h2>
+            <h2 className="text-xl font-semibold text-ink mb-2">Faster page loads</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              On shared boards, the column rename box was opening with a stale name when a teammate had recently renamed it. Typing into it without noticing would silently overwrite their change. It now always opens showing the current name.
+              Board and dashboard pages were making more database queries than they needed to. We cut out a batch of redundant ones and added a couple of missing indexes, so these pages now load noticeably faster.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-ink mb-2">Card moves that fail</h2>
+            <h2 className="text-xl font-semibold text-ink mb-2">Stale group data after roster changes</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              When a card move fails due to a brief connection drop, the card was staying in the wrong column instead of snapping back. It now returns to where it started.
+              Monitor and Integrity stay loaded in the background so switching tabs feels instant, but that meant moving a student between groups in Roster wouldn&apos;t show up there until you refreshed the page. Both panels now update automatically the moment a group changes.
             </p>
           </section>
 
@@ -67,9 +67,9 @@ export default function ReliabilityUpdatePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-ink mb-2">Mixed-style formatting</h2>
+            <h2 className="text-xl font-semibold text-ink mb-2">More reliable rate limits</h2>
             <p className="text-base text-ink/80 leading-relaxed">
-              The formatting toolbar no longer mangles mixed styles. Clicking italic on already-bold text was stripping a character instead of adding italic. That&apos;s fixed.
+              Login and signup limits were checked and updated in two separate steps, so a burst of requests arriving at the exact same instant could occasionally slip a few extra attempts through. That check is now a single atomic step, so it can&apos;t be raced.
             </p>
           </section>
         </div>
