@@ -660,15 +660,15 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
           ))}
         </ul>
 
-        {/* Plan group, Discord-style: separated from the everyday tabs and highlighted */}
+        {/* Plan group, Discord-style: separated from the everyday tabs */}
         <div className="hidden md:block border-t border-border/60 my-3 mx-3" />
         <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-2">Plan</p>
         <button
           onClick={() => setActiveTab("pro")}
-          className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
             activeTab === "pro"
-              ? "bg-accent/15 text-accent"
-              : "text-accent hover:bg-accent/10"
+              ? "bg-ink/8 text-ink font-medium"
+              : "text-ink/70 hover:bg-ink/5 hover:text-ink"
           }`}
         >
           <span className="flex-shrink-0"><IconSparkle /></span>
