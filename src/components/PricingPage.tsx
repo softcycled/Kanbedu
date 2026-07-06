@@ -4,24 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import LandingNav from "./landing/LandingNav";
 import LandingFooter from "./landing/LandingFooter";
+import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/proPlan";
 
-// Strawman tier content pending Jorge's final pricing/feature decisions. Edit
-// the features and price labels here; the page layout reads entirely from this.
+// Free tier copy lives here; Pro tier copy is shared with the in-app
+// Settings > Lecturer Pro tab via src/lib/proPlan.ts.
 const FREE_FEATURES = [
   "Up to 3 active classes",
   "Unlimited boards, groups, and students",
   "Real-time sync across the class",
   "Monitor, Integrity, and Participation panels",
   "Task comments, priorities, and due dates",
-];
-
-const PRO_FEATURES = [
-  "Everything in Free",
-  "Grading export: every student's tasks, participation, and integrity flags as a spreadsheet",
-  "Up to 10 active classes",
-  "Unlimited archived classes for past semesters",
-  "Clone a finished class into the new semester in one click",
-  "Early access to new features",
 ];
 
 function Check() {
@@ -183,13 +175,13 @@ export default function PricingPage() {
                   <div key={billing} className="mt-5 mb-6 min-h-[72px] motion-safe:animate-fade-in">
                     {billing === "yearly" ? (
                       <>
-                        <span className="text-4xl font-bold tracking-tight text-ink">RM190</span>
+                        <span className="text-4xl font-bold tracking-tight text-ink">{PRO_PRICE_YEARLY}</span>
                         <span className="text-sm text-muted ml-1.5">/year</span>
                         <p className="text-xs text-muted mt-2">Two months free. You don&apos;t pay for semester breaks.</p>
                       </>
                     ) : (
                       <>
-                        <span className="text-4xl font-bold tracking-tight text-ink">RM19</span>
+                        <span className="text-4xl font-bold tracking-tight text-ink">{PRO_PRICE_MONTHLY}</span>
                         <span className="text-sm text-muted ml-1.5">/month</span>
                         <p className="text-xs text-muted mt-2">Billed monthly</p>
                       </>

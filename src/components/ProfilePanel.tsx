@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "./ThemeProvider";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Avatar from "./Avatar";
+import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/proPlan";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -27,7 +29,8 @@ type SettingsTab =
   | "notifications"
   | "boards"
   | "accessibility"
-  | "privacy";
+  | "privacy"
+  | "pro";
 
 // ── Avatar palette ────────────────────────────────────────────
 
@@ -194,6 +197,14 @@ function IconPrivacy() {
   );
 }
 
+function IconSparkle() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+    </svg>
+  );
+}
+
 // ── Sidebar nav items ─────────────────────────────────────────
 
 const NAV_ITEMS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
@@ -265,6 +276,58 @@ function NotificationsTab() {
           </SectionItem>
         </SectionBlock>
       </div>
+    </div>
+  );
+}
+
+// ── Lecturer Pro tab (Discord-Nitro-style plan page inside settings) ──
+
+function ProTab() {
+  return (
+    <div className="max-w-lg space-y-8">
+      <div>
+        <h2 className="text-base font-semibold text-ink">Lecturer Pro</h2>
+        <p className="text-sm text-muted mt-0.5">Semester tools for lecturers running classes</p>
+      </div>
+
+      <div className="relative rounded-2xl border border-border overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 70% 55% at 50% 0%, rgba(124,58,237,0.12), transparent 70%)" }}
+        />
+        <div className="relative p-6">
+          <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-1">
+            <span className="text-3xl font-bold tracking-tight text-ink">{PRO_PRICE_MONTHLY}</span>
+            <span className="text-sm text-muted">/month</span>
+            <span className="text-xs text-muted ml-2">or {PRO_PRICE_YEARLY}/year with two months free</span>
+          </div>
+
+          <ul className="mt-5 space-y-2.5">
+            {PRO_FEATURES.map((f) => (
+              <li key={f} className="flex items-start gap-2.5 text-sm text-ink/80">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5 text-accent">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-6 flex items-center gap-3">
+            <Link
+              href="/pricing"
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
+            >
+              Join the Pro waitlist
+            </Link>
+            <span className="text-xs text-muted">Coming soon</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted">
+        Kanbedu stays free for students and free to teach with. Lecturer Pro only adds tools for running many classes across semesters.
+      </p>
     </div>
   );
 }
@@ -596,6 +659,21 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
             </li>
           ))}
         </ul>
+
+        {/* Plan group, Discord-style: separated from the everyday tabs and highlighted */}
+        <div className="hidden md:block border-t border-border/60 my-3 mx-3" />
+        <p className="hidden md:block text-[11px] font-semibold uppercase tracking-widest text-muted px-3 mb-2">Plan</p>
+        <button
+          onClick={() => setActiveTab("pro")}
+          className={`whitespace-nowrap md:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "pro"
+              ? "bg-accent/15 text-accent"
+              : "text-accent hover:bg-accent/10"
+          }`}
+        >
+          <span className="flex-shrink-0"><IconSparkle /></span>
+          Lecturer Pro
+        </button>
       </nav>
 
       {/* ── Right content ── */}
@@ -887,6 +965,9 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
 
         {/* Notifications */}
         {activeTab === "notifications" && <NotificationsTab />}
+
+        {/* Lecturer Pro */}
+        {activeTab === "pro" && <ProTab />}
 
         {/* Boards */}
         {activeTab === "boards" && (
