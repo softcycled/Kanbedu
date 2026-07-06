@@ -17,8 +17,10 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
   "Everything in Free",
+  "Grading export: every student's tasks, participation, and integrity flags as a spreadsheet",
   "Up to 10 active classes",
   "Unlimited archived classes for past semesters",
+  "Clone a finished class into the new semester in one click",
   "Early access to new features",
 ];
 
@@ -92,7 +94,7 @@ function WaitlistForm() {
 }
 
 export default function PricingPage() {
-  const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
+  const [billing, setBilling] = useState<"yearly" | "monthly">("monthly");
   return (
     <div className="dark">
       <div className="min-h-screen font-sans antialiased text-ink bg-paper selection:bg-accent/30 selection:text-white">
@@ -108,7 +110,7 @@ export default function PricingPage() {
                 More for lecturers who need it.
               </h1>
               <p className="text-[15px] md:text-[17px] text-muted max-w-md mx-auto leading-relaxed motion-safe:animate-fade-in [animation-delay:120ms]">
-                Kanbedu stays free for students and teachers. Lecturer Pro raises the active-class limit and adds unlimited archiving.
+                Kanbedu stays free for students and teachers. Lecturer Pro adds grading export, more active classes, and semester-to-semester tools.
               </p>
             </div>
           </section>
