@@ -50,7 +50,7 @@ export default function GroupSearchBar({
           className="w-36 bg-ink/5 border border-border/60 hover:border-border focus:border-ink/30 focus:bg-column-bg rounded-lg pl-9 pr-3 py-1 text-sm text-ink placeholder:text-muted outline-none transition-colors"
         />
         {showDropdown && (
-          <div className="absolute right-0 top-full mt-1 z-50 min-w-full w-max max-w-48 bg-card-bg border border-border/70 rounded-lg shadow-lg overflow-hidden">
+          <div className="absolute right-0 top-full mt-1.5 z-50 min-w-full w-max max-w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
             {suggestions!.map((name) => (
               <button
                 key={name}
