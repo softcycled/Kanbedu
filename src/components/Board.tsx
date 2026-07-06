@@ -30,6 +30,7 @@ import FilterBar from "./FilterBar";
 import ListView from "./ListView";
 import useBoardResources from "@/hooks/useBoardResources";
 import { useToasts } from "@/components/Toasts";
+import BoardHeaderMenu from "./BoardHeaderMenu";
 
 interface Props {
   boardId: string;
@@ -51,9 +52,14 @@ interface Props {
   // When true, shows the "Recently deleted" trash entry point. Personal board
   // owners always; class group boards only for educators/TAs.
   canViewTrash?: boolean;
+  // When provided (personal boards only), the board-name title becomes a
+  // dropdown menu (invite / settings / leave). "Board settings" calls this to
+  // open the settings panel. Class boards pass headerTitle instead, so the menu
+  // never renders there.
+  onOpenSettings?: () => void;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false, onOpenSettings }: Props) {
   const [trashOpen, setTrashOpen] = useState(false);
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
@@ -934,7 +940,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         )}
         <div className="flex-1 min-w-0">
           {headerTitle ?? (
-            <h1 className="text-base font-bold tracking-tight text-ink truncate">{boardName || "Board"}</h1>
+            onOpenSettings ? (
+              <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} variant="mobile" />
+            ) : (
+              <h1 className="text-base font-bold tracking-tight text-ink truncate">{boardName || "Board"}</h1>
+            )
           )}
         </div>
         <div className={`flex items-center gap-1.5 flex-shrink-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>
@@ -1017,7 +1027,11 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       {/* ── Desktop header ── */}
       <div className="hidden md:flex flex-shrink-0 items-center gap-4 px-10 pt-6 pb-5 border-b border-border/60">
         {headerTitle ?? (
-          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+          onOpenSettings ? (
+            <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} variant="desktop" />
+          ) : (
+            <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
+          )
         )}
         {/* When task side-panel is open, hide controls but keep height stable */}
         <div className={`flex items-center gap-4 flex-1 min-w-0 ${selectedTask ? "invisible pointer-events-none" : ""}`}>

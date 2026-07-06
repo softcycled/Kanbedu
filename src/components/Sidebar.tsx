@@ -80,16 +80,6 @@ function IconSettings() {
   );
 }
 
-function IconLayers() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 1.5 1.5 5 8 8.5 14.5 5 8 1.5z" />
-      <path d="M1.5 8 8 11.5 14.5 8" />
-      <path d="M1.5 11 8 14.5 14.5 11" />
-    </svg>
-  );
-}
-
 function IconPlus() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -431,10 +421,11 @@ export default function Sidebar({
     }
   };
 
+  // Board settings ("Manage") now lives in the board-name dropdown in the board
+  // header (see BoardHeaderMenu), so it is intentionally not a footer nav item.
+  // "Settings" here opens the profile/account panel.
   const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
-    // "Boards" opens the board settings panel; "Settings" opens the profile/account panel.
-    { id: "settings", label: "Manage", icon: <IconLayers /> },
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
     { id: "help", label: "Help", icon: <IconHelp /> },
