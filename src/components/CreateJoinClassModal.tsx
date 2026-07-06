@@ -102,7 +102,7 @@ export default function CreateJoinClassModal({ isOpen, onClose, onCreated, defau
       <ProGateModal
         isOpen
         title="Free plan limit reached"
-        description="Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to unlock more."
+        description="Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to get notified when it's ready."
         onClose={onClose}
         onBack={() => setMode("options")}
       />

@@ -138,7 +138,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (result.data.archived === true) {
       return NextResponse.json(
         {
-          error: "Archiving classes is a Pro feature. Join the Pro waitlist to unlock it.",
+          error: "Archiving classes is a Pro feature. Join the Pro waitlist to get notified when it's ready.",
           code: "PRO_FEATURE",
         },
         { status: 403 }

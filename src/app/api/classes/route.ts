@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof ClassLimitReachedError) {
       return NextResponse.json(
         {
-          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
+          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`,
           code: "CLASS_LIMIT_REACHED",
         },
         { status: 403 }

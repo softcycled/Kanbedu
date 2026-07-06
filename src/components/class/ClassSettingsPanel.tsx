@@ -49,7 +49,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         if (data?.code === "PRO_FEATURE") {
           setProGate({
             title: "Archiving is a Pro feature",
-            description: "Archiving hides a finished class and keeps it out of your active list without deleting anything. It's part of Lecturer Pro. Join the Pro waitlist to unlock it.",
+            description: "Archiving hides a finished class and keeps it out of your active list without deleting anything. It's part of Lecturer Pro. Join the Pro waitlist to get notified when it's ready.",
           });
           return false;
         }
@@ -96,7 +96,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         if (cls.code === "PRO_FEATURE") {
           setProGate({
             title: "Cloning is a Pro feature",
-            description: "Cloning copies this class's groups and preset into a fresh class for the new semester. It's part of Lecturer Pro. Join the Pro waitlist to unlock it.",
+            description: "Cloning copies this class's groups and preset into a fresh class for the new semester. It's part of Lecturer Pro. Join the Pro waitlist to get notified when it's ready.",
           });
           setCloning(false);
           return;
@@ -104,7 +104,7 @@ export default function ClassSettingsPanel({ classId, initialName, initialTerm, 
         if (cls.code === "CLASS_LIMIT_REACHED") {
           setProGate({
             title: "Free plan limit reached",
-            description: "Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to unlock more.",
+            description: "Free accounts can have up to 3 active classes at a time. Delete an existing class to free up a slot, or join the Pro waitlist to get notified when it's ready.",
           });
           setCloning(false);
           return;

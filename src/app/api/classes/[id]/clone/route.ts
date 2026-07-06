@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!CLONING_UNLOCKED) {
       return NextResponse.json(
         {
-          error: "Cloning classes is a Pro feature. Join the Pro waitlist to unlock it.",
+          error: "Cloning classes is a Pro feature. Join the Pro waitlist to get notified when it's ready.",
           code: "PRO_FEATURE",
         },
         { status: 403 }
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (error instanceof ClassLimitReachedError) {
       return NextResponse.json(
         {
-          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to unlock more.`,
+          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`,
           code: "CLASS_LIMIT_REACHED",
         },
         { status: 403 }
