@@ -316,8 +316,9 @@ function ProTab() {
           <div className="mt-6 flex items-center gap-3">
             <Link
               href="/pricing"
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
+              className="inline-flex items-center gap-2 bg-[#EBEBEB] text-[#161412] px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-white transition-colors"
             >
+              <IconSparkle />
               Join the Pro waitlist
             </Link>
             <span className="text-xs text-muted">Coming soon</span>
