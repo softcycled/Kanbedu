@@ -63,6 +63,8 @@ interface DropdownItemProps {
   selected?: boolean;
   // Multi-select highlight (role="menuitemcheckbox", checkmark on the right).
   checked?: boolean;
+  // Override the ARIA role, e.g. "option" inside a role="listbox" DropdownMenu.
+  role?: string;
   danger?: boolean;
   disabled?: boolean;
   onClick?: () => void;
@@ -70,9 +72,9 @@ interface DropdownItemProps {
   children: ReactNode;
 }
 
-export function DropdownItem({ icon, selected, checked, danger, disabled, onClick, className = "", children }: DropdownItemProps) {
+export function DropdownItem({ icon, selected, checked, role: roleOverride, danger, disabled, onClick, className = "", children }: DropdownItemProps) {
   const active = selected || checked;
-  const role = checked !== undefined ? "menuitemcheckbox" : "menuitem";
+  const role = roleOverride ?? (checked !== undefined ? "menuitemcheckbox" : "menuitem");
   return (
     <button
       type="button"

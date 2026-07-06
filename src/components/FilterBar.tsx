@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, memo } from "react";
 import { BoardMemberData, Tag } from "@/lib/types";
 import Avatar from "./Avatar";
 import SearchIcon from "./SearchIcon";
+import { DropdownMenu, DropdownItem } from "./ui/DropdownMenu";
 
 interface Props {
   searchQuery: string;
@@ -36,31 +37,12 @@ function FilterBar({
 }: Props) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const assigneeTriggerRef = useRef<HTMLButtonElement>(null);
+  const tagsTriggerRef = useRef<HTMLButtonElement>(null);
+  const priorityTriggerRef = useRef<HTMLButtonElement>(null);
   // Local state for the input so typing feels instant; debounced propagation avoids
   // re-filtering the full task list on every keystroke.
   const [inputValue, setInputValue] = useState(searchQuery);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!openDropdown) return;
-    const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("keydown", keyHandler);
-    return () => document.removeEventListener("keydown", keyHandler);
-  }, [openDropdown]);
 
   // Propagate search to parent after 150 ms of inactivity
   useEffect(() => {
@@ -92,19 +74,12 @@ function FilterBar({
     key: string,
     checked: boolean,
     onClick: () => void,
-    content: React.ReactNode
+    label: React.ReactNode,
+    icon?: React.ReactNode
   ) => (
-    <button
-      key={key}
-      type="button"
-      role="menuitemcheckbox"
-      aria-checked={checked}
-      onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-column-bg cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-    >
-      <div className="flex items-center gap-2">{content}</div>
-      {checked && <CheckIcon />}
-    </button>
+    <DropdownItem key={key} checked={checked} onClick={onClick} icon={icon}>
+      {label}
+    </DropdownItem>
   );
 
   const assigneeRows = (
@@ -113,20 +88,16 @@ function FilterBar({
         "unassigned",
         selectedAssignees.includes("unassigned"),
         () => toggleSelection(selectedAssignees, "unassigned", setSelectedAssignees),
-        <>
-          <Avatar size="sm" />
-          <span className="text-sm text-ink">Unassigned</span>
-        </>
+        "Unassigned",
+        <Avatar size="sm" />
       )}
       {members.map((m) =>
         optionRow(
           m.id,
           selectedAssignees.includes(m.id),
           () => toggleSelection(selectedAssignees, m.id, setSelectedAssignees),
-          <>
-            <Avatar name={m.name} color={m.color} size="sm" />
-            <span className="text-sm text-ink">{m.name}</span>
-          </>
+          m.name,
+          <Avatar name={m.name} color={m.color} size="sm" />
         )
       )}
     </>
@@ -140,10 +111,8 @@ function FilterBar({
           t.id,
           selectedTags.includes(t.id),
           () => toggleSelection(selectedTags, t.id, setSelectedTags),
-          <>
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
-            <span className="text-sm text-ink">{t.name}</span>
-          </>
+          t.name,
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
         )
       )}
     </>
@@ -156,7 +125,7 @@ function FilterBar({
           p,
           selectedPriorities.includes(p),
           () => toggleSelection(selectedPriorities, p, setSelectedPriorities),
-          <span className="text-sm text-ink capitalize">{p}</span>
+          <span className="capitalize">{p}</span>
         )
       )}
     </>
@@ -180,7 +149,7 @@ function FilterBar({
   return (
     <>
       {/* ── Desktop / tablet: inline controls ─────────────────────── */}
-      <div ref={containerRef} className="hidden sm:flex items-center gap-2 ml-auto flex-wrap justify-end">
+      <div className="hidden sm:flex items-center gap-2 ml-auto flex-wrap justify-end">
         {/* Search */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
@@ -197,44 +166,38 @@ function FilterBar({
 
         {/* Assignees */}
         <div className="relative">
-          <button onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")} aria-expanded={openDropdown === "assignee"} aria-haspopup="menu" className={filterButtonClass(selectedAssignees.length > 0)}>
+          <button ref={assigneeTriggerRef} onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")} aria-expanded={openDropdown === "assignee"} aria-haspopup="menu" className={filterButtonClass(selectedAssignees.length > 0)}>
             <span>Assignee</span>
             {selectedAssignees.length > 0 && countBadge(selectedAssignees.length)}
             {chevron(openDropdown === "assignee")}
           </button>
-          {openDropdown === "assignee" && (
-            <div role="menu" className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 overflow-hidden">
-              {assigneeRows}
-            </div>
-          )}
+          <DropdownMenu open={openDropdown === "assignee"} onClose={() => setOpenDropdown(null)} anchorRef={assigneeTriggerRef} align="right" className="w-56 sm:left-0 sm:right-auto">
+            {assigneeRows}
+          </DropdownMenu>
         </div>
 
         {/* Tags */}
         <div className="relative">
-          <button onClick={() => setOpenDropdown(openDropdown === "tags" ? null : "tags")} aria-expanded={openDropdown === "tags"} aria-haspopup="menu" className={filterButtonClass(selectedTags.length > 0)}>
+          <button ref={tagsTriggerRef} onClick={() => setOpenDropdown(openDropdown === "tags" ? null : "tags")} aria-expanded={openDropdown === "tags"} aria-haspopup="menu" className={filterButtonClass(selectedTags.length > 0)}>
             <span>Tags</span>
             {selectedTags.length > 0 && countBadge(selectedTags.length)}
             {chevron(openDropdown === "tags")}
           </button>
-          {openDropdown === "tags" && (
-            <div role="menu" className="absolute left-0 mt-2 w-56 bg-card-bg border border-border rounded-xl shadow-modal z-50 overflow-hidden">
-              {tagRows}
-            </div>
-          )}
+          <DropdownMenu open={openDropdown === "tags"} onClose={() => setOpenDropdown(null)} anchorRef={tagsTriggerRef} align="left" className="w-56">
+            {tagRows}
+          </DropdownMenu>
         </div>
 
         {/* Priority */}
         <div className="relative">
-          <button onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")} aria-expanded={openDropdown === "priority"} aria-haspopup="menu" className={filterButtonClass(selectedPriorities.length > 0)}>
+          <button ref={priorityTriggerRef} onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")} aria-expanded={openDropdown === "priority"} aria-haspopup="menu" className={filterButtonClass(selectedPriorities.length > 0)}>
             <span>Priority</span>
             {selectedPriorities.length > 0 && countBadge(selectedPriorities.length)}
             {chevron(openDropdown === "priority")}
           </button>
-          {openDropdown === "priority" && (
-            <div role="menu" className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-48 bg-card-bg border border-border rounded-xl shadow-modal z-50 overflow-hidden">
-              {priorityRows}
-            </div>
-          )}
+          <DropdownMenu open={openDropdown === "priority"} onClose={() => setOpenDropdown(null)} anchorRef={priorityTriggerRef} align="right" className="w-48 sm:left-0 sm:right-auto">
+            {priorityRows}
+          </DropdownMenu>
         </div>
 
         {/* Count + clear */}
@@ -313,14 +276,6 @@ function FilterIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
