@@ -20,6 +20,8 @@ model User {
   sessionsValidFrom   DateTime?                // sign-out-everywhere cutoff: tokens issued before this are rejected
   isAdmin             Boolean                  @default(false)
   emailVerified       Boolean                  @default(false)
+  proUntil            DateTime?                // Lecturer Pro entitlement expiry; null/past = free. See src/lib/pro.ts
+  stripeCustomerId    String?                  @unique
   invites             BoardInvite[]
   boards              BoardMember[]
   bugReports          BugReport[]
