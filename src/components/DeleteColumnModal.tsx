@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { ColumnData } from "@/lib/types";
+import { DropdownMenu, DropdownItem } from "./ui/DropdownMenu";
 
 interface Props {
   column: ColumnData;
@@ -25,18 +26,7 @@ export default function DeleteColumnModal({
   const [selectedTargetColumn, setSelectedTargetColumn] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [dropdownOpen]);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   const handleDelete = async () => {
     setIsLoading(true);
@@ -63,10 +53,13 @@ export default function DeleteColumnModal({
         {taskCount > 0 && otherColumns.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted mb-1.5">Move tasks to:</p>
-            <div ref={dropdownRef} className="relative">
+            <div className="relative">
               <button
                 type="button"
+                ref={dropdownTriggerRef}
                 onClick={() => setDropdownOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={dropdownOpen}
                 className="w-full bg-column-bg rounded-xl px-3 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
               >
                 <span className="truncate">
@@ -78,32 +71,17 @@ export default function DeleteColumnModal({
                   <path d="M2 4l4 4 4-4"/>
                 </svg>
               </button>
-              {dropdownOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                  {[{ id: "", label: "Delete column and all tasks" }, ...otherColumns.map((c) => ({ id: c.id, label: c.label }))].map((item) => {
-                    const isSelected = (selectedTargetColumn ?? "") === item.id;
-                    return (
-                      <button
-                        key={item.id || "delete-all"}
-                        type="button"
-                        onClick={() => { setSelectedTargetColumn(item.id || undefined); setDropdownOpen(false); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                          isSelected
-                            ? "bg-column-bg text-ink font-medium"
-                            : "text-ink hover:bg-column-bg"
-                        }`}
-                      >
-                        <span className="truncate">{item.label}</span>
-                        {isSelected && (
-                          <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M2 6l3 3 5-5"/>
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <DropdownMenu open={dropdownOpen} onClose={() => setDropdownOpen(false)} anchorRef={dropdownTriggerRef} className="w-full">
+                {[{ id: "", label: "Delete column and all tasks" }, ...otherColumns.map((c) => ({ id: c.id, label: c.label }))].map((item) => (
+                  <DropdownItem
+                    key={item.id || "delete-all"}
+                    selected={(selectedTargetColumn ?? "") === item.id}
+                    onClick={() => { setSelectedTargetColumn(item.id || undefined); setDropdownOpen(false); }}
+                  >
+                    {item.label}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
             </div>
           </div>
         )}
