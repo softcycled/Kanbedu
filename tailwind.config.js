@@ -44,6 +44,7 @@ module.exports = {
       animation: {
         "modal-in": "modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)",
         "fade-in": "fadeIn 0.15s ease-out",
+        "menu-in": "menuIn 0.12s ease-out",
         "slide-up": "slideUp 0.2s cubic-bezier(0.34,1.3,0.64,1)",
         "slide-in-right": "slideInRight 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         "nudge": "nudge 0.75s ease-in-out",
@@ -57,6 +58,10 @@ module.exports = {
         fadeIn: {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },
+        },
+        menuIn: {
+          "0%": { opacity: 0, transform: "translateY(-4px)" },
+          "100%": { opacity: 1, transform: "translateY(0)" },
         },
         slideUp: {
           "0%": { opacity: 0, transform: "translateY(6px)" },
