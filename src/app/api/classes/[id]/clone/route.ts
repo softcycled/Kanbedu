@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { logAuthzDenied } from "@/lib/securityLog";
 import { cloneClassSchema, parseBody } from "@/lib/validations";
-import { createGroupBoard, coercePreset, FREE_ACTIVE_CLASS_LIMIT, ClassLimitReachedError } from "@/lib/classBoards";
+import { createGroupBoard, coercePreset, FREE_ACTIVE_CLASS_LIMIT, PRO_ACTIVE_CLASS_LIMIT, ClassLimitReachedError } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isProUser } from "@/lib/pro";
 
 // POST: clone a class for a new semester. Copies the preset and the group
 // structure (each group gets a fresh, empty board seeded from the preset).
@@ -64,17 +65,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const newName = result.data.name?.trim() || source.name;
     const newTerm = result.data.term?.trim() || null;
 
+    const isPro = await isProUser(session.userId);
+    const classLimit = isPro ? PRO_ACTIVE_CLASS_LIMIT : FREE_ACTIVE_CLASS_LIMIT;
     const runClone = () =>
       prisma.$transaction(
         async (tx) => {
-          // Free plan cap: counted and created in the same serializable
+          // Active class cap: counted and created in the same serializable
           // transaction as the class create route, so two simultaneous
           // clone/create requests can't both slip through on a stale count.
           const activeClassCount = await tx.class.count({
             where: { ownerId: session.userId, archived: false },
           });
-          if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
-            throw new ClassLimitReachedError();
+          if (activeClassCount >= classLimit) {
+            throw new ClassLimitReachedError(classLimit, isPro);
           }
 
           const cls = await tx.class.create({
@@ -170,13 +173,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   } catch (error) {
     if (error instanceof ClassLimitReachedError) {
-      return NextResponse.json(
-        {
-          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`,
-          code: "CLASS_LIMIT_REACHED",
-        },
-        { status: 403 }
-      );
+      const message = error.isPro
+        ? `Pro plan is limited to ${error.limit} active classes. Delete or archive an existing class to create a new one.`
+        : `Free plan is limited to ${error.limit} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`;
+      return NextResponse.json({ error: message, code: "CLASS_LIMIT_REACHED" }, { status: 403 });
     }
     console.error("Failed to clone class:", error);
     return NextResponse.json({ error: "Failed to clone class." }, { status: 500 });

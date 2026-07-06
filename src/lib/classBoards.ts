@@ -1,12 +1,17 @@
 import type { Prisma } from "@prisma/client";
 
-// Free plan cap: active (non-archived) classes an educator may own at once.
-// No paid tier is purchasable yet, so this currently applies to every user.
+// Active (non-archived) class caps per plan. Pro billing isn't purchasable
+// yet (see src/lib/pro.ts), so every account currently sits on the free cap.
 export const FREE_ACTIVE_CLASS_LIMIT = 3;
+export const PRO_ACTIVE_CLASS_LIMIT = 10;
 
 // Thrown from inside the create/clone transactions when the cap is hit, so the
 // route can tell "over the limit" apart from a real DB failure in its catch block.
-export class ClassLimitReachedError extends Error {}
+export class ClassLimitReachedError extends Error {
+  constructor(public limit: number, public isPro: boolean) {
+    super("Class limit reached");
+  }
+}
 
 // Shape of a class preset (stored as JSON on ClassPreset).
 export interface PresetColumn {

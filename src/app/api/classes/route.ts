@@ -3,8 +3,9 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/auth";
 import { createClassSchema, parseBody } from "@/lib/validations";
-import { DEFAULT_PRESET, FREE_ACTIVE_CLASS_LIMIT, ClassLimitReachedError } from "@/lib/classBoards";
+import { DEFAULT_PRESET, FREE_ACTIVE_CLASS_LIMIT, PRO_ACTIVE_CLASS_LIMIT, ClassLimitReachedError } from "@/lib/classBoards";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isProUser } from "@/lib/pro";
 
 // GET: list every class the current user belongs to (any role).
 export async function GET() {
@@ -80,19 +81,20 @@ export async function POST(request: NextRequest) {
     }
     const data = result.data;
 
-    // Free plan cap: 3 active (non-archived) classes per educator. No paid tier
-    // is purchasable yet, so this currently applies to every user. Counted and
-    // created inside the same serializable transaction so two simultaneous
-    // requests can't both read a stale under-the-limit count and both slip
-    // through (Postgres aborts the loser with P2034; we retry it once).
+    // Active (non-archived) class cap: 3 free, 10 Pro. Counted and created
+    // inside the same serializable transaction so two simultaneous requests
+    // can't both read a stale under-the-limit count and both slip through
+    // (Postgres aborts the loser with P2034; we retry it once).
+    const isPro = await isProUser(session.userId);
+    const classLimit = isPro ? PRO_ACTIVE_CLASS_LIMIT : FREE_ACTIVE_CLASS_LIMIT;
     const runCreate = () =>
       prisma.$transaction(
         async (tx) => {
           const activeClassCount = await tx.class.count({
             where: { ownerId: session.userId, archived: false },
           });
-          if (activeClassCount >= FREE_ACTIVE_CLASS_LIMIT) {
-            throw new ClassLimitReachedError();
+          if (activeClassCount >= classLimit) {
+            throw new ClassLimitReachedError(classLimit, isPro);
           }
 
           const cls = await tx.class.create({
@@ -137,13 +139,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof ClassLimitReachedError) {
-      return NextResponse.json(
-        {
-          error: `Free plan is limited to ${FREE_ACTIVE_CLASS_LIMIT} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`,
-          code: "CLASS_LIMIT_REACHED",
-        },
-        { status: 403 }
-      );
+      const message = error.isPro
+        ? `Pro plan is limited to ${error.limit} active classes. Delete or archive an existing class to create a new one.`
+        : `Free plan is limited to ${error.limit} active classes. Delete an existing class, or join the Pro waitlist to get notified when it's ready.`;
+      return NextResponse.json({ error: message, code: "CLASS_LIMIT_REACHED" }, { status: 403 });
     }
     console.error("Failed to create class:", error);
     return NextResponse.json({ error: "Failed to create class." }, { status: 500 });
