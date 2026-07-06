@@ -22,6 +22,7 @@ import { resolveColumnPalette } from "@/lib/columnPalette";
 import { nameToColor } from "@/lib/avatarColor";
 import Avatar from "./Avatar";
 import { useToasts } from "@/components/Toasts";
+import { DropdownMenu, DropdownItem, DropdownDivider } from "./ui/DropdownMenu";
 
 const getColumnDot = (color: string | null | undefined, index: number) =>
   index < 0 ? "bg-muted" : resolveColumnPalette(color, index).dot;
@@ -79,10 +80,10 @@ export default function TaskModal({
   // comparisons stable across renders.
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
-  const assigneeDropdownRef = useRef<HTMLDivElement>(null);
+  const assigneeDropdownRef = useRef<HTMLButtonElement>(null);
   const [columnId, setColumnId] = useState("");
   const [columnDropdownOpen, setColumnDropdownOpen] = useState(false);
-  const columnDropdownRef = useRef<HTMLDivElement>(null);
+  const columnDropdownRef = useRef<HTMLButtonElement>(null);
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("medium");
   const [commentInput, setCommentInput] = useState("");
@@ -95,16 +96,16 @@ export default function TaskModal({
 
   const { tags: allBoardTags, setTagsForBoard } = useBoardResources(boardId);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
-  const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const tagDropdownRef = useRef<HTMLButtonElement>(null);
   const [metaTagDropdownOpen, setMetaTagDropdownOpen] = useState(false);
-  const metaTagDropdownRef = useRef<HTMLDivElement>(null);
+  const metaTagDropdownRef = useRef<HTMLButtonElement>(null);
   const [openMetaProp, setOpenMetaProp] = useState<null | "phase" | "priority" | "assignee">(null);
-  const metaPhaseRef = useRef<HTMLDivElement>(null);
-  const metaPriorityRef = useRef<HTMLDivElement>(null);
-  const metaAssigneeRef = useRef<HTMLDivElement>(null);
+  const metaPhaseRef = useRef<HTMLButtonElement>(null);
+  const metaPriorityRef = useRef<HTMLButtonElement>(null);
+  const metaAssigneeRef = useRef<HTMLButtonElement>(null);
   const metaDeadlineInputRef = useRef<HTMLInputElement>(null);
   const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false);
-  const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const priorityDropdownRef = useRef<HTMLButtonElement>(null);
   const [closing, setClosing] = useState(false);
   // Track viewport so we render properties/meta in either the inline mobile slot or the
   // desktop right column — never both — so dropdown refs and outside-click stay correct.
@@ -427,30 +428,6 @@ export default function TaskModal({
     }
   }, [toasts]);
 
-  // Close column dropdown on outside click
-  useEffect(() => {
-    if (!columnDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (columnDropdownRef.current && !columnDropdownRef.current.contains(e.target as Node)) {
-        setColumnDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [columnDropdownOpen]);
-
-  // Close priority dropdown on outside click
-  useEffect(() => {
-    if (!priorityDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target as Node)) {
-        setPriorityDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [priorityDropdownOpen]);
-
   // Reset closing state when a new task opens
   useEffect(() => {
     if (task) setClosing(false);
@@ -579,18 +556,6 @@ export default function TaskModal({
     };
   }, [isEditingDescription, adjustDescriptionHeight]);
 
-  // Close assignee dropdown on outside click
-  useEffect(() => {
-    if (!assigneeDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (assigneeDropdownRef.current && !assigneeDropdownRef.current.contains(e.target as Node)) {
-        setAssigneeDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [assigneeDropdownOpen]);
-
   // Re-render every 30s so relative timestamps stay current
   useEffect(() => {
     if (!task) return;
@@ -599,49 +564,6 @@ export default function TaskModal({
   }, [task]);
 
   // Tags are provided from shared `useBoardResources` hook to avoid duplicate fetches.
-
-  // Close tag dropdown on outside click
-  useEffect(() => {
-    if (!tagDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
-        setTagDropdownOpen(false);
-        setIsCreatingTag(false);
-        setTagCreatePhase(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [tagDropdownOpen]);
-
-  // Close meta-row tag dropdown on outside click
-  useEffect(() => {
-    if (!metaTagDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (metaTagDropdownRef.current && !metaTagDropdownRef.current.contains(e.target as Node)) {
-        setMetaTagDropdownOpen(false);
-        setIsCreatingTag(false);
-        setTagCreatePhase(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [metaTagDropdownOpen]);
-
-  // Close meta-row property dropdowns on outside click
-  useEffect(() => {
-    if (!openMetaProp) return;
-    const openRef = openMetaProp === "phase" ? metaPhaseRef
-                  : openMetaProp === "priority" ? metaPriorityRef
-                  : metaAssigneeRef;
-    const handler = (e: MouseEvent) => {
-      if (openRef.current && !openRef.current.contains(e.target as Node)) {
-        setOpenMetaProp(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openMetaProp]);
 
   // Wrapper for onUpdate to show saving feedback
   const handleUpdateWithFeedback = useCallback(async (id: string, data: Partial<Task>) => {
@@ -1030,10 +952,13 @@ export default function TaskModal({
           </svg>
           {assigneeIds.length > 1 ? "Assignees" : "Assignee"}
         </div>
-        <div ref={assigneeDropdownRef} className="relative">
+        <div className="relative">
           <button
             type="button"
+            ref={assigneeDropdownRef}
             onClick={() => setAssigneeDropdownOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={assigneeDropdownOpen}
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
             {(() => {
@@ -1057,55 +982,34 @@ export default function TaskModal({
               );
             })()}
           </button>
-          {assigneeDropdownOpen && (
-            <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              <button
-                type="button"
+          <DropdownMenu open={assigneeDropdownOpen} onClose={() => setAssigneeDropdownOpen(false)} anchorRef={assigneeDropdownRef} className="w-64">
+            <DropdownItem
+              checked={assigneeIds.length === 0}
+              icon={<Avatar size="sm" />}
+              onClick={() => {
+                userHasEdited.current = true;
+                setAssigneeIds([]);
+                setAssigneeDropdownOpen(false);
+              }}
+            >
+              Unassigned
+            </DropdownItem>
+            {boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta").map((m) => (
+              <DropdownItem
+                key={m.id}
+                checked={assigneeIds.includes(m.id)}
+                icon={<Avatar name={m.name} color={m.color} size="sm" />}
                 onClick={() => {
                   userHasEdited.current = true;
-                  setAssigneeIds([]);
-                  setAssigneeDropdownOpen(false);
+                  setAssigneeIds((prev) =>
+                    prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                  );
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                  assigneeIds.length === 0 ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                }`}
               >
-                <Avatar size="sm" />
-                <span className="truncate">Unassigned</span>
-                {assigneeIds.length === 0 && (
-                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M2 6l3 3 5-5"/>
-                  </svg>
-                )}
-              </button>
-              {boardMembers.filter((m) => m.classRole !== "educator" && m.classRole !== "ta").map((m) => {
-                const isSelected = assigneeIds.includes(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      userHasEdited.current = true;
-                      setAssigneeIds((prev) =>
-                        prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]
-                      );
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                    }`}
-                  >
-                    <Avatar name={m.name} color={m.color} size="sm" />
-                    <span className="truncate">{m.name}</span>
-                    {isSelected && (
-                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M2 6l3 3 5-5"/>
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                {m.name}
+              </DropdownItem>
+            ))}
+          </DropdownMenu>
         </div>
 
         {/* Phase */}
@@ -1115,43 +1019,35 @@ export default function TaskModal({
           </svg>
           Phase
         </div>
-        <div ref={columnDropdownRef} className="relative">
+        <div className="relative">
           <button
             type="button"
+            ref={columnDropdownRef}
             onClick={() => setColumnDropdownOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={columnDropdownOpen}
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(columns.find((c) => c.id === columnId)?.color, columns.findIndex((c) => c.id === columnId))}`} />
             <span className="truncate">{columns.find((c) => c.id === columnId)?.label ?? "Unknown"}</span>
           </button>
-          {columnDropdownOpen && (
-            <div className="absolute z-10 mt-1 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              {columns.map((c) => {
-                const isSelected = c.id === columnId;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      userHasEdited.current = true;
-                      setColumnId(c.id);
-                      setColumnDropdownOpen(false);
-                      void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                  >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
-                    <span className="truncate">{c.label}</span>
-                    {isSelected && (
-                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M2 6l3 3 5-5"/>
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <DropdownMenu open={columnDropdownOpen} onClose={() => setColumnDropdownOpen(false)} anchorRef={columnDropdownRef} className="w-64">
+            {columns.map((c) => (
+              <DropdownItem
+                key={c.id}
+                selected={c.id === columnId}
+                icon={<span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
+                onClick={() => {
+                  userHasEdited.current = true;
+                  setColumnId(c.id);
+                  setColumnDropdownOpen(false);
+                  void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                }}
+              >
+                {c.label}
+              </DropdownItem>
+            ))}
+          </DropdownMenu>
         </div>
 
         {/* Priority */}
@@ -1161,42 +1057,34 @@ export default function TaskModal({
           </svg>
           Priority
         </div>
-        <div ref={priorityDropdownRef} className="relative">
+        <div className="relative">
           <button
             type="button"
+            ref={priorityDropdownRef}
             onClick={() => setPriorityDropdownOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={priorityDropdownOpen}
             className="-mx-2 px-2 py-1 rounded-md text-sm text-ink hover:bg-column-bg transition-colors text-left flex items-center gap-2 w-full max-w-full"
           >
             <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
             <span className={priorityLabelClass}>{priority}</span>
           </button>
-          {priorityDropdownOpen && (
-            <div className="absolute z-10 mt-1 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                const isSelected = priority === p;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => {
-                      setPriority(p);
-                      setPriorityDropdownOpen(false);
-                      void handleUpdateWithFeedback(task.id, { priority: p });
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                  >
-                    <PriorityIcon priority={p} className="w-3.5 h-3.5" />
-                    <span className="capitalize">{p}</span>
-                    {isSelected && (
-                      <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M2 6l3 3 5-5"/>
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <DropdownMenu open={priorityDropdownOpen} onClose={() => setPriorityDropdownOpen(false)} anchorRef={priorityDropdownRef} className="w-48">
+            {(["low", "medium", "high", "urgent"] as const).map((p) => (
+              <DropdownItem
+                key={p}
+                selected={priority === p}
+                icon={<PriorityIcon priority={p} className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  setPriority(p);
+                  setPriorityDropdownOpen(false);
+                  void handleUpdateWithFeedback(task.id, { priority: p });
+                }}
+              >
+                <span className="capitalize">{p}</span>
+              </DropdownItem>
+            ))}
+          </DropdownMenu>
         </div>
 
         {/* Deadline */}
@@ -1266,7 +1154,7 @@ export default function TaskModal({
           </svg>
           Tags
         </div>
-        <div ref={tagDropdownRef} className="relative">
+        <div className="relative">
           <div className={`flex flex-wrap items-center gap-1.5 -mx-1 ${tagsTopPt}`}>
             {(allBoardTags.filter((t) => (optimisticTagIds ?? task.tags?.map((tt) => tt.id) ?? []).includes(t.id))).map((tag) => (
               <button
@@ -1280,7 +1168,10 @@ export default function TaskModal({
               </button>
             ))}
             <button
+              ref={tagDropdownRef}
               onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+              aria-haspopup="menu"
+              aria-expanded={tagDropdownOpen}
               className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
               title="Manage tags"
               aria-label="Add tag"
@@ -1291,113 +1182,115 @@ export default function TaskModal({
             </button>
           </div>
 
-          {tagDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-              {!isCreatingTag && (
-                <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                  {allBoardTags.length === 0 ? (
-                    <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
-                  ) : (
-                    allBoardTags.map((tag) => {
-                      const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
-                      return (
-                        <div
-                          key={tag.id}
-                          onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
-                          className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                            isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                          }`}
-                        >
-                          <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
-                          <span className="truncate flex-1">{tag.name}</span>
-                          <div className="ml-auto flex items-center gap-1">
-                            {isSelected && (
-                              <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M2 6l3 3 5-5"/>
-                              </svg>
-                            )}
-                            <button
-                              onClick={(e) => handleDeleteTag(e, tag)}
-                              className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                              </svg>
-                            </button>
-                          </div>
+          <DropdownMenu
+            open={tagDropdownOpen}
+            onClose={() => { setTagDropdownOpen(false); setIsCreatingTag(false); setTagCreatePhase(null); }}
+            anchorRef={tagDropdownRef}
+            className="w-56"
+          >
+            {!isCreatingTag && (
+              <div className="max-h-56 overflow-y-auto no-scrollbar">
+                {allBoardTags.length === 0 ? (
+                  <p className="px-2.5 py-4 text-center text-xs text-muted">No tags found.</p>
+                ) : (
+                  allBoardTags.map((tag) => {
+                    const isSelected = (optimisticTagIds ?? task.tags?.map((t) => t.id) ?? []).some((id) => id === tag.id);
+                    return (
+                      <div
+                        key={tag.id}
+                        onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                        className={`group flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors cursor-pointer ${
+                          isSelected ? "bg-ink/5 text-ink font-medium" : "text-ink/80 hover:text-ink hover:bg-ink/5"
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <span className="truncate flex-1">{tag.name}</span>
+                        <div className="ml-auto flex items-center gap-1">
+                          {isSelected && (
+                            <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M2 6l3 3 5-5"/>
+                            </svg>
+                          )}
+                          <button
+                            onClick={(e) => handleDeleteTag(e, tag)}
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                            </svg>
+                          </button>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
 
-              {isCreatingTag && tagCreatePhase === "name" && (
-                <div className="p-2">
-                  <input
-                    autoFocus
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    placeholder="Tag name…"
-                    className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setIsCreatingTag(false);
-                        setNewTagName("");
-                        setTagCreatePhase(null);
-                      } else if (e.key === "Enter") {
-                        e.preventDefault();
-                      }
-                    }}
-                  />
-                  <div className="mt-3 flex items-center justify-between">
-                    <button
-                      onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
-                      className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
-                      disabled={!newTagName.trim()}
-                      className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {isCreatingTag && tagCreatePhase === "color" && (
-                <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                  {LABEL_PALETTE.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleCreateTagWithColor(p.hex)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
-                      <span className="truncate">{p.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!isCreatingTag && (
-                <div className="border-t border-border/20">
+            {isCreatingTag && tagCreatePhase === "name" && (
+              <div className="p-1">
+                <input
+                  autoFocus
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Tag name…"
+                  className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setIsCreatingTag(false);
+                      setNewTagName("");
+                      setTagCreatePhase(null);
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                    }
+                  }}
+                />
+                <div className="mt-3 flex items-center justify-between px-1">
                   <button
-                    onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
-                    className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                    onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                    className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
                   >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                    disabled={!newTagName.trim()}
+                    className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isCreatingTag && tagCreatePhase === "color" && (
+              <div className="max-h-56 overflow-y-auto no-scrollbar">
+                {LABEL_PALETTE.map((p) => (
+                  <DropdownItem
+                    key={p.id}
+                    icon={<span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />}
+                    onClick={() => handleCreateTagWithColor(p.hex)}
+                  >
+                    {p.name}
+                  </DropdownItem>
+                ))}
+              </div>
+            )}
+
+            {!isCreatingTag && (
+              <>
+                <DropdownDivider />
+                <DropdownItem onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}>
+                  <span className="flex items-center justify-center gap-1 w-full">
                     <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M7 3v8M3 7h8" />
                     </svg>
                     Create new tag
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                  </span>
+                </DropdownItem>
+              </>
+            )}
+          </DropdownMenu>
         </div>
       </>
     );
@@ -1691,91 +1584,78 @@ export default function TaskModal({
 
                   {/* Phase */}
                   {colLabel && (
-                    <div ref={metaPhaseRef} className="relative">
+                    <div className="relative">
                       <button
                         type="button"
+                        ref={metaPhaseRef}
                         onClick={() => setOpenMetaProp((cur) => cur === "phase" ? null : "phase")}
+                        aria-haspopup="menu"
+                        aria-expanded={openMetaProp === "phase"}
                         className={`${itemClass} text-ink`}
                       >
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(colColor, colIdx)}`} />
                         <span>{colLabel}</span>
                       </button>
-                      {openMetaProp === "phase" && (
-                        <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          {columns.map((c) => {
-                            const isSelected = c.id === columnId;
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  userHasEdited.current = true;
-                                  setColumnId(c.id);
-                                  setOpenMetaProp(null);
-                                  void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                              >
-                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />
-                                <span className="truncate">{c.label}</span>
-                                {isSelected && (
-                                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M2 6l3 3 5-5"/>
-                                  </svg>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <DropdownMenu open={openMetaProp === "phase"} onClose={() => setOpenMetaProp(null)} anchorRef={metaPhaseRef} className="w-56">
+                        {columns.map((c) => (
+                          <DropdownItem
+                            key={c.id}
+                            selected={c.id === columnId}
+                            icon={<span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
+                            onClick={() => {
+                              userHasEdited.current = true;
+                              setColumnId(c.id);
+                              setOpenMetaProp(null);
+                              void handleUpdateWithFeedback(task.id, { column: c.id } as Partial<Task>);
+                            }}
+                          >
+                            {c.label}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
                     </div>
                   )}
 
                   {/* Priority */}
-                  <div ref={metaPriorityRef} className="relative">
+                  <div className="relative">
                     <button
                       type="button"
+                      ref={metaPriorityRef}
                       onClick={() => setOpenMetaProp((cur) => cur === "priority" ? null : "priority")}
+                      aria-haspopup="menu"
+                      aria-expanded={openMetaProp === "priority"}
                       className={`${itemClass} text-ink`}
                     >
                       <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
                       <span className="capitalize text-white">{priority}</span>
                     </button>
-                    {openMetaProp === "priority" && (
-                      <div className="absolute top-full left-0 mt-1 z-50 w-48 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {(["low", "medium", "high", "urgent"] as const).map((p) => {
-                          const isSelected = priority === p;
-                          return (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => {
-                                setPriority(p);
-                                setOpenMetaProp(null);
-                                void handleUpdateWithFeedback(task.id, { priority: p });
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"}`}
-                            >
-                              <PriorityIcon priority={p} className="w-3.5 h-3.5" />
-                              <span className="capitalize">{p}</span>
-                              {isSelected && (
-                                <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M2 6l3 3 5-5"/>
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <DropdownMenu open={openMetaProp === "priority"} onClose={() => setOpenMetaProp(null)} anchorRef={metaPriorityRef} className="w-48">
+                      {(["low", "medium", "high", "urgent"] as const).map((p) => (
+                        <DropdownItem
+                          key={p}
+                          selected={priority === p}
+                          icon={<PriorityIcon priority={p} className="w-3.5 h-3.5" />}
+                          onClick={() => {
+                            setPriority(p);
+                            setOpenMetaProp(null);
+                            void handleUpdateWithFeedback(task.id, { priority: p });
+                          }}
+                        >
+                          <span className="capitalize">{p}</span>
+                        </DropdownItem>
+                      ))}
+                    </DropdownMenu>
                   </div>
 
                   {/* Assignees — multi-select; clicking a member toggles them */}
                   {metaAssignees.length > 0 && (
-                    <div ref={metaAssigneeRef} className="relative">
+                    <div className="relative">
                       <button
                         type="button"
+                        ref={metaAssigneeRef}
                         onClick={() => setOpenMetaProp((cur) => cur === "assignee" ? null : "assignee")}
+                        aria-haspopup="menu"
+                        aria-expanded={openMetaProp === "assignee"}
                         className={`${itemClass} text-ink`}
                       >
                         <span className="flex items-center flex-shrink-0">
@@ -1789,48 +1669,34 @@ export default function TaskModal({
                             : `${metaAssignees[0].name} +${metaAssignees.length - 1}`}
                         </span>
                       </button>
-                      {openMetaProp === "assignee" && (
-                        <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          <button
-                            type="button"
+                      <DropdownMenu open={openMetaProp === "assignee"} onClose={() => setOpenMetaProp(null)} anchorRef={metaAssigneeRef} className="w-64">
+                        <DropdownItem
+                          checked={assigneeIds.length === 0}
+                          icon={<Avatar size="sm" />}
+                          onClick={() => {
+                            userHasEdited.current = true;
+                            setAssigneeIds([]);
+                            setOpenMetaProp(null);
+                          }}
+                        >
+                          Unassigned
+                        </DropdownItem>
+                        {boardMembers.filter((bm) => bm.classRole !== "educator" && bm.classRole !== "ta").map((bm) => (
+                          <DropdownItem
+                            key={bm.id}
+                            checked={assigneeIds.includes(bm.id)}
+                            icon={<Avatar name={bm.name} color={bm.color} size="sm" />}
                             onClick={() => {
                               userHasEdited.current = true;
-                              setAssigneeIds([]);
-                              setOpenMetaProp(null);
+                              setAssigneeIds((prev) =>
+                                prev.includes(bm.id) ? prev.filter((id) => id !== bm.id) : [...prev, bm.id]
+                              );
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
                           >
-                            <Avatar size="sm" />
-                            <span className="truncate">Unassigned</span>
-                          </button>
-                          {boardMembers.filter((bm) => bm.classRole !== "educator" && bm.classRole !== "ta").map((bm) => {
-                            const isSelected = assigneeIds.includes(bm.id);
-                            return (
-                              <button
-                                key={bm.id}
-                                type="button"
-                                onClick={() => {
-                                  userHasEdited.current = true;
-                                  setAssigneeIds((prev) =>
-                                    prev.includes(bm.id) ? prev.filter((id) => id !== bm.id) : [...prev, bm.id]
-                                  );
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                  isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                                }`}
-                              >
-                                <Avatar name={bm.name} color={bm.color} size="sm" />
-                                <span className="truncate">{bm.name}</span>
-                                {isSelected && (
-                                  <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M2 6l3 3 5-5"/>
-                                  </svg>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                            {bm.name}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
                     </div>
                   )}
 
@@ -1875,7 +1741,7 @@ export default function TaskModal({
               return (
                 <div className="px-8 md:px-10 pb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
                   <span className="text-muted mr-1">Tags</span>
-                  <div ref={metaTagDropdownRef} className="relative flex flex-wrap items-center gap-1.5">
+                  <div className="relative flex flex-wrap items-center gap-1.5">
                     {selectedTags.map((tag) => (
                       <button
                         key={tag.id}
@@ -1888,7 +1754,10 @@ export default function TaskModal({
                       </button>
                     ))}
                     <button
+                      ref={metaTagDropdownRef}
                       onClick={() => { setTagDropdownOpen(false); setMetaTagDropdownOpen((v) => !v); }}
+                      aria-haspopup="menu"
+                      aria-expanded={metaTagDropdownOpen}
                       className="inline-flex items-center justify-center w-5 h-5 rounded-full text-muted hover:text-ink hover:bg-column-bg transition-colors"
                       title="Manage tags"
                       aria-label="Add tag"
@@ -1898,113 +1767,115 @@ export default function TaskModal({
                       </svg>
                     </button>
 
-                    {metaTagDropdownOpen && (
-                      <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                        {!isCreatingTag && (
-                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                            {allBoardTags.length === 0 ? (
-                              <p className="px-4 py-4 text-center text-xs text-muted">No tags found.</p>
-                            ) : (
-                              allBoardTags.map((tag) => {
-                                const isSelected = selectedIds.some((id) => id === tag.id);
-                                return (
-                                  <div
-                                    key={tag.id}
-                                    onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
-                                    className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                                      isSelected ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                                    }`}
-                                  >
-                                    <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
-                                    <span className="truncate flex-1">{tag.name}</span>
-                                    <div className="ml-auto flex items-center gap-1">
-                                      {isSelected && (
-                                        <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <path d="M2 6l3 3 5-5"/>
-                                        </svg>
-                                      )}
-                                      <button
-                                        onClick={(e) => handleDeleteTag(e, tag)}
-                                        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                          <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
-                                        </svg>
-                                      </button>
-                                    </div>
+                    <DropdownMenu
+                      open={metaTagDropdownOpen}
+                      onClose={() => { setMetaTagDropdownOpen(false); setIsCreatingTag(false); setTagCreatePhase(null); }}
+                      anchorRef={metaTagDropdownRef}
+                      className="w-56"
+                    >
+                      {!isCreatingTag && (
+                        <div className="max-h-56 overflow-y-auto no-scrollbar">
+                          {allBoardTags.length === 0 ? (
+                            <p className="px-2.5 py-4 text-center text-xs text-muted">No tags found.</p>
+                          ) : (
+                            allBoardTags.map((tag) => {
+                              const isSelected = selectedIds.some((id) => id === tag.id);
+                              return (
+                                <div
+                                  key={tag.id}
+                                  onClick={(e) => { e.stopPropagation(); toggleTag(tag.id); }}
+                                  className={`group flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-colors cursor-pointer ${
+                                    isSelected ? "bg-ink/5 text-ink font-medium" : "text-ink/80 hover:text-ink hover:bg-ink/5"
+                                  }`}
+                                >
+                                  <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                                  <span className="truncate flex-1">{tag.name}</span>
+                                  <div className="ml-auto flex items-center gap-1">
+                                    {isSelected && (
+                                      <svg className="flex-shrink-0 text-ink group-hover:opacity-0 transition-opacity" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M2 6l3 3 5-5"/>
+                                      </svg>
+                                    )}
+                                    <button
+                                      onClick={(e) => handleDeleteTag(e, tag)}
+                                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M11 4l-.6 7.4A1 1 0 019.4 12H4.6a1 1 0 01-1-.6L3 4" />
+                                      </svg>
+                                    </button>
                                   </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
 
-                        {isCreatingTag && tagCreatePhase === "name" && (
-                          <div className="p-3">
-                            <input
-                              autoFocus
-                              value={newTagName}
-                              onChange={(e) => setNewTagName(e.target.value)}
-                              placeholder="Tag name…"
-                              className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") {
-                                  setIsCreatingTag(false);
-                                  setNewTagName("");
-                                  setTagCreatePhase(null);
-                                } else if (e.key === "Enter") {
-                                  e.preventDefault();
-                                }
-                              }}
-                            />
-                            <div className="mt-3 flex items-center justify-between">
-                              <button
-                                onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
-                                className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
-                                disabled={!newTagName.trim()}
-                                className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
-                              >
-                                Next
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {isCreatingTag && tagCreatePhase === "color" && (
-                          <div className="pb-1 max-h-56 overflow-y-auto no-scrollbar">
-                            {LABEL_PALETTE.map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => handleCreateTagWithColor(p.hex)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-column-bg transition-colors"
-                              >
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
-                                <span className="truncate">{p.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {!isCreatingTag && (
-                          <div className="border-t border-border/20">
+                      {isCreatingTag && tagCreatePhase === "name" && (
+                        <div className="p-1">
+                          <input
+                            autoFocus
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            placeholder="Tag name…"
+                            className="w-full bg-column-bg border border-border rounded-md px-3 py-1.5 text-sm text-ink outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setIsCreatingTag(false);
+                                setNewTagName("");
+                                setTagCreatePhase(null);
+                              } else if (e.key === "Enter") {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                          <div className="mt-3 flex items-center justify-between px-1">
                             <button
-                              onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}
-                              className="w-full flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-muted hover:text-ink hover:bg-column-bg transition-colors"
+                              onClick={() => { setIsCreatingTag(false); setNewTagName(""); setTagCreatePhase(null); }}
+                              className="text-[12px] font-medium text-muted hover:text-ink px-2 py-1"
                             >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => { if (newTagName.trim()) setTagCreatePhase("color"); }}
+                              disabled={!newTagName.trim()}
+                              className="text-[12px] font-semibold text-ink hover:text-ink/70 px-2 py-1 disabled:opacity-30 transition-opacity"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isCreatingTag && tagCreatePhase === "color" && (
+                        <div className="max-h-56 overflow-y-auto no-scrollbar">
+                          {LABEL_PALETTE.map((p) => (
+                            <DropdownItem
+                              key={p.id}
+                              icon={<span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />}
+                              onClick={() => handleCreateTagWithColor(p.hex)}
+                            >
+                              {p.name}
+                            </DropdownItem>
+                          ))}
+                        </div>
+                      )}
+
+                      {!isCreatingTag && (
+                        <>
+                          <DropdownDivider />
+                          <DropdownItem onClick={() => { setIsCreatingTag(true); setTagCreatePhase("name"); }}>
+                            <span className="flex items-center justify-center gap-1 w-full">
                               <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M7 3v8M3 7h8" />
                               </svg>
                               Create new tag
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                            </span>
+                          </DropdownItem>
+                        </>
+                      )}
+                    </DropdownMenu>
                   </div>
                 </div>
               );
