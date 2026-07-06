@@ -318,7 +318,6 @@ function ProTab() {
               href="/pricing"
               className="inline-flex items-center gap-2 bg-[#EBEBEB] text-[#161412] px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-white transition-colors"
             >
-              <IconSparkle />
               Join the Pro waitlist
             </Link>
             <span className="text-xs text-muted">Coming soon</span>
