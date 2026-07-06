@@ -6,6 +6,7 @@ import { formatDeadlineLabel } from "@/lib/utils";
 import { COLUMN_PALETTE } from "@/lib/columnPalette";
 import { getPriorityConfig, PRIORITY_ORDER } from "@/lib/priority";
 import Avatar from "./Avatar";
+import { DropdownMenu, DropdownItem } from "./ui/DropdownMenu";
 
 // ──  Deadline sorting helper ────────────────────────────────
 
@@ -58,19 +59,7 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const inputRef = useRef<HTMLInputElement>(null);
-  const columnDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!columnDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (columnDropdownRef.current && !columnDropdownRef.current.contains(e.target as Node)) {
-        setColumnDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [columnDropdownOpen]);
+  const columnDropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Build index maps for O(1) lookups
   const columnMap = useMemo(
@@ -168,10 +157,13 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
             placeholder="Task title…"
             className="flex-1 min-w-0 bg-transparent text-sm text-ink placeholder:text-muted outline-none"
           />
-          <div ref={columnDropdownRef} className="relative flex-shrink-0">
+          <div className="relative flex-shrink-0">
             <button
               type="button"
+              ref={columnDropdownTriggerRef}
               onClick={() => setColumnDropdownOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={columnDropdownOpen}
               className="
                 bg-column-bg rounded-xl px-4 py-2.5
                 text-sm text-ink
@@ -186,37 +178,20 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
               </svg>
             </button>
 
-            {columnDropdownOpen && (
-              <div
-                className="absolute z-10 mt-1 w-max min-w-max bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden"
-              >
-                {columns.map((c) => {
-                  const isSelected = c.id === newColumn;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setNewColumn(c.id);
-                        setColumnDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                        isSelected
-                          ? "bg-column-bg text-ink font-medium"
-                          : "text-ink hover:bg-column-bg"
-                      }`}
-                    >
-                      <span className="truncate">{c.label}</span>
-                      {isSelected && (
-                        <svg className="ml-auto flex-shrink-0 text-ink" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M2 6l3 3 5-5"/>
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <DropdownMenu open={columnDropdownOpen} onClose={() => setColumnDropdownOpen(false)} anchorRef={columnDropdownTriggerRef} className="w-max">
+              {columns.map((c) => (
+                <DropdownItem
+                  key={c.id}
+                  selected={c.id === newColumn}
+                  onClick={() => {
+                    setNewColumn(c.id);
+                    setColumnDropdownOpen(false);
+                  }}
+                >
+                  {c.label}
+                </DropdownItem>
+              ))}
+            </DropdownMenu>
           </div>
           <button
             onClick={handleSubmit}

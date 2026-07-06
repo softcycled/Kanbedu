@@ -6,6 +6,7 @@ import useBoardResources from "@/hooks/useBoardResources";
 import { Board } from "@/lib/types";
 import DeleteBoardModal from "./DeleteBoardModal";
 import ConfirmModal from "./ConfirmModal";
+import { DropdownMenu, DropdownItem } from "./ui/DropdownMenu";
 
 interface Member {
   id: string;
@@ -99,23 +100,8 @@ export default function SettingsPanel({
 
   const [transferDropdownOpen, setTransferDropdownOpen] = useState(false);
   const [removeDropdownOpen, setRemoveDropdownOpen] = useState(false);
-  const transferDropdownRef = useRef<HTMLDivElement>(null);
-  const removeDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    if (!transferDropdownOpen && !removeDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (transferDropdownOpen && transferDropdownRef.current && !transferDropdownRef.current.contains(e.target as Node)) {
-        setTransferDropdownOpen(false);
-      }
-      if (removeDropdownOpen && removeDropdownRef.current && !removeDropdownRef.current.contains(e.target as Node)) {
-        setRemoveDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [transferDropdownOpen, removeDropdownOpen]);
+  const transferDropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const removeDropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setNameValue(board?.name ?? "");
@@ -573,11 +559,14 @@ export default function SettingsPanel({
                     <p className="text-xs text-muted mt-0.5">Pass board ownership to another member.</p>
                   </div>
                   <div className="flex items-center gap-2 sm:flex-shrink-0">
-                    <div ref={transferDropdownRef} className="relative flex-1 sm:flex-none sm:w-44">
+                    <div className="relative flex-1 sm:flex-none sm:w-44">
                       <button
                         type="button"
+                        ref={transferDropdownTriggerRef}
                         onClick={() => setTransferDropdownOpen((v) => !v)}
                         disabled={currentUserRole !== "owner"}
+                        aria-haspopup="menu"
+                        aria-expanded={transferDropdownOpen}
                         className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
                       >
                         {transferTarget ? (
@@ -595,27 +584,24 @@ export default function SettingsPanel({
                         ) : <span className="text-muted">Select member</span>}
                         <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
                       </button>
-                      {transferDropdownOpen && (
-                        <div className="absolute z-20 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
-                            <p className="px-4 py-2.5 text-xs text-muted">No other members</p>
-                          ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => { setTransferTarget(m.id); setTransferDropdownOpen(false); }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                transferTarget === m.id ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                              }`}
-                            >
+                      <DropdownMenu open={transferDropdownOpen} onClose={() => setTransferDropdownOpen(false)} anchorRef={transferDropdownTriggerRef} className="w-full">
+                        {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
+                          <p className="px-2.5 py-2 text-xs text-muted">No other members</p>
+                        ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
+                          <DropdownItem
+                            key={m.id}
+                            selected={transferTarget === m.id}
+                            onClick={() => { setTransferTarget(m.id); setTransferDropdownOpen(false); }}
+                            icon={
                               <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
                                 {m.name.charAt(0).toUpperCase()}
                               </span>
-                              <span className="truncate">{m.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                            }
+                          >
+                            {m.name}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
                     </div>
                     <button
                       onClick={() => setTransferConfirmOpen(true)}
@@ -636,11 +622,14 @@ export default function SettingsPanel({
                     <p className="text-xs text-muted mt-0.5">Revoke a member's access to this board.</p>
                   </div>
                   <div className="flex items-center gap-2 sm:flex-shrink-0">
-                    <div ref={removeDropdownRef} className="relative flex-1 sm:flex-none sm:w-44">
+                    <div className="relative flex-1 sm:flex-none sm:w-44">
                       <button
                         type="button"
+                        ref={removeDropdownTriggerRef}
                         onClick={() => setRemoveDropdownOpen((v) => !v)}
                         disabled={currentUserRole !== "owner"}
+                        aria-haspopup="menu"
+                        aria-expanded={removeDropdownOpen}
                         className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
                       >
                         {removeTarget ? (
@@ -658,27 +647,24 @@ export default function SettingsPanel({
                         ) : <span className="text-muted">Select member</span>}
                         <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
                       </button>
-                      {removeDropdownOpen && (
-                        <div className="absolute z-20 mt-1 w-full bg-card-bg border border-border rounded-xl shadow-modal overflow-hidden">
-                          {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
-                            <p className="px-4 py-2.5 text-xs text-muted">No other members</p>
-                          ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => { setRemoveTarget(m.id); setRemoveDropdownOpen(false); }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                removeTarget === m.id ? "bg-column-bg text-ink font-medium" : "text-ink hover:bg-column-bg"
-                              }`}
-                            >
+                      <DropdownMenu open={removeDropdownOpen} onClose={() => setRemoveDropdownOpen(false)} anchorRef={removeDropdownTriggerRef} className="w-full">
+                        {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
+                          <p className="px-2.5 py-2 text-xs text-muted">No other members</p>
+                        ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
+                          <DropdownItem
+                            key={m.id}
+                            selected={removeTarget === m.id}
+                            onClick={() => { setRemoveTarget(m.id); setRemoveDropdownOpen(false); }}
+                            icon={
                               <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: m.color }}>
                                 {m.name.charAt(0).toUpperCase()}
                               </span>
-                              <span className="truncate">{m.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                            }
+                          >
+                            {m.name}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
                     </div>
                     <button
                       onClick={() => setRemoveConfirmOpen(true)}
