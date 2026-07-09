@@ -2,8 +2,11 @@
 // pricing page and the in-app Settings > Lecturer Pro tab so the two can
 // never drift apart. Edit prices and features here only.
 
-export const PRO_PRICE_MONTHLY = "RM19";
-export const PRO_PRICE_YEARLY = "RM190";
+// RM160 = exactly 10 months of RM16, so "2 months free" is verifiably true.
+// The label below must stay true if either price changes; recompute before editing.
+export const PRO_PRICE_MONTHLY = "RM16";
+export const PRO_PRICE_YEARLY = "RM160";
+export const PRO_YEARLY_DISCOUNT_LABEL = "2 months free";
 
 export const PRO_FEATURES = [
   "Everything in Free",

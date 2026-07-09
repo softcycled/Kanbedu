@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTheme } from "./ThemeProvider";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Avatar from "./Avatar";
-import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/proPlan";
+import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -299,7 +299,7 @@ function ProTab() {
           <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-1">
             <span className="text-3xl font-bold tracking-tight text-ink">{PRO_PRICE_MONTHLY}</span>
             <span className="text-sm text-muted">/month</span>
-            <span className="text-xs text-muted ml-2">or {PRO_PRICE_YEARLY}/year with two months free</span>
+            <span className="text-xs text-muted ml-2">or {PRO_PRICE_YEARLY}/year, {PRO_YEARLY_DISCOUNT_LABEL}</span>
           </div>
 
           <ul className="mt-5 space-y-2.5">

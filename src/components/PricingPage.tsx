@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import LandingNav from "./landing/LandingNav";
 import LandingFooter from "./landing/LandingFooter";
-import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/proPlan";
+import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
 
 // Free tier copy lives here; Pro tier copy is shared with the in-app
 // Settings > Lecturer Pro tab via src/lib/proPlan.ts.
@@ -127,7 +127,7 @@ export default function PricingPage() {
                 }`}
               >
                 Yearly
-                <span className="text-xs text-muted">2 months free</span>
+                <span className="text-xs text-muted">{PRO_YEARLY_DISCOUNT_LABEL}</span>
               </button>
             </div>
           </div>
