@@ -6,7 +6,8 @@ import type { ClassSummary } from "../Sidebar";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import { trackEvent } from "@/lib/analytics";
-import { DropdownMenu, DropdownItem } from "../ui/DropdownMenu";
+import { DropdownMenu, DropdownItem, DropdownDivider } from "../ui/DropdownMenu";
+import BoardMembersModal from "./BoardMembersModal";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -33,58 +34,77 @@ interface Props {
   onOpenNav?: () => void;
 }
 
-// A student's class experience rendered INSIDE the main app shell (sidebar +
-// content area), not the dedicated educator workspace. Shows the group board
-// once the student is placed, otherwise a lobby waiting screen.
-export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
-  const { push } = useToasts();
-  const [confirmLeave, setConfirmLeave] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const titleRef = useRef<HTMLButtonElement>(null);
+// Title + dropdown for the student's group board header. Must be a real
+// component (not a plain JSX value built once and reused): Board.tsx keeps
+// both its mobile and desktop header rows mounted at all times (toggled with
+// CSS, not unmounted), so `headerTitle` renders into two simultaneous DOM
+// spots. A shared useRef/useState across both would mean the hidden copy's
+// outside-click handler races the visible one's own item clicks and eats
+// them. A component gets an independent instance (own state, own ref) at
+// each render site, which is what actually avoids that race.
+function GroupBoardTitleMenu({
+  className,
+  groupName,
+  hasBoard,
+  onMembersClick,
+  onLeaveClick,
+}: {
+  className: string;
+  groupName: string | null;
+  hasBoard: boolean;
+  onMembersClick: () => void;
+  onLeaveClick: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (activeClass.boardId) trackEvent("board_view", { boardType: "class" });
-  }, [activeClass.boardId]);
-
-  // ConfirmModal handles its own processing state and closes itself afterward;
-  // we only surface a toast if the leave request fails.
-  const leave = async () => {
-    const ok = await onLeave(activeClass.id);
-    if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
-  };
-
-  // Header label doubles as a dropdown trigger (matches the personal-board
-  // title menu): class name (muted) then group name (bold), wraps onto a
-  // second line and stays compact when the names are long.
-  const breadcrumb = (
+  return (
     <div className="relative min-w-0">
       <button
-        ref={titleRef}
-        onClick={() => setMenuOpen((v) => !v)}
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
         aria-label="Group board menu"
         aria-haspopup="menu"
-        aria-expanded={menuOpen}
+        aria-expanded={open}
         className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 -mx-1.5 px-1.5 py-0.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
       >
-        <span className="text-sm text-muted break-words">{activeClass.name}</span>
-        {activeClass.groupName && (
+        <span className="text-sm text-muted break-words">{className}</span>
+        {groupName && (
           <>
             <span className="text-sm text-muted/60">/</span>
-            <span className="text-lg font-bold tracking-tight text-ink break-words leading-tight">{activeClass.groupName}</span>
+            <span className="text-lg font-bold tracking-tight text-ink break-words leading-tight">{groupName}</span>
           </>
         )}
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-          className={`flex-shrink-0 self-center text-muted transition-transform ${menuOpen ? "rotate-180" : ""}`}
+          className={`flex-shrink-0 self-center text-muted transition-transform ${open ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      <DropdownMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={titleRef} className="w-[180px]">
+      <DropdownMenu open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} className="w-[180px]">
+        {hasBoard && (
+          <>
+            <DropdownItem
+              onClick={() => { setOpen(false); onMembersClick(); }}
+              icon={
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              }
+            >
+              Members
+            </DropdownItem>
+            <DropdownDivider />
+          </>
+        )}
         <DropdownItem
           danger
-          onClick={() => { setMenuOpen(false); setConfirmLeave(true); }}
+          onClick={() => { setOpen(false); onLeaveClick(); }}
           icon={
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -97,6 +117,36 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
         </DropdownItem>
       </DropdownMenu>
     </div>
+  );
+}
+
+// A student's class experience rendered INSIDE the main app shell (sidebar +
+// content area), not the dedicated educator workspace. Shows the group board
+// once the student is placed, otherwise a lobby waiting screen.
+export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
+  const { push } = useToasts();
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeClass.boardId) trackEvent("board_view", { boardType: "class" });
+  }, [activeClass.boardId]);
+
+  // ConfirmModal handles its own processing state and closes itself afterward;
+  // we only surface a toast if the leave request fails.
+  const leave = async () => {
+    const ok = await onLeave(activeClass.id);
+    if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
+  };
+
+  const breadcrumb = (
+    <GroupBoardTitleMenu
+      className={activeClass.name}
+      groupName={activeClass.groupName ?? null}
+      hasBoard={!!activeClass.boardId}
+      onMembersClick={() => setMembersOpen(true)}
+      onLeaveClick={() => setConfirmLeave(true)}
+    />
   );
 
   return (
@@ -139,6 +189,14 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
         onClose={() => setConfirmLeave(false)}
         onConfirm={leave}
       />
+
+      {activeClass.boardId && (
+        <BoardMembersModal
+          isOpen={membersOpen}
+          onClose={() => setMembersOpen(false)}
+          boardId={activeClass.boardId}
+        />
+      )}
     </div>
   );
 }
