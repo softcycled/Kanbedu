@@ -85,13 +85,13 @@ export function DropdownItem({ icon, selected, checked, role: roleOverride, dang
       onClick={onClick}
       className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg text-left transition-colors disabled:opacity-50 disabled:cursor-default ${
         danger
-          ? "text-ink/80 hover:text-red-500 hover:bg-red-500/8"
+          ? "text-red-600 dark:text-red-400 hover:bg-red-500/10"
           : active
           ? "bg-ink/5 text-ink font-medium"
           : "text-ink/80 hover:text-ink hover:bg-ink/5"
       } ${className}`}
     >
-      {icon && <span className="flex-shrink-0 text-muted">{icon}</span>}
+      {icon && <span className={`flex-shrink-0 ${danger ? "text-red-600 dark:text-red-400" : "text-muted"}`}>{icon}</span>}
       <span className="flex-1 min-w-0 truncate text-left">{children}</span>
       {active && (
         <svg className="ml-auto flex-shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
