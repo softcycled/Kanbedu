@@ -7,6 +7,8 @@
 export const PRO_PRICE_MONTHLY = "RM16";
 export const PRO_PRICE_YEARLY = "RM160";
 export const PRO_YEARLY_DISCOUNT_LABEL = "2 months free";
+// Shown wherever prices appear until Pro is purchasable. Remove at launch.
+export const PRO_PRICE_DISCLAIMER = "Prices may change until Lecturer Pro officially launches.";
 
 export const PRO_FEATURES = [
   "Everything in Free",

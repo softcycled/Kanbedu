@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import LandingNav from "./landing/LandingNav";
 import LandingFooter from "./landing/LandingFooter";
-import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
+import { PRO_FEATURES, PRO_PRICE_DISCLAIMER, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
 
 // Free tier copy lives here; Pro tier copy is shared with the in-app
 // Settings > Lecturer Pro tab via src/lib/proPlan.ts.
@@ -205,6 +205,9 @@ export default function PricingPage() {
             </div>
 
             <p className="text-center text-xs text-muted/60 mt-10 max-w-md mx-auto">
+              {PRO_PRICE_DISCLAIMER}
+            </p>
+            <p className="text-center text-xs text-muted/60 mt-2 max-w-md mx-auto">
               Questions about Lecturer Pro? Email{" "}
               <a href="mailto:kanbeduapp@gmail.com" className="underline hover:text-muted transition-colors">kanbeduapp@gmail.com</a>.
             </p>

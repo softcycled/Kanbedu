@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTheme } from "./ThemeProvider";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Avatar from "./Avatar";
-import { PRO_FEATURES, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
+import { PRO_FEATURES, PRO_PRICE_DISCLAIMER, PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY, PRO_YEARLY_DISCOUNT_LABEL } from "@/lib/proPlan";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -326,7 +326,7 @@ function ProTab() {
       </div>
 
       <p className="text-xs text-muted">
-        Kanbedu stays free for students and free to teach with. Lecturer Pro only adds tools for running many classes across semesters.
+        Kanbedu stays free for students and free to teach with. Lecturer Pro only adds tools for running many classes across semesters. {PRO_PRICE_DISCLAIMER}
       </p>
     </div>
   );
