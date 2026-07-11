@@ -73,6 +73,13 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
             <span className="text-lg font-bold tracking-tight text-ink break-words leading-tight">{activeClass.groupName}</span>
           </>
         )}
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+          className={`flex-shrink-0 self-center text-muted transition-transform ${menuOpen ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
       <DropdownMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={titleRef} className="w-[180px]">
         <DropdownItem
