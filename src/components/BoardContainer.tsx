@@ -67,6 +67,10 @@ export default function BoardContainer({
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId);
   const [activePanel, setActivePanel] = useState<Panel>("board");
+  // Set when Settings should open with a specific class board pre-selected
+  // (e.g. a student clicking "Board settings" from inside their group board),
+  // instead of defaulting to the personal boards list.
+  const [pendingClassBoardId, setPendingClassBoardId] = useState<string | null>(null);
   const analyticsKey = useRef(0);
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
@@ -299,8 +303,17 @@ export default function BoardContainer({
       analyticsKey.current += 1;
       setAnalyticsRenderKey(analyticsKey.current);
     }
+    setPendingClassBoardId(null); // clear any pending class-board preselect from a prior "Board settings" jump
     setActiveClass(null); // leaving the class view for a personal panel
     setActivePanel(panel);
+  }, []);
+
+  // A student opened "Board settings" from inside their group board: jump
+  // straight to that class board's detail view in Settings.
+  const handleOpenClassBoardSettings = useCallback((boardId: string) => {
+    setPendingClassBoardId(boardId);
+    setActiveClass(null);
+    setActivePanel("settings");
   }, []);
 
   // Selecting a class: educators/TAs go to the dedicated workspace; students
@@ -534,7 +547,7 @@ export default function BoardContainer({
       >
         {activeClass && (
           <div className="flex-1 overflow-hidden flex flex-col">
-            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} onOpenNav={() => setNavOpen(true)} />
+            <StudentClassView activeClass={activeClass} currentUserId={currentUserId} onLeave={handleLeaveClass} onOpenNav={() => setNavOpen(true)} onOpenBoardSettings={handleOpenClassBoardSettings} />
           </div>
         )}
         {!activeClass && activePanel === "board" && (
@@ -563,7 +576,7 @@ export default function BoardContainer({
                 isLoading={isLoadingBoard}
                 currentUserId={currentUserId}
                 onOpenNav={() => setNavOpen(true)}
-                onOpenSettings={() => setActivePanel("settings")}
+                onOpenSettings={() => { setPendingClassBoardId(null); setActivePanel("settings"); }}
                 canViewTrash
               />
             </div>
@@ -589,7 +602,8 @@ export default function BoardContainer({
               .map((c) => ({ classId: c.id, className: c.name, groupName: c.groupName ?? null, boardId: c.boardId! }))}
             onSwitchToBoard={(boardId) => { handleBoardSwitch(boardId); setActivePanel("board"); }}
             onLeaveClass={handleLeaveClass}
-            onClose={() => setActivePanel("board")}
+            onClose={() => { setPendingClassBoardId(null); setActivePanel("board"); }}
+            initialClassBoardId={pendingClassBoardId ?? undefined}
           />
         )}
         {activePanel === "profile" && <ProfilePanel onClose={() => setActivePanel("board")} />}

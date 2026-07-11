@@ -41,6 +41,10 @@ interface Props {
   onSwitchToBoard?: (boardId: string) => void;
   onLeaveClass?: (classId: string) => Promise<boolean>;
   onClose?: () => void;
+  // Jump straight to a specific class board's detail view (e.g. opened via
+  // "Board settings" from inside that board), instead of defaulting to the
+  // personal boards list.
+  initialClassBoardId?: string;
 }
 
 export default function SettingsPanel({
@@ -54,13 +58,14 @@ export default function SettingsPanel({
   onSwitchToBoard,
   onLeaveClass,
   onClose,
+  initialClassBoardId,
 }: Props) {
   // Mobile drill-down: "list" shows the board list, "detail" shows the selected board
-  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+  const [mobileView, setMobileView] = useState<"list" | "detail">(initialClassBoardId ? "detail" : "list");
   const [selectedBoardId, setSelectedBoardId] = useState(activeBoardId);
   const board = boards.find((b) => b.id === selectedBoardId) ?? boards[0];
 
-  const [selectedClassBoardId, setSelectedClassBoardId] = useState<string | null>(null);
+  const [selectedClassBoardId, setSelectedClassBoardId] = useState<string | null>(initialClassBoardId ?? null);
   const selectedClassBoard = classBoards.find((c) => c.boardId === selectedClassBoardId) ?? null;
   const [classBoardMembers, setClassBoardMembers] = useState<Member[]>([]);
   const [loadingClassMembers, setLoadingClassMembers] = useState(false);

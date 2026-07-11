@@ -7,7 +7,6 @@ import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import { trackEvent } from "@/lib/analytics";
 import { DropdownMenu, DropdownItem, DropdownDivider } from "../ui/DropdownMenu";
-import BoardMembersModal from "./BoardMembersModal";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -32,6 +31,9 @@ interface Props {
   // if the request failed so the view can surface an error.
   onLeave: (classId: string) => Promise<boolean>;
   onOpenNav?: () => void;
+  // Jumps to the shared Settings panel with this board pre-selected (read-only
+  // for students: members list + Leave class, no rename/transfer/delete).
+  onOpenBoardSettings: (boardId: string) => void;
 }
 
 // Title + dropdown for the student's group board header. Must be a real
@@ -46,13 +48,13 @@ function GroupBoardTitleMenu({
   className,
   groupName,
   hasBoard,
-  onMembersClick,
+  onBoardSettingsClick,
   onLeaveClick,
 }: {
   className: string;
   groupName: string | null;
   hasBoard: boolean;
-  onMembersClick: () => void;
+  onBoardSettingsClick: () => void;
   onLeaveClick: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -87,17 +89,15 @@ function GroupBoardTitleMenu({
         {hasBoard && (
           <>
             <DropdownItem
-              onClick={() => { setOpen(false); onMembersClick(); }}
+              onClick={() => { setOpen(false); onBoardSettingsClick(); }}
               icon={
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="8" r="2.5" />
+                  <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M12.01 12.01l1.06 1.06M2.93 13.07l1.06-1.06M12.01 3.99l1.06-1.06" />
                 </svg>
               }
             >
-              Members
+              Board settings
             </DropdownItem>
             <DropdownDivider />
           </>
@@ -123,10 +123,9 @@ function GroupBoardTitleMenu({
 // A student's class experience rendered INSIDE the main app shell (sidebar +
 // content area), not the dedicated educator workspace. Shows the group board
 // once the student is placed, otherwise a lobby waiting screen.
-export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
+export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav, onOpenBoardSettings }: Props) {
   const { push } = useToasts();
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [membersOpen, setMembersOpen] = useState(false);
 
   useEffect(() => {
     if (activeClass.boardId) trackEvent("board_view", { boardType: "class" });
@@ -144,7 +143,7 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
       className={activeClass.name}
       groupName={activeClass.groupName ?? null}
       hasBoard={!!activeClass.boardId}
-      onMembersClick={() => setMembersOpen(true)}
+      onBoardSettingsClick={() => activeClass.boardId && onOpenBoardSettings(activeClass.boardId)}
       onLeaveClick={() => setConfirmLeave(true)}
     />
   );
@@ -189,14 +188,6 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
         onClose={() => setConfirmLeave(false)}
         onConfirm={leave}
       />
-
-      {activeClass.boardId && (
-        <BoardMembersModal
-          isOpen={membersOpen}
-          onClose={() => setMembersOpen(false)}
-          boardId={activeClass.boardId}
-        />
-      )}
     </div>
   );
 }
