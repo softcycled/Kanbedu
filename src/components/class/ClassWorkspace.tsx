@@ -6,6 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
 import { trackEvent } from "@/lib/analytics";
+import { DropdownMenu, DropdownItem } from "../ui/DropdownMenu";
 
 function PanelSkeleton() {
   return (
@@ -90,13 +91,75 @@ function TabBar({ tabs, tab, setTab, setVisitedTabs }: {
 }
 
 
+// Discord-style board title for the educator's per-group view: the group name
+// doubles as a dropdown trigger (mirrors BoardHeaderMenu on personal boards).
+// Only action is renaming — invite/leave don't apply here, the class-level
+// Settings tab already owns those.
+function GroupTitleMenu({ name, onRename }: { name: string; onRename: (newName: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) { inputRef.current?.focus(); inputRef.current?.select(); }
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        defaultValue={name}
+        aria-label="Group name"
+        onBlur={(e) => { setEditing(false); onRename(e.target.value); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
+        }}
+        className="text-base md:text-xl font-bold tracking-tight text-ink bg-transparent outline-none border-b border-border focus:border-ink/30 min-w-0 w-full max-w-[60vw] md:max-w-xs"
+      />
+    );
+  }
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Group board menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 -mx-1.5 px-1.5 py-0.5 rounded-lg hover:bg-ink/5 transition-colors min-w-0"
+      >
+        <span className="text-base md:text-xl font-bold tracking-tight text-ink truncate">{name}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      <DropdownMenu open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} className="w-[190px]">
+        <DropdownItem
+          onClick={() => { setOpen(false); setEditing(true); }}
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          }
+        >
+          Rename group
+        </DropdownItem>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export default function ClassWorkspace(props: Props) {
   const { classId, name, term, archived, ownerId, currentUserId, joinCode, groups } = props;
   const [tab, setTab] = useState<Tab>("monitor");
   // Track which tabs have ever been opened so we can keep them mounted after
   // first visit — switching back is instant with no re-fetch.
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
-  const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null } | null>(null);
+  const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null; groupId: string } | null>(null);
   // Bumped whenever Roster creates/deletes a group, so Monitor and Integrity
   // (which stay mounted across tab switches) refetch instead of showing stale data.
   const [groupsVersion, setGroupsVersion] = useState(0);
@@ -131,10 +194,37 @@ export default function ClassWorkspace(props: Props) {
   const openGroupBoard = useCallback(
     (g: { id: string; name: string; boardId: string }) => {
       const known = groups.find((gr) => gr.boardId === g.boardId || gr.id === g.id);
-      setOpenBoard({ boardId: g.boardId, name: g.name, secret: known?.realtimeSecret ?? null });
+      setOpenBoard({ boardId: g.boardId, name: g.name, secret: known?.realtimeSecret ?? null, groupId: g.id });
     },
     [groups]
   );
+
+  // Renames the currently-open group from its board-header dropdown. Optimistic
+  // with rollback; also bumps groupsVersion so Monitor/Integrity/Roster show the
+  // new name when the educator switches back to those tabs.
+  const renameOpenGroupBoard = useCallback(async (newName: string) => {
+    setOpenBoard((current) => {
+      if (!current) return current;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === current.name) return current;
+
+      const prevName = current.name;
+      fetch(`/api/classes/${classId}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId: current.groupId, name: trimmed }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("rename failed");
+          setGroupsVersion((v) => v + 1);
+        })
+        .catch(() => {
+          setOpenBoard((c) => (c && c.groupId === current.groupId ? { ...c, name: prevName } : c));
+        });
+
+      return { ...current, name: trimmed };
+    });
+  }, [classId]);
 
   const header = (
     <header className="flex-shrink-0 flex items-center justify-between px-6 md:px-10 pt-6 pb-4 border-b border-border/60">
@@ -161,13 +251,12 @@ export default function ClassWorkspace(props: Props) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M15 18l-6-6 6-6"/></svg>
             <span className="truncate">{name}</span>
           </button>
-          {/* Desktop: full breadcrumb */}
+          {/* Desktop: breadcrumb back to the class; the group name itself lives in
+              the board's own header row below as a dropdown (Rename group). */}
           <div className="hidden md:flex items-center gap-3 min-w-0">
             <Link href="/" className="text-lg font-bold tracking-tight text-ink hover:opacity-70 transition-opacity">kanbedu</Link>
             <span className="text-muted">/</span>
             <button onClick={() => setOpenBoard(null)} className="text-base font-semibold text-ink/60 hover:text-ink transition-colors truncate">{name}</button>
-            <span className="text-muted">/</span>
-            <span className="text-base font-semibold text-ink truncate">{openBoard.name}</span>
           </div>
           <button onClick={() => setOpenBoard(null)} className="hidden md:block text-sm text-muted hover:text-ink transition-colors flex-shrink-0">Back</button>
         </header>
@@ -176,6 +265,7 @@ export default function ClassWorkspace(props: Props) {
           boardName={openBoard.name}
           currentUserId={currentUserId}
           realtimeSecret={openBoard.secret}
+          headerTitle={<GroupTitleMenu name={openBoard.name} onRename={renameOpenGroupBoard} />}
           canViewTrash
         />
       </div>

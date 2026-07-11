@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { ClassSummary } from "../Sidebar";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import { trackEvent } from "@/lib/analytics";
+import { DropdownMenu, DropdownItem } from "../ui/DropdownMenu";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -38,6 +39,8 @@ interface Props {
 export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
   const { push } = useToasts();
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const titleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (activeClass.boardId) trackEvent("board_view", { boardType: "class" });
@@ -50,29 +53,43 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
     if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
   };
 
-  // Single header label: class name (muted) then group name (bold). Wraps onto a
-  // second line and stays compact when the names are long, so it never pushes
-  // the filters or the Leave action off screen.
+  // Header label doubles as a dropdown trigger (matches the personal-board
+  // title menu): class name (muted) then group name (bold), wraps onto a
+  // second line and stays compact when the names are long.
   const breadcrumb = (
-    <div className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-      <span className="text-sm text-muted break-words">{activeClass.name}</span>
-      {activeClass.groupName && (
-        <>
-          <span className="text-sm text-muted/60">/</span>
-          <span className="text-lg font-bold tracking-tight text-ink break-words leading-tight">{activeClass.groupName}</span>
-        </>
-      )}
+    <div className="relative min-w-0">
+      <button
+        ref={titleRef}
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-label="Group board menu"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 -mx-1.5 px-1.5 py-0.5 rounded-lg hover:bg-ink/5 transition-colors text-left"
+      >
+        <span className="text-sm text-muted break-words">{activeClass.name}</span>
+        {activeClass.groupName && (
+          <>
+            <span className="text-sm text-muted/60">/</span>
+            <span className="text-lg font-bold tracking-tight text-ink break-words leading-tight">{activeClass.groupName}</span>
+          </>
+        )}
+      </button>
+      <DropdownMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={titleRef} className="w-[180px]">
+        <DropdownItem
+          danger
+          onClick={() => { setMenuOpen(false); setConfirmLeave(true); }}
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          }
+        >
+          Leave class
+        </DropdownItem>
+      </DropdownMenu>
     </div>
-  );
-
-  const leaveButton = (
-    <button
-      onClick={() => setConfirmLeave(true)}
-      className="text-[11px] text-muted hover:text-red-500 transition-colors flex-shrink-0"
-      title="Leave this class"
-    >
-      Leave class
-    </button>
   );
 
   return (
@@ -88,15 +105,13 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
           currentUserId={currentUserId}
           realtimeSecret={activeClass.realtimeSecret ?? null}
           headerTitle={breadcrumb}
-          headerTrailing={leaveButton}
           onOpenNav={onOpenNav}
         />
       ) : (
         <>
-          {/* No board yet — a slim header carries the same context + Leave action. */}
+          {/* No board yet — a slim header carries the same context; Leave lives in the title's dropdown. */}
           <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-3 border-b border-border/60">
             {breadcrumb}
-            <div className="ml-auto">{leaveButton}</div>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
             <div className="w-12 h-12 rounded-full bg-ink/5 flex items-center justify-center mb-4">
