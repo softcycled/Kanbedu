@@ -8,6 +8,12 @@ export async function POST(req: NextRequest) {
   const session = await getVerifiedSession();
   if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
+  // Admins (and anyone testing/QA-ing the app) shouldn't skew usage numbers
+  // meant to reflect real lecturer/student behavior. Silently no-op instead
+  // of erroring, so the client's fire-and-forget call never has to know.
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isAdmin: true } });
+  if (user?.isAdmin) return NextResponse.json({ ok: true });
+
   // Generous per-user cap: enough for normal use, tight enough to stop a
   // runaway client-side loop from writing unbounded rows.
   const limit = await checkRateLimit(session.userId, "analytics_track", 120, 1);
