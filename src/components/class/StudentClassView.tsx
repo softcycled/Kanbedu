@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { ClassSummary } from "../Sidebar";
 import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
+import { trackEvent } from "@/lib/analytics";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -37,6 +38,10 @@ interface Props {
 export default function StudentClassView({ activeClass, currentUserId, onLeave, onOpenNav }: Props) {
   const { push } = useToasts();
   const [confirmLeave, setConfirmLeave] = useState(false);
+
+  useEffect(() => {
+    if (activeClass.boardId) trackEvent("board_view", { boardType: "class" });
+  }, [activeClass.boardId]);
 
   // ConfirmModal handles its own processing state and closes itself afterward;
   // we only surface a toast if the leave request fails.

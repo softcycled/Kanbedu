@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
+import { trackEvent } from "@/lib/analytics";
 
 function PanelSkeleton() {
   return (
@@ -100,6 +101,14 @@ export default function ClassWorkspace(props: Props) {
   // (which stay mounted across tab switches) refetch instead of showing stale data.
   const [groupsVersion, setGroupsVersion] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    trackEvent("panel_view", { panel: tab, context: "class" });
+  }, [tab]);
+
+  useEffect(() => {
+    if (openBoard) trackEvent("board_view", { boardType: "class" });
+  }, [openBoard?.boardId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

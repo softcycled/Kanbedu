@@ -37,6 +37,7 @@ model User {
   notifications       Notification[]
   pushSubscriptions   PushSubscription[]
   attachments         Attachment[]
+  analyticsEvents     AnalyticsEvent[]
 }
 
 // In-app notification feed. Push delivery is best-effort on top of this.
@@ -375,5 +376,24 @@ model ProWaitlist {
   source    String   @default("pricing") // entry point, in case of future capture surfaces
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+// Lightweight in-house product usage log (device split, feature usage, active
+// users). Self-hosted deliberately: no student/lecturer usage data leaves our
+// own database. `event` is restricted server-side to a known allowlist (see
+// src/lib/analytics.ts); `metadata` stays small and never holds task/board
+// content, only shape (e.g. { panel: "roster" }).
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  device    String? // "desktop" | "mobile", detected client-side
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([event, createdAt])
+  @@index([userId])
   @@index([createdAt])
 }

@@ -29,6 +29,7 @@ import DeleteColumnModal from "./DeleteColumnModal";
 import FilterBar from "./FilterBar";
 import ListView from "./ListView";
 import useBoardResources from "@/hooks/useBoardResources";
+import { trackEvent } from "@/lib/analytics";
 import { useToasts } from "@/components/Toasts";
 import BoardHeaderMenu from "./BoardHeaderMenu";
 
@@ -757,6 +758,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       // Replace the temp task with server-supplied task
       onTasksChange((prev) => prev.map((t) => (t.id === tempId ? newTask : t)));
       broadcastRefresh({ type: "task:create", task: newTask });
+      trackEvent("task_created");
     } catch (error) {
       console.error("Failed to add task:", error);
       onTasksChange((prev) => prev.filter((t) => t.id !== tempId));
@@ -787,6 +789,10 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       onTasksChange((prev) => prev.map((t) => (t.id === id ? updatedTask : t)));
       setSelectedTask((prev) => (prev?.id === id ? updatedTask : prev));
       broadcastRefresh({ type: "task:update", task: updatedTask });
+      if (prevTask && updatedTask.column !== prevTask.column) {
+        trackEvent("task_moved");
+        if (!prevTask.completedAt && updatedTask.completedAt) trackEvent("task_completed");
+      }
       return true;
     } catch (error) {
       console.error("Failed to update task:", error);

@@ -30,10 +30,27 @@ interface EmailStats {
   warning?: boolean;
 }
 
+interface UsageStats {
+  windowDays: number;
+  deviceSplit: { desktop: number; mobile: number; unknown: number };
+  topEvents: { event: string; count: number }[];
+  topPanels: { panel: string; count: number }[];
+  activeUsers: { last24h: number; last7d: number; last30d: number };
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  panel_view: "Panel viewed",
+  board_view: "Board opened",
+  task_created: "Task created",
+  task_moved: "Task moved",
+  task_completed: "Task completed",
+};
+
 export default function AdminPanel() {
   const [reports, setReports] = useState<BugReport[]>([]);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
+  const [usage, setUsage] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
 
@@ -44,15 +61,17 @@ export default function AdminPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [reportsRes, healthRes, emailRes] = await Promise.all([
+      const [reportsRes, healthRes, emailRes, usageRes] = await Promise.all([
         fetch("/api/admin/reports"),
         fetch("/api/admin/health"),
         fetch("/api/admin/email-stats"),
+        fetch("/api/admin/usage"),
       ]);
 
       if (reportsRes.ok) setReports(await reportsRes.json());
       if (healthRes.ok) setHealth(await healthRes.json());
       if (emailRes.ok) setEmailStats(await emailRes.json());
+      if (usageRes.ok) setUsage(await usageRes.json());
     } catch (error) {
       console.error("Failed to fetch admin data:", error);
     } finally {
@@ -169,6 +188,93 @@ export default function AdminPanel() {
           )}
         </div>
       </div>
+
+      {usage && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-ink">Usage <span className="font-normal text-muted">— last {usage.windowDays} days</span></h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Active users */}
+            <div className="bg-card-bg border border-border/60 rounded-2xl p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Active users</p>
+              <div className="flex items-end gap-4">
+                <div>
+                  <p className="text-2xl font-bold text-ink">{usage.activeUsers.last24h}</p>
+                  <p className="text-[10px] text-muted">24h</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-ink">{usage.activeUsers.last7d}</p>
+                  <p className="text-[10px] text-muted">7d</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-ink">{usage.activeUsers.last30d}</p>
+                  <p className="text-[10px] text-muted">30d</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Device split */}
+            <div className="bg-card-bg border border-border/60 rounded-2xl p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Device split</p>
+              {(() => {
+                const total = usage.deviceSplit.desktop + usage.deviceSplit.mobile + usage.deviceSplit.unknown;
+                if (total === 0) return <p className="text-xs text-muted">No data yet.</p>;
+                const pct = (n: number) => Math.round((n / total) * 100);
+                return (
+                  <div className="space-y-2">
+                    {([
+                      ["Desktop", usage.deviceSplit.desktop],
+                      ["Mobile", usage.deviceSplit.mobile],
+                    ] as const).map(([label, n]) => (
+                      <div key={label}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-ink/80">{label}</span>
+                          <span className="text-muted font-mono">{pct(n)}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-column-bg overflow-hidden">
+                          <div className="h-full bg-accent rounded-full" style={{ width: `${pct(n)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Top panels */}
+            <div className="bg-card-bg border border-border/60 rounded-2xl p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Most-viewed panels</p>
+              {usage.topPanels.length === 0 ? (
+                <p className="text-xs text-muted">No data yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {usage.topPanels.slice(0, 5).map((p) => (
+                    <li key={p.panel} className="flex items-center justify-between text-xs">
+                      <span className="text-ink/80 capitalize">{p.panel}</span>
+                      <span className="text-muted font-mono">{p.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {usage.topEvents.length > 0 && (
+            <div className="bg-card-bg border border-border/60 rounded-2xl p-5 shadow-sm mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Top actions</p>
+              <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
+                {usage.topEvents.map((e) => (
+                  <li key={e.event} className="flex items-center justify-between text-xs">
+                    <span className="text-ink/80">{EVENT_LABELS[e.event] ?? e.event}</span>
+                    <span className="text-muted font-mono">{e.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         {filteredReports.length === 0 ? (

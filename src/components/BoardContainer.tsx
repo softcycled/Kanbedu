@@ -27,6 +27,7 @@ import HelpPanel from "./HelpPanel";
 import AdminPanel from "./AdminPanel";
 import { useRealtime } from "@/hooks/useRealtime";
 import { ColumnData } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   initialTasks: Task[];
@@ -70,6 +71,18 @@ export default function BoardContainer({
   const [analyticsRenderKey, setAnalyticsRenderKey] = useState(0);
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
   const [taskTotal, setTaskTotal] = useState(initialTaskTotal ?? initialTasks.length);
+
+  // "board" is the default resting state, not a feature someone chose to
+  // open, so it's excluded here; board opens are tracked separately below.
+  useEffect(() => {
+    if (activePanel === "board") return;
+    trackEvent("panel_view", { panel: activePanel, context: "personal" });
+  }, [activePanel]);
+
+  useEffect(() => {
+    if (activePanel !== "board") return;
+    trackEvent("board_view", { boardType: "personal" });
+  }, [activeBoardId, activePanel]);
 
   // Mobile drawer: the sidebar is a full-screen base layer; the board (main)
   // slides off to the right to reveal it. Open via the header "<" trigger or a
