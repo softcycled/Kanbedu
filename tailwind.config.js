@@ -17,6 +17,7 @@ module.exports = {
         // All tokens use CSS variables so light/dark flip happens in one place (globals.css).
         // Space-separated RGB values enable Tailwind alpha modifiers: bg-ink/80, border/50, etc.
         paper:        "rgb(var(--c-paper)      / <alpha-value>)",
+        canvas:       "rgb(var(--c-canvas)     / <alpha-value>)",
         ink:          "rgb(var(--c-ink)        / <alpha-value>)",
         muted:        "rgb(var(--c-muted)      / <alpha-value>)",
         accent:       "rgb(var(--c-accent)     / <alpha-value>)",

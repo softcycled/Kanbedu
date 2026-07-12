@@ -14,6 +14,7 @@
 /* Values are space-separated R G B so Tailwind alpha modifiers work */
 :root {
   --c-paper:      247 245 240;  /* #F7F5F0 */
+  --c-canvas:     255 255 255;  /* main content area — deliberately lighter than paper (sidebar) for two-tone separation */
   --c-ink:        28  25  23;   /* #1C1917 */
   --c-muted:      120 113 108;  /* #78716C */
   --c-accent:     37  99  235;  /* #2563EB - Kanbedu Blue */
@@ -42,6 +43,7 @@
 /* dark: Tailwind variants inside must also be removed — they key off <html>.dark */
 .force-light {
   --c-paper:      247 245 240;
+  --c-canvas:     255 255 255;
   --c-ink:        28  25  23;
   --c-muted:      120 113 108;
   --c-accent:     37  99  235;
@@ -63,6 +65,7 @@
 /* ── Dark theme tokens ────────────────────────────────────────── */
 .dark {
   --c-paper:      22  20  18;   /* #161412 warm near-black */
+  --c-canvas:     48  45  42;   /* #302D2A — same lighter step as card-bg, main content area vs sidebar */
   --c-ink:        242 239 233;  /* #F2EFE9 warm off-white */
   --c-muted:      168 162 158;  /* #A8A29E lighter muted */
   --c-accent:     59  130 246;  /* #3B82F6 - Brighter blue for dark mode */

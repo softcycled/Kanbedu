@@ -700,7 +700,7 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="hidden md:flex w-56 flex-shrink-0 flex-col bg-paper border-r border-border/70 h-screen sticky top-0">
+      <aside className="hidden md:flex w-60 flex-shrink-0 flex-col bg-paper border-r border-border/70 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 

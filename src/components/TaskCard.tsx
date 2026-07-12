@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect } from "react";
 import { Task } from "@/lib/types";
 import { formatDeadlineLabel } from "@/lib/utils";
+import { getPriorityConfig } from "@/lib/priority";
 import PriorityIcon from "./PriorityIcon";
 import Avatar from "./Avatar";
 
@@ -94,7 +95,7 @@ function TaskCard({ task, onClick }: Props) {
       )}
 
       <div className="flex items-center gap-2 mt-2.5">
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-white">
+        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getPriorityConfig(p).text}`}>
           <PriorityIcon priority={p} className="w-3 h-3" />
           {priorityLabel[p]}
         </span>
