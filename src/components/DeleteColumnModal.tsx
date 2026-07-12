@@ -67,7 +67,7 @@ export default function DeleteColumnModal({
                     ? otherColumns.find((c) => c.id === selectedTargetColumn)?.label
                     : "Delete column and all tasks"}
                 </span>
-                <svg className="ml-auto flex-shrink-0 text-muted transition-transform" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg className={`ml-auto flex-shrink-0 text-muted transition-transform ${dropdownOpen ? "rotate-180" : ""}`} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M2 4l4 4 4-4"/>
                 </svg>
               </button>

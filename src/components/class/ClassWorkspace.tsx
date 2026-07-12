@@ -136,7 +136,7 @@ function GroupTitleMenu({ name, onRename }: { name: string; onRename: (newName: 
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      <DropdownMenu open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} className="w-[190px]">
+      <DropdownMenu open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} className="w-[212px]">
         <DropdownItem
           onClick={() => { setOpen(false); setEditing(true); }}
           icon={

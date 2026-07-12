@@ -165,15 +165,15 @@ export default function ListView({ tasks, columns, boardMembers, onTaskClick, on
               aria-haspopup="menu"
               aria-expanded={columnDropdownOpen}
               className="
-                bg-column-bg rounded-xl px-4 py-2.5
+                bg-column-bg rounded-xl px-3 py-2.5
                 text-sm text-ink
                 border border-transparent hover:border-border
                 transition-colors cursor-pointer text-left
                 flex items-center gap-2 min-w-max
               "
             >
-              <span className="truncate text-xs">{columns.find((c) => c.id === newColumn)?.label ?? "Select"}</span>
-              <svg className="flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <span className="truncate">{columns.find((c) => c.id === newColumn)?.label ?? "Select"}</span>
+              <svg className={`ml-auto flex-shrink-0 text-muted transition-transform ${columnDropdownOpen ? "rotate-180" : ""}`} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M2 4l4 4 4-4"/>
               </svg>
             </button>

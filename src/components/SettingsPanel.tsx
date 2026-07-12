@@ -572,7 +572,7 @@ export default function SettingsPanel({
                         disabled={currentUserRole !== "owner"}
                         aria-haspopup="menu"
                         aria-expanded={transferDropdownOpen}
-                        className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
+                        className="w-full bg-column-bg rounded-xl px-3 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
                       >
                         {transferTarget ? (
                           (() => {
@@ -587,11 +587,11 @@ export default function SettingsPanel({
                             ) : <span className="text-muted">Select member</span>;
                           })()
                         ) : <span className="text-muted">Select member</span>}
-                        <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
+                        <svg className={`ml-auto flex-shrink-0 text-muted transition-transform ${transferDropdownOpen ? "rotate-180" : ""}`} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
                       </button>
                       <DropdownMenu open={transferDropdownOpen} onClose={() => setTransferDropdownOpen(false)} anchorRef={transferDropdownTriggerRef} className="w-full">
                         {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
-                          <p className="px-2.5 py-2 text-xs text-muted">No other members</p>
+                          <p className="px-2.5 py-4 text-center text-xs text-muted">No other members</p>
                         ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
                           <DropdownItem
                             key={m.id}
@@ -635,7 +635,7 @@ export default function SettingsPanel({
                         disabled={currentUserRole !== "owner"}
                         aria-haspopup="menu"
                         aria-expanded={removeDropdownOpen}
-                        className="w-full bg-column-bg rounded-xl px-3 py-2 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
+                        className="w-full bg-column-bg rounded-xl px-3 py-2.5 text-sm text-ink border border-transparent hover:border-border transition-colors cursor-pointer text-left flex items-center gap-2"
                       >
                         {removeTarget ? (
                           (() => {
@@ -650,11 +650,11 @@ export default function SettingsPanel({
                             ) : <span className="text-muted">Select member</span>;
                           })()
                         ) : <span className="text-muted">Select member</span>}
-                        <svg className="ml-auto flex-shrink-0 text-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
+                        <svg className={`ml-auto flex-shrink-0 text-muted transition-transform ${removeDropdownOpen ? "rotate-180" : ""}`} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4"/></svg>
                       </button>
                       <DropdownMenu open={removeDropdownOpen} onClose={() => setRemoveDropdownOpen(false)} anchorRef={removeDropdownTriggerRef} className="w-full">
                         {members.filter((m) => m.role !== "owner" && m.id !== currentUserId).length === 0 ? (
-                          <p className="px-2.5 py-2 text-xs text-muted">No other members</p>
+                          <p className="px-2.5 py-4 text-center text-xs text-muted">No other members</p>
                         ) : members.filter((m) => m.role !== "owner" && m.id !== currentUserId).map((m) => (
                           <DropdownItem
                             key={m.id}
