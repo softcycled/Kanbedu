@@ -61,16 +61,6 @@ interface Props {
   onMobileOpenChange: (open: boolean) => void;
 }
 
-function IconBarChart() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="8" width="3" height="7" rx="0.5" />
-      <rect x="6" y="4" width="3" height="11" rx="0.5" />
-      <rect x="11" y="1" width="3" height="14" rx="0.5" />
-    </svg>
-  );
-}
-
 function IconSettings() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -421,11 +411,10 @@ export default function Sidebar({
     }
   };
 
-  // Board settings ("Manage") now lives in the board-name dropdown in the board
-  // header (see BoardHeaderMenu), so it is intentionally not a footer nav item.
-  // "Settings" here opens the profile/account panel.
-  const desktopNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
-    { id: "analytics", label: "Analytics", icon: <IconBarChart /> },
+  // Board settings ("Manage") and Analytics now live in the board-name dropdown
+  // in the board header (see BoardHeaderMenu), so they are intentionally not
+  // footer nav items. "Settings" here opens the profile/account panel.
+  const footerNavItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
     { id: "profile", label: "Settings", icon: <IconSettings /> },
     ...(isAdmin ? [{ id: "admin" as Panel, label: "Admin", icon: <IconShield /> }] : []),
     { id: "help", label: "Help", icon: <IconHelp /> },
@@ -571,7 +560,7 @@ export default function Sidebar({
       </div>
 
       <div className="py-3 border-t border-border/60 px-3 space-y-0.5">
-        {desktopNavItems.map((item) => (
+        {footerNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => { onPanelChange(item.id); setMobileOpen(false); }}

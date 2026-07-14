@@ -54,13 +54,15 @@ interface Props {
   // owners always; class group boards only for educators/TAs.
   canViewTrash?: boolean;
   // When provided (personal boards only), the board-name title becomes a
-  // dropdown menu (invite / settings / leave). "Board settings" calls this to
-  // open the settings panel. Class boards pass headerTitle instead, so the menu
-  // never renders there.
+  // dropdown menu (invite / settings / analytics / leave). "Board settings"
+  // calls this to open the settings panel. Class boards pass headerTitle
+  // instead, so the menu never renders there.
   onOpenSettings?: () => void;
+  // Opens the analytics panel for this board, from the board-name dropdown.
+  onOpenAnalytics?: () => void;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false, onOpenSettings }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false, onOpenSettings, onOpenAnalytics }: Props) {
   const [trashOpen, setTrashOpen] = useState(false);
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
@@ -984,7 +986,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         <div className="flex-1 min-w-0">
           {headerTitle ?? (
             onOpenSettings ? (
-              <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} variant="mobile" />
+              <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} onOpenAnalytics={onOpenAnalytics} variant="mobile" />
             ) : (
               <h1 className="text-base font-bold tracking-tight text-ink truncate">{boardName || "Board"}</h1>
             )
@@ -1071,7 +1073,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       <div className="hidden md:flex flex-shrink-0 items-center gap-4 px-10 pt-6 pb-5 border-b border-border/60">
         {headerTitle ?? (
           onOpenSettings ? (
-            <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} variant="desktop" />
+            <BoardHeaderMenu boardId={boardId} boardName={boardName ?? ""} currentUserId={currentUserId} onOpenSettings={onOpenSettings} onOpenAnalytics={onOpenAnalytics} variant="desktop" />
           ) : (
             <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{boardName || "Board"}</h1>
           )

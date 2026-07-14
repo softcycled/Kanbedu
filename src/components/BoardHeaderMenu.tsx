@@ -11,6 +11,7 @@ interface Props {
   boardName: string;
   currentUserId?: string;
   onOpenSettings: () => void;
+  onOpenAnalytics?: () => void;
   variant?: "desktop" | "mobile";
 }
 
@@ -18,7 +19,7 @@ interface Props {
 // the quick actions (invite, full settings, leave). Only rendered for personal
 // boards; class group boards pass their own headerTitle to <Board>, so this
 // never appears there. Invite/leave logic mirrors SettingsPanel exactly.
-export default function BoardHeaderMenu({ boardId, boardName, currentUserId, onOpenSettings, variant = "desktop" }: Props) {
+export default function BoardHeaderMenu({ boardId, boardName, currentUserId, onOpenSettings, onOpenAnalytics, variant = "desktop" }: Props) {
   const router = useRouter();
   const { members, setMembersForBoard } = useBoardResources(boardId);
   const [open, setOpen] = useState(false);
@@ -109,6 +110,20 @@ export default function BoardHeaderMenu({ boardId, boardName, currentUserId, onO
         >
           Board settings
         </DropdownItem>
+        {onOpenAnalytics && (
+          <DropdownItem
+            onClick={() => { setOpen(false); onOpenAnalytics(); }}
+            icon={
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="8" width="3" height="7" rx="0.5" />
+                <rect x="6" y="4" width="3" height="11" rx="0.5" />
+                <rect x="11" y="1" width="3" height="14" rx="0.5" />
+              </svg>
+            }
+          >
+            Analytics
+          </DropdownItem>
+        )}
         {canLeave && (
           <>
             <DropdownDivider />

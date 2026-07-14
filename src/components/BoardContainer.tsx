@@ -577,6 +577,7 @@ export default function BoardContainer({
                 currentUserId={currentUserId}
                 onOpenNav={() => setNavOpen(true)}
                 onOpenSettings={() => { setPendingClassBoardId(null); setActivePanel("settings"); }}
+                onOpenAnalytics={() => handlePanelChange("analytics")}
                 canViewTrash
               />
             </div>
