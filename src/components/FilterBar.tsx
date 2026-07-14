@@ -112,7 +112,7 @@ function FilterBar({
           selectedTags.includes(t.id),
           () => toggleSelection(selectedTags, t.id, setSelectedTags),
           t.name,
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
+          <div className="w-[11px] h-[11px] rounded-full" style={{ backgroundColor: t.color }} />
         )
       )}
     </>

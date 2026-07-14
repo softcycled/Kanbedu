@@ -200,7 +200,7 @@ export default function ColumnHeader({
                 <DropdownItem
                   key={p.name}
                   selected={color === p.name}
-                  icon={<span className={`w-3 h-3 rounded-full flex-shrink-0 ${p.dot}`} />}
+                  icon={<span className={`inline-block w-[11px] h-[11px] rounded-full flex-shrink-0 ${p.dot}`} />}
                   onClick={() => pickColor(color === p.name ? null : p.name)}
                 >
                   <span className="capitalize">{p.name}</span>

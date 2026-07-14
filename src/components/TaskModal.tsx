@@ -1036,7 +1036,7 @@ export default function TaskModal({
               <DropdownItem
                 key={c.id}
                 selected={c.id === columnId}
-                icon={<span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
+                icon={<span className={`inline-block w-[7px] h-[7px] rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
                 onClick={() => {
                   userHasEdited.current = true;
                   setColumnId(c.id);
@@ -1203,7 +1203,7 @@ export default function TaskModal({
                           isSelected ? "bg-ink/5 text-ink font-medium" : "text-ink/80 hover:text-ink hover:bg-ink/5"
                         }`}
                       >
-                        <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <span className="w-[9px] h-[9px] flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
                         <span className="truncate flex-1">{tag.name}</span>
                         <div className="ml-auto flex items-center gap-1">
                           {isSelected && (
@@ -1268,7 +1268,7 @@ export default function TaskModal({
                 {LABEL_PALETTE.map((p) => (
                   <DropdownItem
                     key={p.id}
-                    icon={<span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />}
+                    icon={<span className="inline-block w-[9px] h-[9px] rounded-full" style={{ backgroundColor: p.hex }} />}
                     onClick={() => handleCreateTagWithColor(p.hex)}
                   >
                     {p.name}
@@ -1601,7 +1601,7 @@ export default function TaskModal({
                           <DropdownItem
                             key={c.id}
                             selected={c.id === columnId}
-                            icon={<span className={`w-2 h-2 rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
+                            icon={<span className={`inline-block w-[7px] h-[7px] rounded-full flex-shrink-0 ${getColumnDot(c.color, columns.indexOf(c))}`} />}
                             onClick={() => {
                               userHasEdited.current = true;
                               setColumnId(c.id);
@@ -1788,7 +1788,7 @@ export default function TaskModal({
                                     isSelected ? "bg-ink/5 text-ink font-medium" : "text-ink/80 hover:text-ink hover:bg-ink/5"
                                   }`}
                                 >
-                                  <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                                  <span className="w-[9px] h-[9px] flex-shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
                                   <span className="truncate flex-1">{tag.name}</span>
                                   <div className="ml-auto flex items-center gap-1">
                                     {isSelected && (
@@ -1853,7 +1853,7 @@ export default function TaskModal({
                           {LABEL_PALETTE.map((p) => (
                             <DropdownItem
                               key={p.id}
-                              icon={<span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />}
+                              icon={<span className="inline-block w-[9px] h-[9px] rounded-full" style={{ backgroundColor: p.hex }} />}
                               onClick={() => handleCreateTagWithColor(p.hex)}
                             >
                               {p.name}
