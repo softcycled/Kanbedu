@@ -113,6 +113,57 @@ export default function SettingsPanel({
     setEditingName(false);
   }, [board?.id, board?.name]);
 
+  // Public view state is local to this panel — it isn't shown anywhere else
+  // in the app, so there's no need to thread it through the parent's boards
+  // array the way name changes are.
+  const [publicViewEnabled, setPublicViewEnabled] = useState(board?.publicViewEnabled ?? false);
+  const [publicViewToken, setPublicViewToken] = useState(board?.publicViewToken ?? "");
+  const [publicViewBusy, setPublicViewBusy] = useState(false);
+  const [copiedPublicLink, setCopiedPublicLink] = useState(false);
+  const [regeneratingLink, setRegeneratingLink] = useState(false);
+
+  useEffect(() => {
+    setPublicViewEnabled(board?.publicViewEnabled ?? false);
+    setPublicViewToken(board?.publicViewToken ?? "");
+  }, [board?.id, board?.publicViewEnabled, board?.publicViewToken]);
+
+  const togglePublicView = async (enabled: boolean) => {
+    if (!board) return;
+    setPublicViewBusy(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/public-view`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setPublicViewEnabled(updated.publicViewEnabled);
+      setPublicViewToken(updated.publicViewToken);
+    } finally {
+      setPublicViewBusy(false);
+    }
+  };
+
+  const copyPublicViewLink = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/preview/${publicViewToken}`);
+    setCopiedPublicLink(true);
+    setTimeout(() => setCopiedPublicLink(false), 2000);
+  };
+
+  const regeneratePublicViewLink = async () => {
+    if (!board) return;
+    setRegeneratingLink(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/public-view/regenerate`, { method: "POST" });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setPublicViewToken(updated.publicViewToken);
+    } finally {
+      setRegeneratingLink(false);
+    }
+  };
+
   // Members are provided via shared `useBoardResources` hook; no local fetch needed.
 
   const saveName = async () => {
@@ -513,6 +564,61 @@ export default function SettingsPanel({
                 </button>
               </div>
             </section>
+
+            {/* Public view */}
+            {currentUserRole === "owner" && (
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Public View</h4>
+              <div className="p-4 bg-card-bg border border-border rounded-xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">Public view link</p>
+                    <p className="text-xs text-muted mt-0.5">Anyone with the link can view this board in read-only preview mode. No login required.</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={publicViewEnabled}
+                    onClick={() => togglePublicView(!publicViewEnabled)}
+                    disabled={publicViewBusy}
+                    className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                      publicViewEnabled ? "bg-primary" : "bg-ink/15 dark:bg-ink/30"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 rounded-full shadow transform transition-transform duration-200 bg-paper ${
+                        publicViewEnabled ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {publicViewEnabled && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      readOnly
+                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/preview/${publicViewToken}`}
+                      className="flex-1 min-w-0 text-xs text-muted bg-ink/5 border border-border rounded-lg px-3 py-2 truncate"
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <button
+                      onClick={copyPublicViewLink}
+                      className="flex-shrink-0 px-3 py-2 rounded-lg bg-primary text-on-primary text-xs font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      {copiedPublicLink ? "Copied!" : "Copy"}
+                    </button>
+                    <button
+                      onClick={regeneratePublicViewLink}
+                      disabled={regeneratingLink}
+                      title="Invalidate the current link and generate a new one"
+                      className="flex-shrink-0 px-3 py-2 rounded-lg border border-border text-ink text-xs font-medium hover:bg-ink/5 transition-colors disabled:opacity-50"
+                    >
+                      {regeneratingLink ? "…" : "Regenerate"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+            )}
 
             {/* Members */}
             <section>

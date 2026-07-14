@@ -44,6 +44,10 @@ export const updateBoardSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(100, "Name is too long.").optional(),
 });
 
+export const setPublicViewSchema = z.object({
+  enabled: z.boolean(),
+});
+
 export const reorderBoardsSchema = z.object({
   ids: z.array(z.string().min(1)),
 });

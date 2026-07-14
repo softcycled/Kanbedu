@@ -4,6 +4,8 @@ export interface Board {
   order: number;
   createdAt: string | Date;
   realtimeSecret?: string;
+  publicViewEnabled?: boolean;
+  publicViewToken?: string;
 }
 
 export interface ColumnData {

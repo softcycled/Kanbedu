@@ -83,16 +83,18 @@ model EmailVerification {
 }
 
 model Board {
-  id             String        @id @default(cuid())
-  name           String
-  order          Int           @default(0)
-  createdAt      DateTime      @default(now())
-  realtimeSecret String        @unique @default(cuid())
-  invites        BoardInvite[]
-  members        BoardMember[]
-  columns        Column[]
-  tags           Tag[]
-  group          Group?
+  id                String        @id @default(cuid())
+  name              String
+  order             Int           @default(0)
+  createdAt         DateTime      @default(now())
+  realtimeSecret    String        @unique @default(cuid())
+  publicViewEnabled Boolean       @default(false)
+  publicViewToken   String        @unique @default(cuid())
+  invites           BoardInvite[]
+  members           BoardMember[]
+  columns           Column[]
+  tags              Tag[]
+  group             Group?
 }
 
 model BoardMember {
