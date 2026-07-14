@@ -107,6 +107,15 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   // task's own column is the destination — we need this to revert on failure.
   const dragOriginRef = useRef<{ column: string; order: number } | null>(null);
 
+  // Per-column in-flight tracker for color updates. Without this, rapidly
+  // picking two colors in a row fires two independent PATCH requests, and
+  // whichever response lands last wins — on a real network the earlier pick
+  // can resolve after the later one and silently overwrite it, both in the UI
+  // and in the DB. Coalescing to "one in-flight request per column, latest
+  // pick queued behind it" guarantees the last color the user picked is the
+  // one that's ultimately persisted.
+  const colorRequestsRef = useRef<Map<string, { inFlight: boolean; queuedColor: string | null; hasQueued: boolean; prevColor: string | null }>>(new Map());
+
   const toasts = useToasts();
 
   const sensors = useSensors(
@@ -270,10 +279,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
   }, [columns, broadcastRefresh, toasts]);
 
-  const handleSetColumnColor = useCallback(async (columnId: string, color: string | null) => {
-    const prev = columns.find((c) => c.id === columnId);
-    // Optimistic: apply the color immediately, roll back on failure.
-    onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? { ...c, color } : c)));
+  // Sends one color PATCH for a column and, once it resolves, either sends the
+  // next queued pick (if the user picked again while this was in flight) or
+  // clears the in-flight flag. Only rolls back on failure if nothing newer is
+  // queued — a newer pick superseding a failed older one shouldn't be undone.
+  const runColorUpdate = useCallback(async (columnId: string, color: string | null) => {
+    const state = colorRequestsRef.current.get(columnId)!;
     try {
       const res = await fetch(`/api/columns/${columnId}`, {
         method: "PATCH",
@@ -286,10 +297,36 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       broadcastRefresh();
     } catch (error) {
       console.error("Failed to set column color:", error);
-      if (prev) onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? prev : c)));
-      toasts.push({ title: "Could not update color", description: "Please try again." });
+      if (!state.hasQueued) {
+        const prevColor = state.prevColor;
+        onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? { ...c, color: prevColor } : c)));
+        toasts.push({ title: "Could not update color", description: "Please try again." });
+      }
+    } finally {
+      if (state.hasQueued) {
+        const next = state.queuedColor;
+        state.hasQueued = false;
+        runColorUpdate(columnId, next);
+      } else {
+        state.inFlight = false;
+      }
     }
-  }, [columns, onColumnsChange, broadcastRefresh, toasts]);
+  }, [onColumnsChange, broadcastRefresh, toasts]);
+
+  const handleSetColumnColor = useCallback((columnId: string, color: string | null) => {
+    // Optimistic: apply the color immediately regardless of any in-flight request.
+    onColumnsChange((cols) => cols.map((c) => (c.id === columnId ? { ...c, color } : c)));
+
+    const existing = colorRequestsRef.current.get(columnId);
+    if (existing?.inFlight) {
+      existing.queuedColor = color;
+      existing.hasQueued = true;
+      return;
+    }
+    const prevColor = columns.find((c) => c.id === columnId)?.color ?? null;
+    colorRequestsRef.current.set(columnId, { inFlight: true, queuedColor: null, hasQueued: false, prevColor });
+    runColorUpdate(columnId, color);
+  }, [columns, onColumnsChange, runColorUpdate]);
 
   const handleDeleteColumnClick = useCallback((columnId: string) => {
     const columnData = columns.find((c) => c.id === columnId);
