@@ -64,6 +64,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       select: { id: true, column: true },
     });
 
+    // task -> board, so contributions are attributed to the board they actually
+    // happened on. Without this, a student's historical words/comments follow
+    // them to a new group after a Roster reassignment, and the old group
+    // silently loses credit for the work they did before the move.
     const taskToBoardId = new Map<string, string>();
     for (const t of tasks) {
       const bId = colToBoardId.get(t.column);
@@ -94,7 +98,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     // 90-day cutoff on description versions matches the integrity route and
     // prevents runaway memory on large classes with long edit histories.
     const versionCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-    const [descVersions, comments] = await Promise.all([
+    const [descVersions, comments, trimmedTaskRows] = await Promise.all([
       prisma.taskDescriptionVersion.findMany({
         where: { taskId: { in: taskIds }, createdAt: { gte: versionCutoff } },
         select: { taskId: true, userId: true, content: true, createdAt: true },
@@ -104,7 +108,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         where: { taskId: { in: taskIds } },
         select: { taskId: true, author: true, userId: true, content: true },
       }),
+      // Tasks with description history older than the cutoff, so the earliest
+      // in-window version isn't mistaken for the description's true starting
+      // point — a task that's been open longer than 90 days would otherwise
+      // have its whole pre-existing content credited to whoever saved it next.
+      prisma.taskDescriptionVersion.findMany({
+        where: { taskId: { in: taskIds }, createdAt: { lt: versionCutoff } },
+        select: { taskId: true },
+        distinct: ["taskId"],
+      }),
     ]);
+    const trimmedTaskIds = new Set(trimmedTaskRows.map((r) => r.taskId));
 
     // --- Description contributions ---
     // Group versions by taskId (already sorted by taskId+createdAt from query)
@@ -115,47 +129,69 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       versionsByTask.set(v.taskId, arr);
     }
 
-    // userId -> { wordsAdded, edits }
+    // "boardId:userId" -> { wordsAdded, edits }, scoped per board so a
+    // reassigned student's totals stay with the group they actually earned
+    // them on instead of following them to wherever they ended up.
     const descStats = new Map<string, { wordsAdded: number; edits: number }>();
-    for (const [, versions] of versionsByTask) {
+    for (const [taskId, versions] of versionsByTask) {
+      const boardId = taskToBoardId.get(taskId);
+      if (!boardId) continue;
       for (let i = 0; i < versions.length; i++) {
         const cur = versions[i];
-        const prevWords = i > 0 ? wordCount(versions[i - 1].content) : 0;
+        // A trimmed task's word count immediately before our earliest visible
+        // version is unknown, so its delta can't be trusted — count the edit,
+        // not the words.
+        const prevWords = i > 0 ? wordCount(versions[i - 1].content) : trimmedTaskIds.has(taskId) ? wordCount(cur.content) : 0;
         const delta = wordCount(cur.content) - prevWords;
-        const s = descStats.get(cur.userId) ?? { wordsAdded: 0, edits: 0 };
+        const key = `${boardId}:${cur.userId}`;
+        const s = descStats.get(key) ?? { wordsAdded: 0, edits: 0 };
         s.edits += 1;
         if (delta > 0) s.wordsAdded += delta;
-        descStats.set(cur.userId, s);
+        descStats.set(key, s);
       }
     }
 
     // --- Comment contributions ---
     // Comments store the author string baked in at write time. Map every stable
     // identifier for each user so name changes break as few lookups as possible.
-    // Full fix requires adding userId to the Comment model (migration needed).
+    // Only comments predating the userId column (added 2026-06-27) need this
+    // fallback. If two members share the exact same display name, drop the
+    // name from the map rather than guessing which one wrote it.
     const authorToUserId = new Map<string, string>();
+    const ambiguousNames = new Set<string>();
     for (const g of groups) {
       for (const m of g.board.members) {
         const { id: uid, handle, name, email } = m.user;
         if (handle) authorToUserId.set(`@${handle}`, uid);
-        if (name && name.trim()) authorToUserId.set(name.trim(), uid);
+        if (name && name.trim()) {
+          const key = name.trim();
+          if (authorToUserId.has(key) && authorToUserId.get(key) !== uid) {
+            ambiguousNames.add(key);
+          } else {
+            authorToUserId.set(key, uid);
+          }
+        }
         if (email) authorToUserId.set(email, uid);
         const override = nameOverrides.get(uid);
         if (override) authorToUserId.set(override, uid);
       }
     }
+    for (const key of ambiguousNames) authorToUserId.delete(key);
 
-    // userId -> { count, words }
+    // "boardId:userId" -> { count, words }
     const commentStats = new Map<string, { count: number; words: number }>();
     for (const c of comments) {
+      const boardId = taskToBoardId.get(c.taskId);
+      if (!boardId) continue;
       // Use stored userId when available (new comments); fall back to author
       // string matching for comments posted before the userId migration.
       const uid = c.userId ?? authorToUserId.get(c.author);
       if (!uid) continue;
-      const s = commentStats.get(uid) ?? { count: 0, words: 0 };
+      const key = `${boardId}:${uid}`;
+      const s = commentStats.get(key) ?? { count: 0, words: 0 };
       s.count += 1;
       s.words += wordCount(c.content);
-      commentStats.set(uid, s);
+      commentStats.set(key, s);
     }
 
     // --- Assemble result ---
@@ -166,8 +202,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       members: g.board.members.filter((m) => !nonStudentIds.has(m.user.id)).map((m) => {
         const uid = m.user.id;
         const displayName = nameOverrides.get(uid) || m.user.name || (m.user.handle ? `@${m.user.handle}` : "Unknown");
-        const desc = descStats.get(uid) ?? { wordsAdded: 0, edits: 0 };
-        const cmts = commentStats.get(uid) ?? { count: 0, words: 0 };
+        const key = `${g.boardId}:${uid}`;
+        const desc = descStats.get(key) ?? { wordsAdded: 0, edits: 0 };
+        const cmts = commentStats.get(key) ?? { count: 0, words: 0 };
         return {
           userId: uid,
           name: displayName,
