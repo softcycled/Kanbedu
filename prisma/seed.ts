@@ -1189,8 +1189,85 @@ async function seedDemoClass(userMap: Map<string, string>, ownerId: string) {
     },
   });
 
-  type GTask = { title: string; col: 0 | 1 | 2; assignee?: string; priority?: string; deadline?: Date | null; stale?: boolean };
-  async function makeGroup(name: string, order: number, students: string[], tasks: GTask[]) {
+  // Journey-based task def for class group boards. `journey` is the ordered list
+  // of (column, days spent there) the task walked through; the last entry is its
+  // current column. Column-skip, speed-run, and cycle time are all derived from
+  // this instead of being hand-set, and it writes real TaskColumnHistory rows —
+  // without those, every Done task in the Integrity panel looks like it skipped
+  // every column, since "no history" and "skipped every column" are indistinguishable.
+  type ClassTask = {
+    title: string;
+    assignee?: string;
+    priority?: string;
+    deadline?: Date | null;
+    journey: Array<{ col: 0 | 1 | 2; days: number }>;
+    // Name of the student who actually moved/completed this task, when it isn't
+    // the assignee — writes movedByNonAssignee + a TaskActivity row so the
+    // Integrity panel can attribute "moved by @X".
+    movedBy?: string;
+  };
+
+  async function writeClassGroupTasks(tasks: ClassTask[], cols: { id: string }[], userMap: Map<string, string>) {
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      const totalDays = t.journey.reduce((sum, j) => sum + j.days, 0);
+      const createdAt = daysAgo(totalDays);
+      let cursor = new Date(createdAt);
+      for (let j = 0; j < t.journey.length - 1; j++) {
+        cursor = new Date(cursor.getTime() + t.journey[j].days * 86_400_000);
+      }
+      const colUpdatedAt = new Date(cursor);
+      const lastCol = t.journey[t.journey.length - 1].col;
+      const isDone = lastCol === 2;
+
+      const task = await prisma.task.create({
+        data: {
+          title: t.title,
+          description: "",
+          column: cols[lastCol].id,
+          order: i,
+          priority: t.priority ?? "medium",
+          assigneeId: t.assignee ? userMap.get(t.assignee) ?? null : null,
+          deadline: t.deadline ?? null,
+          createdAt,
+          updatedAt: colUpdatedAt,
+          completedAt: isDone ? colUpdatedAt : null,
+          columnUpdatedAt: colUpdatedAt,
+          movedByNonAssignee: !!t.movedBy,
+        },
+      });
+
+      let histCursor = new Date(createdAt);
+      for (let j = 0; j < t.journey.length; j++) {
+        const step = t.journey[j];
+        const enteredAt = new Date(histCursor);
+        const isLast = j === t.journey.length - 1;
+        const exitedAt = isLast ? null : new Date(histCursor.getTime() + step.days * 86_400_000);
+        await prisma.taskColumnHistory.create({
+          data: { taskId: task.id, columnId: cols[step.col].id, enteredAt, exitedAt },
+        });
+        if (!isLast) histCursor = exitedAt!;
+      }
+
+      if (t.movedBy) {
+        const moverId = userMap.get(t.movedBy);
+        if (moverId) {
+          const colLabel = ["To Do", "In Progress", "Done"][lastCol];
+          await prisma.taskActivity.create({
+            data: {
+              taskId: task.id,
+              userId: moverId,
+              type: isDone ? "COMPLETE" : "MOVE",
+              content: isDone ? `Completed in ${colLabel}` : `Moved to ${colLabel}`,
+              createdAt: colUpdatedAt,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  async function makeGroup(name: string, order: number, students: string[], tasks: ClassTask[]) {
     const board = await prisma.board.create({ data: { name, order: 100 + order } });
     const cols = await Promise.all([
       prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, boardId: board.id } }),
@@ -1205,45 +1282,38 @@ async function seedDemoClass(userMap: Map<string, string>, ownerId: string) {
       await prisma.boardMember.create({ data: { userId: sid, boardId: board.id, role: "member" } });
       await prisma.classMember.create({ data: { userId: sid, classId: cls.id, role: "student", groupId: group.id } });
     }
-    for (let i = 0; i < tasks.length; i++) {
-      const t = tasks[i];
-      const now = new Date();
-      await prisma.task.create({
-        data: {
-          title: t.title,
-          description: "",
-          column: cols[t.col].id,
-          order: i,
-          priority: t.priority ?? "medium",
-          assigneeId: t.assignee ? userMap.get(t.assignee)! : null,
-          deadline: t.deadline ?? null,
-          createdAt: daysAgo(10),
-          updatedAt: now,
-          completedAt: t.col === 2 ? now : null,
-          columnUpdatedAt: t.stale ? daysAgo(6) : now,
-        },
-      });
-    }
+    await writeClassGroupTasks(tasks, cols, userMap);
     console.log(`  ✓ Group "${name}": ${students.length} students, ${tasks.length} tasks`);
   }
 
-  // On-track group.
+  // On-track group — mostly clean, with one skipped-column task and one task
+  // moved by a teammate instead of its assignee.
   await makeGroup("Team Alpha", 0, ["Bob", "Carol", "Dave"], [
-    { title: "Project proposal", col: 2, assignee: "Bob", priority: "high" },
-    { title: "Database schema", col: 2, assignee: "Carol", priority: "high" },
-    { title: "Build the REST API", col: 1, assignee: "Dave", priority: "high" },
-    { title: "Frontend mockups", col: 1, assignee: "Carol" },
-    { title: "Write unit tests", col: 0, assignee: "Bob" },
-    { title: "Set up CI pipeline", col: 0 },
+    { title: "Project proposal", assignee: "Bob", priority: "high", journey: [{ col: 0, days: 3 }, { col: 1, days: 4 }, { col: 2, days: 3 }] },
+    // Skipped column: jumped To Do → Done, never visited In Progress.
+    { title: "Database schema", assignee: "Carol", priority: "high", journey: [{ col: 0, days: 1 }, { col: 2, days: 2 }] },
+    // Moved by non-assignee: Dave is assigned, Carol actually moved it along.
+    { title: "Build the REST API", assignee: "Dave", priority: "high", journey: [{ col: 0, days: 1 }, { col: 1, days: 3 }], movedBy: "Carol" },
+    { title: "Frontend mockups", assignee: "Carol", journey: [{ col: 0, days: 2 }, { col: 1, days: 2 }] },
+    { title: "Write unit tests", assignee: "Bob", journey: [{ col: 0, days: 1 }] },
+    { title: "Set up CI pipeline", journey: [{ col: 0, days: 3 }] },
   ]);
 
-  // Needs-attention group (a stalled task and two overdue ones).
+  // Needs-attention group — a stalled task, two overdue ones, and one example
+  // each of speed-run, skipped column, and moved-by-non-assignee.
   await makeGroup("Team Beta", 1, ["Jake", "Emma", "Priya"], [
-    { title: "Requirements doc", col: 2, assignee: "Jake", priority: "high" },
-    { title: "Authentication flow", col: 1, assignee: "Emma", priority: "high", stale: true },
-    { title: "Payment integration", col: 1, assignee: "Priya", priority: "urgent", deadline: daysFromNow(-2) },
-    { title: "Landing page", col: 0, assignee: "Jake" },
-    { title: "Deployment", col: 0, priority: "high", deadline: daysFromNow(-1) },
+    // Speed-run: created and marked Done ~10 minutes later (visits every column
+    // on the way, so it's flagged for speed alone, not also as a skip).
+    { title: "Requirements doc", assignee: "Jake", priority: "high", journey: [{ col: 0, days: 0.003 }, { col: 1, days: 0.004 }, { col: 2, days: 2 }] },
+    // Stalled: sitting in In Progress for 6 days with no movement.
+    { title: "Authentication flow", assignee: "Emma", priority: "high", journey: [{ col: 0, days: 4 }, { col: 1, days: 6 }] },
+    { title: "Payment integration", assignee: "Priya", priority: "urgent", deadline: daysFromNow(-2), journey: [{ col: 0, days: 1 }, { col: 1, days: 3 }] },
+    { title: "Landing page", assignee: "Jake", journey: [{ col: 0, days: 2 }] },
+    { title: "Deployment", priority: "high", deadline: daysFromNow(-1), journey: [{ col: 0, days: 1 }] },
+    // Skipped column: jumped To Do → Done, never visited In Progress.
+    { title: "Sprint retrospective notes", assignee: "Priya", journey: [{ col: 0, days: 1 }, { col: 2, days: 3 }] },
+    // Moved by non-assignee: Emma is assigned, Jake actually completed it.
+    { title: "Code review checklist", assignee: "Emma", journey: [{ col: 0, days: 1 }, { col: 1, days: 2 }, { col: 2, days: 1 }], movedBy: "Jake" },
   ]);
 
   // Students still waiting in the lobby (not yet placed in a group). When a real
