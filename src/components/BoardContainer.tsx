@@ -543,7 +543,7 @@ export default function BoardContainer({
       />
 
       <main
-        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-canvas relative z-30 transition-transform duration-300 ease-out ${navOpen ? "translate-x-full md:translate-x-0" : ""}`}
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-paper relative z-30 transition-transform duration-300 ease-out ${navOpen ? "translate-x-full md:translate-x-0" : ""}`}
       >
         {activeClass && (
           <div className="flex-1 overflow-hidden flex flex-col">
