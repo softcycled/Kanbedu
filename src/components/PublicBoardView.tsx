@@ -41,8 +41,11 @@ interface PublicBoardData {
 
 const PRIORITY_LABEL: Record<string, string> = { low: "Low", medium: "Med", high: "High", urgent: "URGENT" };
 
-function PublicTaskCard({ task, onClick }: { task: PublicTask; onClick: () => void }) {
-  const deadlineInfo = formatDeadlineLabel(task.deadline, null);
+function PublicTaskCard({ task, isDone, onClick }: { task: PublicTask; isDone: boolean; onClick: () => void }) {
+  // completedAt is never sent to the public API (see route comment on why), so a
+  // done task has no timestamp to short-circuit formatDeadlineLabel's overdue check.
+  // Use the column's isDone flag instead -- it's already public, unlike completedAt.
+  const deadlineInfo = isDone ? { label: "", severity: "none" as const } : formatDeadlineLabel(task.deadline, null);
   const p = task.priority ?? "medium";
 
   return (
@@ -86,14 +89,14 @@ function PublicTaskCard({ task, onClick }: { task: PublicTask; onClick: () => vo
   );
 }
 
-function PublicTaskDetail({ task, columnLabel, onClose }: { task: PublicTask; columnLabel: string; onClose: () => void }) {
+function PublicTaskDetail({ task, columnLabel, isDone, onClose }: { task: PublicTask; columnLabel: string; isDone: boolean; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const deadlineInfo = formatDeadlineLabel(task.deadline, null);
+  const deadlineInfo = isDone ? { label: "", severity: "none" as const } : formatDeadlineLabel(task.deadline, null);
   const p = task.priority ?? "medium";
 
   return (
@@ -222,9 +225,10 @@ export default function PublicBoardView({ token }: { token: string }) {
     );
   }
 
-  const selectedColumnLabel = selectedTask
-    ? sortedColumns.find((c) => c.id === selectedTask.column)?.label ?? ""
-    : "";
+  const selectedColumn = selectedTask
+    ? sortedColumns.find((c) => c.id === selectedTask.column)
+    : undefined;
+  const selectedColumnLabel = selectedColumn?.label ?? "";
 
   return (
     <div className="min-h-screen bg-paper">
@@ -272,7 +276,7 @@ export default function PublicBoardView({ token }: { token: string }) {
                   <div className="flex-1 rounded-xl bg-column-bg p-2 min-h-[120px]">
                     <div className="flex flex-col gap-3">
                       {tasks.map((task) => (
-                        <PublicTaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+                        <PublicTaskCard key={task.id} task={task} isDone={col.isDone} onClick={() => setSelectedTask(task)} />
                       ))}
                     </div>
                   </div>
@@ -284,7 +288,7 @@ export default function PublicBoardView({ token }: { token: string }) {
       </div>
 
       {selectedTask && (
-        <PublicTaskDetail task={selectedTask} columnLabel={selectedColumnLabel} onClose={() => setSelectedTask(null)} />
+        <PublicTaskDetail task={selectedTask} columnLabel={selectedColumnLabel} isDone={selectedColumn?.isDone ?? false} onClose={() => setSelectedTask(null)} />
       )}
     </div>
   );
