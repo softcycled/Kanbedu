@@ -25,6 +25,7 @@ import ClientErrorBoundary from "./ClientErrorBoundary";
 import ProfilePanel from "./ProfilePanel";
 import HelpPanel from "./HelpPanel";
 import AdminPanel from "./AdminPanel";
+import AnnouncementModal from "./AnnouncementModal";
 import { useRealtime } from "@/hooks/useRealtime";
 import { ColumnData } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
@@ -616,6 +617,7 @@ export default function BoardContainer({
         {activePanel === "admin" && <AdminPanel />}
         {activePanel === "help" && <HelpPanel onClose={() => setActivePanel("board")} />}
       </main>
+      <AnnouncementModal />
     </div>
   );
 }
