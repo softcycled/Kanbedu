@@ -76,7 +76,7 @@ export default async function Home({
   const firstBoard = boards[0];
 
   // Run columns + tasks in parallel — tasks filter by relation instead of prefetching column IDs
-  const taskWhere = { columnRel: { boardId: firstBoard.id } };
+  const taskWhere = { columnRel: { boardId: firstBoard.id }, deletedAt: null };
   const [boardColumns, tasks, taskTotal] = await Promise.all([
     prisma.column.findMany({
       where: { boardId: firstBoard.id },
