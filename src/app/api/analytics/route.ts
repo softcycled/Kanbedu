@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthzDenied } from "@/lib/securityLog";
-import { getBoardNameOverrides } from "@/lib/classNames";
 
 export async function GET(request: NextRequest) {
   const session = await getVerifiedSession();
@@ -28,14 +27,18 @@ export async function GET(request: NextRequest) {
   // Limit history lookback to 90 days — prevents unbounded scans on long-lived boards
   const HISTORY_CUTOFF = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-  // Run columns and tasks in parallel — tasks filter via relation instead of prefetching IDs
-  const [columns, tasks, nameOverrides] = await Promise.all([
+  // Columns and tasks run in parallel. Select is intentionally narrow: this
+  // route only ever powers charts (workload by phase, priority mix, weekly
+  // completion trend, cycle-time/stagnation/deadline aggregates) -- no
+  // per-task title, assignee, or comment data leaves this route anymore, so
+  // none of it is fetched. Cuts a join (comment _count), a relation
+  // (assignees + assigneeUser), and a whole second query (roster name
+  // overrides) that existed only to resolve assignee display names.
+  const [columns, tasks] = await Promise.all([
     prisma.column.findMany({
       where: { boardId },
       orderBy: { order: "asc" },
     }),
-    // Explicit select keeps the payload lean — skips description (up to 50KB
-    // per task) and other fields analytics never reads.
     prisma.task.findMany({
       where: { columnRel: { boardId }, deletedAt: null },
       select: {
@@ -47,31 +50,25 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         completedAt: true,
         deadline: true,
-        movedByNonAssignee: true,
-        _count: { select: { comments: true } },
         columnHistory: {
           where: { enteredAt: { gte: HISTORY_CUTOFF } },
           orderBy: { enteredAt: "asc" },
           select: { columnId: true, enteredAt: true, exitedAt: true },
         },
-        assigneeId: true,
-        assigneeUser: { select: { name: true, handle: true } },
-        assignees: {
-          orderBy: { assignedAt: "asc" },
-          select: { userId: true, user: { select: { name: true, handle: true } } },
-        },
       },
       orderBy: { createdAt: "asc" },
     }),
-    // Class group boards show educator-set roster names in analytics
-    getBoardNameOverrides(boardId),
   ]);
 
   if (columns.length === 0) {
     return NextResponse.json({
       columns: [],
-      tasks: [],
-      summary: { total: 0, completed: 0, inProgress: 0, overdue: 0, avgCycleTimeMs: null },
+      weeklyCompletions: [],
+      priorityMix: [],
+      summary: {
+        total: 0, completed: 0, inProgress: 0, overdue: 0, avgCycleTimeMs: null,
+        stagnantCount: 0, stagnantRate: 0, deadlineAdherence: null, historyTruncated: false,
+      },
     });
   }
 
@@ -171,7 +168,6 @@ export async function GET(request: NextRequest) {
     return {
       id: col.id,
       label: col.label,
-      order: col.order,
       isDone: col.isDone,
       currentTaskCount: currentTasks.length,
       throughput,
@@ -202,66 +198,20 @@ export async function GET(request: NextRequest) {
     isBottleneck: p.id === bottleneckId,
   }));
 
-  // ── Task details ──────────────────────────────────────────────
-  const nonDoneColumnIdSet = new Set(columns.filter((c) => !c.isDone).map((c) => c.id));
-
-  // Resolve display names for a task's full assignee set (roster override →
-  // @handle → name). Falls back to the legacy single assignee for old rows.
-  const getAssigneeNames = (t: (typeof tasks)[number]): string[] => {
-    if (t.assignees.length > 0) {
-      return t.assignees.map(
-        (a) =>
-          nameOverrides.get(a.userId) ??
-          (a.user.handle ? `@${a.user.handle}` : a.user.name || "(unknown)")
-      );
-    }
-    if (t.assigneeId) {
-      return [
-        nameOverrides.get(t.assigneeId) ??
-          (t.assigneeUser?.handle ? `@${t.assigneeUser.handle}` : t.assigneeUser?.name || "(unknown)"),
-      ];
-    }
-    return [];
-  };
-
-  const taskDetails = tasks.map((t) => {
+  // ── Task aggregates ──────────────────────────────────────────
+  // Per-task cycle/phase time, kept as plain values -- never returned
+  // per-task, only the aggregates below (and the weekly/priority
+  // breakdowns further down) go out over the wire. This keeps the response
+  // size bounded by column count + a fixed handful of weeks/priorities
+  // instead of growing linearly with the number of tasks on the board.
+  const taskAggregates = tasks.map((t) => {
     const col = columnMap.get(t.column);
     const isDone = col?.isDone ?? false;
-    // Cycle time: completedAt if available, else null
-    const cycleTimeMs = t.completedAt
-      ? t.completedAt.getTime() - t.createdAt.getTime()
-      : null;
-    // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done tasks
-    // so they never trip the stagnant threshold in per-column cards.
-    const enteredCurrentColumn = getEnteredCurrentColumn(t);
-    const currentPhaseMs = isDone ? 0 : now.getTime() - enteredCurrentColumn.getTime();
-    // Age freezes at completedAt for done tasks so it doesn't keep growing
-    const totalAgeMs = isDone && t.completedAt
-      ? t.completedAt.getTime() - t.createdAt.getTime()
-      : now.getTime() - t.createdAt.getTime();
-
-    // Count distinct non-done columns this task has visited (via history)
-    const visitedColumnCount = new Set(
-      t.columnHistory.map((h) => h.columnId).filter((cid) => nonDoneColumnIdSet.has(cid))
-    ).size;
-
-    return {
-      id: t.id,
-      title: t.title,
-      assignee: getAssigneeNames(t).join(", ") || "(unassigned)",
-      priority: t.priority,
-      columnId: t.column,
-      columnLabel: col?.label ?? t.column,
-      columnIsDone: isDone,
-      createdAt: t.createdAt.toISOString(),
-      completedAt: t.completedAt?.toISOString() ?? null,
-      deadline: t.deadline?.toISOString() ?? null,
-      commentCount: t._count.comments,
-      cycleTimeMs,
-      currentPhaseMs,
-      totalAgeMs,
-      visitedColumnCount,
-    };
+    const cycleTimeMs = t.completedAt ? t.completedAt.getTime() - t.createdAt.getTime() : null;
+    // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done
+    // tasks so they never trip the stagnant threshold.
+    const currentPhaseMs = isDone ? 0 : now.getTime() - getEnteredCurrentColumn(t).getTime();
+    return { priority: t.priority, columnIsDone: isDone, cycleTimeMs, currentPhaseMs };
   });
 
   // ── Summary ───────────────────────────────────────────────────
@@ -274,7 +224,7 @@ export async function GET(request: NextRequest) {
     (t) => t.deadline && endOfDay(t.deadline) < now && !(columnMap.get(t.column)?.isDone)
   ).length;
 
-  const cycleTimes = taskDetails
+  const cycleTimes = taskAggregates
     .filter((t) => t.cycleTimeMs !== null)
     .map((t) => t.cycleTimeMs!);
   const avgCycleTimeMs =
@@ -284,39 +234,8 @@ export async function GET(request: NextRequest) {
 
   // Stagnation: in-progress tasks that haven't moved in 3+ days
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-  const activeTasks = taskDetails.filter((t) => !t.columnIsDone);
+  const activeTasks = taskAggregates.filter((t) => !t.columnIsDone);
   const stagnantCount = activeTasks.filter((t) => t.currentPhaseMs > THREE_DAYS_MS).length;
-
-  // Comment density: avg comments per task
-  const totalComments = tasks.reduce((sum, t) => sum + t._count.comments, 0);
-  const commentDensity = tasks.length > 0 ? totalComments / tasks.length : 0;
-
-  // Integrity check: flag completed tasks that look like last-minute fabrication.
-  // A task is suspicious if it was completed extremely quickly (speed-run) or if it
-  // bypassed intermediate columns without passing through them (column-skipping).
-  const SPEED_RUN_MS = 30 * 60 * 1000; // 30 minutes
-  const totalNonDoneColumns = columns.filter((c) => !c.isDone).length;
-  const taskById = new Map(tasks.map((t) => [t.id, t]));
-  const suspiciousTasks = taskDetails
-    .filter((t) => {
-      const rawTask = taskById.get(t.id);
-      const isMovedByOther = rawTask?.movedByNonAssignee ?? false;
-      return (t.columnIsDone && t.cycleTimeMs !== null) || isMovedByOther;
-    })
-    .map((t) => {
-      const rawTask = taskById.get(t.id)!;
-      return {
-        id: t.id,
-        title: t.title,
-        assignee: t.assignee,
-        cycleTimeMs: t.cycleTimeMs ?? 0,
-        visitedColumnCount: t.visitedColumnCount,
-        isSpeedRun: t.columnIsDone && t.cycleTimeMs !== null && t.cycleTimeMs < SPEED_RUN_MS,
-        isColumnSkip: t.columnIsDone && totalNonDoneColumns > 1 && t.visitedColumnCount < totalNonDoneColumns,
-        isMovedByOther: rawTask.movedByNonAssignee,
-      };
-    })
-    .filter((t) => t.isSpeedRun || t.isColumnSkip || t.isMovedByOther);
 
   // Deadline adherence: completed tasks with a deadline.
   // Use setUTCHours to extend to end-of-UTC-day — consistent regardless of server timezone.
@@ -327,52 +246,64 @@ export async function GET(request: NextRequest) {
     return t.completedAt!.getTime() <= endOfDeadlineDay.getTime();
   }).length;
 
-  // ── Assignee breakdown ────────────────────────────────────────
-  const assigneeMap = new Map<
-    string,
-    { total: number; completed: number; overdue: number; cycleTimes: number[] }
-  >();
-
-  // Distribute each task to every one of its assignees — a shared task counts
-  // toward each member's totals. taskDetails is index-aligned with tasks.
-  tasks.forEach((rawTask, i) => {
-    const t = taskDetails[i];
-    for (const name of getAssigneeNames(rawTask)) {
-      if (!assigneeMap.has(name)) {
-        assigneeMap.set(name, { total: 0, completed: 0, overdue: 0, cycleTimes: [] });
-      }
-      const entry = assigneeMap.get(name)!;
-      entry.total++;
-      if (t.columnIsDone) entry.completed++;
-      if (t.deadline && endOfDay(new Date(t.deadline)) < now && !t.columnIsDone) entry.overdue++;
-      if (t.cycleTimeMs !== null) entry.cycleTimes.push(t.cycleTimeMs);
-    }
-  });
-
-  const assignees = Array.from(assigneeMap.entries())
-    .map(([name, data]) => ({
-      name,
-      total: data.total,
-      completed: data.completed,
-      overdue: data.overdue,
-      avgCycleTimeMs:
-        data.cycleTimes.length > 0
-          ? data.cycleTimes.reduce((a, b) => a + b, 0) / data.cycleTimes.length
-          : null,
-    }))
-    .sort((a, b) => b.total - a.total);
-
   // Detect tasks whose history was silently truncated by HISTORY_CUTOFF: created before
   // the cutoff but have no history entries (their move history was pruned).
   const historyTruncated = tasks.some(
     (t) => t.createdAt < HISTORY_CUTOFF && t.columnHistory.length === 0
   );
 
+  // ── Weekly completions (trend chart) ────────────────────────────
+  // Monday-start buckets, oldest first, ending on the current (still
+  // accumulating) week. Window shrinks to the board's real history (3-10
+  // weeks) instead of always assuming 10, so a brand-new board doesn't show
+  // nine empty weeks before any real data.
+  function startOfWeek(d: Date): Date {
+    const r = new Date(d);
+    const day = r.getUTCDay();
+    r.setUTCDate(r.getUTCDate() + ((day === 0 ? -6 : 1) - day));
+    r.setUTCHours(0, 0, 0, 0);
+    return r;
+  }
+  const thisWeekStart = startOfWeek(now);
+  let earliestCreatedMs = now.getTime();
+  for (const t of tasks) {
+    const ts = t.createdAt.getTime();
+    if (ts < earliestCreatedMs) earliestCreatedMs = ts;
+  }
+  const weeksOfHistory = Math.round((thisWeekStart.getTime() - startOfWeek(new Date(earliestCreatedMs)).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+  const weekCount = Math.min(10, Math.max(3, weeksOfHistory));
+  const weeklyBuckets = Array.from({ length: weekCount }, (_, i) => {
+    const start = new Date(thisWeekStart);
+    start.setUTCDate(start.getUTCDate() - (weekCount - 1 - i) * 7);
+    return { label: start.toLocaleDateString("en-US", { month: "short", day: "numeric" }), start, count: 0, isCurrent: i === weekCount - 1 };
+  });
+  for (const t of tasks) {
+    if (!t.completedAt) continue;
+    const ts = t.completedAt.getTime();
+    for (let i = weeklyBuckets.length - 1; i >= 0; i--) {
+      if (ts >= weeklyBuckets[i].start.getTime()) { weeklyBuckets[i].count++; break; }
+    }
+  }
+  const weeklyCompletions = weeklyBuckets.map(({ label, count, isCurrent }) => ({ label, count, isCurrent }));
+
+  // ── Priority mix (open vs done per priority) ────────────────────
+  const priorityCounts: Record<string, { open: number; done: number }> = {
+    urgent: { open: 0, done: 0 }, high: { open: 0, done: 0 }, medium: { open: 0, done: 0 }, low: { open: 0, done: 0 },
+  };
+  for (const t of taskAggregates) {
+    const bucket = priorityCounts[t.priority];
+    if (!bucket) continue;
+    if (t.columnIsDone) bucket.done++; else bucket.open++;
+  }
+  const priorityMix = (["urgent", "high", "medium", "low"] as const).map((p) => ({
+    priority: p, open: priorityCounts[p].open, done: priorityCounts[p].done, total: priorityCounts[p].open + priorityCounts[p].done,
+  }));
+
   return NextResponse.json(
     {
       columns: phaseStatsWithBottleneck,
-      tasks: taskDetails,
-      assignees,
+      weeklyCompletions,
+      priorityMix,
       summary: {
         total: tasks.length,
         completed,
@@ -381,12 +312,10 @@ export async function GET(request: NextRequest) {
         avgCycleTimeMs,
         stagnantCount,
         stagnantRate: activeTasks.length > 0 ? stagnantCount / activeTasks.length : 0,
-        commentDensity,
         deadlineAdherence:
           completedWithDeadline.length > 0
             ? { onTime, total: completedWithDeadline.length }
             : null,
-        suspiciousTasks,
         historyTruncated,
       },
     },

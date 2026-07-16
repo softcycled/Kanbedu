@@ -308,6 +308,11 @@ export default function BoardContainer({
     setActivePanel(panel);
   }, []);
 
+  // Stable reference so AnalyticsPanel's React.memo isn't defeated by a fresh
+  // inline arrow on every re-render (the board's 3s realtime poll re-renders
+  // this component regardless of which panel is open).
+  const handleCloseAnalytics = useCallback(() => setActivePanel("board"), []);
+
   // A student opened "Board settings" from inside their group board: jump
   // straight to that class board's detail view in Settings.
   const handleOpenClassBoardSettings = useCallback((boardId: string) => {
@@ -587,7 +592,7 @@ export default function BoardContainer({
           <ClientErrorBoundary
             fallback={<div className="flex-1 flex items-center justify-center text-muted text-sm">Failed to load analytics. <button onClick={() => setActivePanel("board")} className="ml-3 text-xs underline">Back</button></div>}
           >
-            <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} onClose={() => setActivePanel("board")} />
+            <AnalyticsPanel key={analyticsRenderKey} boardName={activeBoard?.name ?? ""} boardId={activeBoardId} onClose={handleCloseAnalytics} />
           </ClientErrorBoundary>
         )}
         {activePanel === "settings" && (

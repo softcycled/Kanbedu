@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  Cell, AreaChart, Area,
+} from "recharts";
 import Skeleton from "./Skeleton";
-import { isOverdue as isDeadlineOverdue } from "@/lib/utils";
-import { getPriorityConfig, PRIORITY_ORDER } from "@/lib/priority";
+import { useTheme } from "./ThemeProvider";
 
 interface Props {
   boardName: string;
@@ -16,7 +19,6 @@ interface Props {
 interface PhaseStats {
   id: string;
   label: string;
-  order: number;
   isDone: boolean;
   currentTaskCount: number;
   throughput: number;
@@ -26,47 +28,27 @@ interface PhaseStats {
   isBottleneck: boolean;
 }
 
-interface TaskDetail {
-  id: string;
-  title: string;
-  assignee: string;
-  priority: string;
-  columnId: string;
-  columnLabel: string;
-  columnIsDone: boolean;
-  createdAt: string;
-  completedAt: string | null;
-  deadline: string | null;
-  commentCount: number;
-  cycleTimeMs: number | null;
-  currentPhaseMs: number;
-  totalAgeMs: number;
-  visitedColumnCount: number;
+// Both pre-aggregated server-side (see src/app/api/analytics/route.ts) so the
+// response stays a fixed small size regardless of how many tasks the board
+// has, instead of shipping one JSON object per task just to bucket them
+// client-side.
+interface WeeklyCompletionBucket {
+  label: string;
+  count: number;
+  isCurrent: boolean;
 }
 
-interface SuspiciousTask {
-  id: string;
-  title: string;
-  assignee: string;
-  cycleTimeMs: number;
-  visitedColumnCount: number;
-  isSpeedRun: boolean;
-  isColumnSkip: boolean;
-  isMovedByOther: boolean;
-}
-
-interface AssigneeRow {
-  name: string;
+interface PriorityMixRow {
+  priority: "urgent" | "high" | "medium" | "low";
+  open: number;
+  done: number;
   total: number;
-  completed: number;
-  overdue: number;
-  avgCycleTimeMs: number | null;
 }
 
 interface AnalyticsData {
   columns: PhaseStats[];
-  tasks: TaskDetail[];
-  assignees: AssigneeRow[];
+  weeklyCompletions: WeeklyCompletionBucket[];
+  priorityMix: PriorityMixRow[];
   summary: {
     total: number;
     completed: number;
@@ -75,19 +57,32 @@ interface AnalyticsData {
     avgCycleTimeMs: number | null;
     stagnantCount: number;
     stagnantRate: number;
-    commentDensity: number;
     deadlineAdherence: { onTime: number; total: number } | null;
-    suspiciousTasks: SuspiciousTask[];
     historyTruncated: boolean;
   };
 }
 
-type SortKey = "currentPhaseMs" | "totalAgeMs" | "priority" | "commentCount" | "title" | "assignee";
-type FilterKey = "all" | "active" | "overdue" | "unassigned";
-
 // ── Helpers ───────────────────────────────────────────────────
 
 const MS_DAY = 86_400_000;
+
+// Status colors are theme-invariant, matching the dot/badge colors already
+// used for bottleneck + done states elsewhere in the app.
+const STATUS_GOOD = "#22C55E";
+const STATUS_WARN = "#F97316";
+// Title-case even for urgent -- the shared PRIORITY_CONFIG.urgent.label is
+// "URGENT" (all-caps, deliberate everywhere else it's used, e.g. task cards),
+// but sitting directly next to "High/Med/Low" on a compact chart axis it reads
+// as shouty. This is a display-only override scoped to this chart.
+const PRIORITY_AXIS_LABEL: Record<string, string> = { urgent: "Urgent", high: "High", medium: "Med", low: "Low" };
+
+// Shared legend for the two phase charts -- both color bars the same way
+// (normal / bottleneck / done), so they use one legend definition.
+const PHASE_LEGEND = (accentHex: string) => [
+  { label: "Normal", color: accentHex },
+  { label: "Bottleneck", color: STATUS_WARN },
+  { label: "Done", color: STATUS_GOOD },
+];
 
 function formatDuration(ms: number): string {
   if (ms < 60_000) return "< 1m";
@@ -98,21 +93,12 @@ function formatDuration(ms: number): string {
   return `${Math.round(days)}d`;
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-
-export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
+function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
-  // activity-stats / leaderboard removed to reduce load; keep only core analytics
   const [loading, setLoading] = useState(true);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("priority");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [filter, setFilter] = useState<FilterKey>("all");
   const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -128,57 +114,104 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   }, [boardId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  // Trigger bar animation only after data loads, not on a fixed timeout.
-  // Bars paint at 0% on the first frame, then transition to real widths.
+  // Bars/meters paint at 0 on the first frame, then transition to real values
+  // once data has actually loaded -- not on a fixed timeout.
   useEffect(() => {
     if (loading || !data) return;
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, [loading, data]);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("desc"); }
-  };
+  // Theme-reactive chart chrome. These are resolved to concrete hex (not CSS
+  // vars) because Cell/Area fills are SVG presentation attributes -- safer to
+  // compute the value once than rely on var() resolution inside recharts' SVG.
+  const accentHex = resolvedTheme === "dark" ? "#3B82F6" : "#2563EB";
+  const inkHex = resolvedTheme === "dark" ? "#F2EFE9" : "#1C1917";
+  const mutedHex = resolvedTheme === "dark" ? "#A8A29E" : "#78716C";
+  const borderHex = resolvedTheme === "dark" ? "#464340" : "#E2DED8";
+  const cardBgHex = resolvedTheme === "dark" ? "#302D2A" : "#FDFCFA";
 
-  const filteredTasks = useMemo(() => {
+  const phaseTaskData = useMemo(() => {
     if (!data) return [];
-    const now = Date.now();
-    let list = [...data.tasks];
-    if (filter === "active") list = list.filter((t) => !t.columnIsDone);
-    if (filter === "overdue") list = list.filter((t) => t.deadline && new Date(t.deadline).getTime() < now && !t.columnIsDone);
-    if (filter === "unassigned") list = list.filter((t) => t.assignee === "(unassigned)");
-    list.sort((a, b) => {
-      // Completed tasks sink to the bottom; active tasks float up
-      const doneA = a.columnIsDone ? 1 : 0;
-      const doneB = b.columnIsDone ? 1 : 0;
-      if (doneA !== doneB) return doneA - doneB;
-      // Within each group, apply the active sort key
-      let diff = 0;
-      if (sortKey === "currentPhaseMs") diff = a.currentPhaseMs - b.currentPhaseMs;
-      else if (sortKey === "totalAgeMs") diff = a.totalAgeMs - b.totalAgeMs;
-      else if (sortKey === "priority") diff = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
-      else if (sortKey === "commentCount") diff = a.commentCount - b.commentCount;
-      else if (sortKey === "title") diff = a.title.localeCompare(b.title);
-      else if (sortKey === "assignee") diff = (a.assignee ?? "").toLowerCase().localeCompare((b.assignee ?? "").toLowerCase());
-      if (diff === 0) diff = a.title.localeCompare(b.title); // stable tie-break
-      return sortDir === "asc" ? diff : -diff;
-    });
-    return list;
-  }, [data, filter, sortKey, sortDir]);
+    return data.columns.map((c) => ({
+      id: c.id, name: c.label, tasks: c.currentTaskCount, isDone: c.isDone, isBottleneck: c.isBottleneck,
+      throughput: c.throughput, longestStagnantMs: c.longestStagnantMs, longestStagnantTitle: c.longestStagnantTitle,
+    }));
+  }, [data]);
 
-  const hasAssignees = useMemo(() => data?.tasks.some((t) => t.assignee && t.assignee !== "(unassigned)") ?? false, [data]);
+  const phaseTimeData = useMemo(() => {
+    if (!data) return [];
+    return data.columns
+      .filter((c) => c.avgPhaseTimeMs !== null)
+      .map((c) => ({ id: c.id, name: c.label, days: (c.avgPhaseTimeMs ?? 0) / MS_DAY, raw: c.avgPhaseTimeMs ?? 0, isDone: c.isDone, isBottleneck: c.isBottleneck }));
+  }, [data]);
+
+  // Open vs done per priority, not just a raw count -- "6 urgent tasks" is
+  // trivia, "6 urgent, 4 still open" is something you can act on. Both
+  // pieces are pre-aggregated server-side now -- this just adds the
+  // display-only title-cased label.
+  const priorityMix = useMemo(() => {
+    if (!data) return [];
+    return data.priorityMix.map((p) => ({ ...p, label: PRIORITY_AXIS_LABEL[p.priority] ?? p.priority }));
+  }, [data]);
+
+  const weeklyCompletions = data?.weeklyCompletions ?? [];
+
+  const bottleneckPhase = useMemo(() => phaseTaskData.find((c) => c.isBottleneck) ?? null, [phaseTaskData]);
+
+  // Longest-waiting active task across every non-done column -- the one
+  // thing on this board most worth someone's attention right now.
+  const oldestStagnant = useMemo(() => {
+    if (!data) return null;
+    let max: { title: string; ms: number } | null = null;
+    for (const c of data.columns) {
+      if (c.isDone || c.longestStagnantMs == null || !c.longestStagnantTitle) continue;
+      if (!max || c.longestStagnantMs > max.ms) max = { title: c.longestStagnantTitle, ms: c.longestStagnantMs };
+    }
+    return max;
+  }, [data]);
+
+  // Recharts treats a new object *reference* passed to `tick`/`cursor`/`label`
+  // as a reason to reset animation/label state, not just a value diff. The
+  // board polls every 3s (useRealtime's fallback interval) and re-renders this
+  // panel's ancestor each time, which was recreating these as fresh object
+  // literals every render and made the bar-tip value labels flicker on and
+  // off in sync with the poll. Memoized on the hex strings so the reference
+  // only changes when the theme actually changes.
+  const tickStyle = useMemo(() => ({ fill: mutedHex, fontSize: 11 }), [mutedHex]);
+  const barCursor = useMemo(() => ({ fill: accentHex, fillOpacity: 0.06 }), [accentHex]);
+  const taskCountLabel = useMemo(() => ({ position: "top" as const, style: { fill: inkHex, fontSize: 12, fontWeight: 600 } }), [inkHex]);
+  const phaseTimeLabel = useMemo(() => ({
+    position: "right" as const,
+    dataKey: "raw",
+    formatter: (v: unknown) => formatDuration(Number(v) || 0),
+    style: { fill: inkHex, fontSize: 12, fontWeight: 600 },
+  }), [inkHex]);
+  const areaActiveDot = useMemo(() => ({ r: 6, fill: accentHex, stroke: cardBgHex, strokeWidth: 2 }), [accentHex, cardBgHex]);
+  // Only draws a dot on weeks with an actual completion, or the current
+  // (still-accumulating) week -- a dot on every empty week added noise to an
+  // already-sparse line. Wrapped in useCallback for the same reference-
+  // stability reason as the objects above.
+  const renderCompletionDot = useCallback((props: { cx?: number; cy?: number; payload?: { isCurrent?: boolean; count?: number; label?: string } }) => {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null || !payload) return <></>;
+    if (!payload.isCurrent && !payload.count) return <></>;
+    return <circle key={payload.label} cx={cx} cy={cy} r={4} fill={accentHex} stroke={cardBgHex} strokeWidth={2} />;
+  }, [accentHex, cardBgHex]);
 
   if (loading && !data) {
     return (
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
-        <Skeleton className="h-48 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-60 rounded-xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -196,7 +229,18 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
     );
   }
 
-  const { summary, columns, assignees } = data;
+  const { summary } = data;
+  const deadlineRate = summary.deadlineAdherence ? summary.deadlineAdherence.onTime / summary.deadlineAdherence.total : null;
+  const stagnantColors =
+    summary.stagnantRate > 0.3 ? { text: "text-red-500", bar: "bg-red-500" } :
+    summary.stagnantRate > 0.1 ? { text: "text-yellow-600", bar: "bg-yellow-500" } :
+    { text: "text-green-600", bar: "bg-green-500" };
+  const deadlineColors =
+    deadlineRate === null ? null :
+    deadlineRate >= 0.7 ? { text: "text-green-600", bar: "bg-green-500" } : { text: "text-red-500", bar: "bg-red-500" };
+  // Below this, five near-empty charts just look broken -- a friendly
+  // placeholder reads better than a wall of mostly-blank cards.
+  const hasEnoughActivity = summary.total >= 3;
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-8 md:py-8 no-scrollbar">
@@ -215,325 +259,212 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
           <p className="text-sm text-muted mt-0.5">{boardName}</p>
         </div>
         {lastFetched && (
-          <span className="text-xs text-muted">
-            Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted">
+              Updated {lastFetched.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </span>
+            <button
+              onClick={fetchData}
+              aria-label="Refresh analytics"
+              className="p-1 rounded-md text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}>
+                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         <SummaryCard label="Total tasks" value={String(summary.total)} sub="" />
         <SummaryCard label="Completed" value={String(summary.completed)} sub={summary.total > 0 ? `${Math.round((summary.completed / summary.total) * 100)}%` : "0%"} valueColor="text-green-600" />
         <SummaryCard label="In progress" value={String(summary.inProgress)} sub="" valueColor="text-blue-600" />
         <SummaryCard label="Overdue" value={String(summary.overdue)} sub="" valueColor={summary.overdue > 0 ? "text-red-500" : "text-ink"} />
         <SummaryCard label="Avg cycle time" value={summary.avgCycleTimeMs !== null ? formatDuration(summary.avgCycleTimeMs) : "—"} sub="to complete" />
+        <SummaryCard
+          label="Oldest stuck task"
+          value={oldestStagnant ? formatDuration(oldestStagnant.ms) : "—"}
+          sub={oldestStagnant ? (oldestStagnant.title.length > 24 ? `${oldestStagnant.title.slice(0, 24)}…` : oldestStagnant.title) : "Nothing stuck"}
+          valueColor={oldestStagnant && oldestStagnant.ms > 3 * MS_DAY ? "text-red-500" : "text-ink"}
+        />
       </div>
 
-      {/* Contribution Activity — hidden, preserved for future use
-      {activityData && (
-        <Section title="Contribution Activity">
-          <ContributionHeatmap data={activityData.dailyScores.map(d => ({ date: d.date, value: d.score }))} />
-          <div className="bg-card-bg rounded-xl border border-border p-5 mt-4">
-            <div className="mb-4">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Completions over time</h4>
-              <p className="text-[11px] text-muted">Weekly volume — last 12 weeks</p>
-            </div>
-            <div className="h-40 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2DED8" opacity={0.1} />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#78716C", fontSize: 11 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#78716C", fontSize: 11 }} allowDecimals={false} />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: "#1C1917", borderRadius: "12px", border: "1px solid #2D2A27", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
-                    labelStyle={{ fontWeight: "bold", color: "#FDFCFA", marginBottom: "4px" }}
-                    itemStyle={{ color: "#3B82F6" }}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" animationDuration={1200} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </Section>
-      )}
-      */}
+      {!hasEnoughActivity ? (
+        <div className="bg-card-bg rounded-xl border border-border p-10 flex flex-col items-center justify-center text-center gap-1.5">
+          <p className="text-sm font-medium text-ink">Not enough activity yet</p>
+          <p className="text-xs text-muted max-w-xs">Charts will appear here once this board has a few tasks moving through columns.</p>
+        </div>
+      ) : (
+      <div className={`space-y-6 transition-opacity duration-500 ${mounted ? "opacity-100" : "opacity-0"}`}>
+        {/* Trend */}
+        <ChartCard title="Completions over time" subtitle={`Tasks marked done, weekly (last ${weeklyCompletions.length} week${weeklyCompletions.length !== 1 ? "s" : ""})`} height={240}>
+          {summary.completed === 0 ? (
+            <EmptyChartState text="No completed tasks yet." />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weeklyCompletions} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="completionsFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={accentHex} stopOpacity={0.22} />
+                    <stop offset="100%" stopColor={accentHex} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke={borderHex} strokeOpacity={0.6} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={tickStyle} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={tickStyle} width={28} />
+                <RechartsTooltip content={<CompletionsTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke={accentHex}
+                  strokeWidth={2}
+                  fill="url(#completionsFill)"
+                  isAnimationActive
+                  animationDuration={1100}
+                  dot={renderCompletionDot}
+                  activeDot={areaActiveDot}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
 
-      {/* Phase Health */}
-      <Section title="Workflow Overview">
-        {summary.historyTruncated && (
-          <div className="mb-3 px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-700 dark:text-yellow-400">
-            Some tasks predate the 90-day history window. Phase times for those tasks are estimated from their last-moved date.
-          </div>
-        )}
-        {(() => {
-          const maxTasks = Math.max(1, ...columns.filter((c) => !c.isDone).map((c) => c.currentTaskCount));
-          const completionPct = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
-          return (
-            <div className="overflow-x-auto -mx-1 px-1 pb-1">
-            <div className="flex flex-row items-stretch gap-0 w-full min-w-max lg:min-w-0">
-              {columns.map((col, i) => (
-                <div key={col.id} className="flex flex-row items-stretch min-w-[220px] lg:min-w-0" style={{ flex: "1 1 0" }}>
-                  {/* Column card */}
-                  <div className={`w-full rounded-xl border p-4 flex flex-col gap-3 h-full ${
-                    col.isBottleneck
-                      ? "border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20"
-                      : col.isDone
-                      ? "border-green-300 dark:border-green-800 bg-green-100/60 dark:bg-green-950/20"
-                      : "border-border bg-card-bg"
-                  }`}>
-                    {/* Header */}
-                    <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-semibold text-sm text-ink">{col.label}</span>
-                        {col.isBottleneck && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
-                            ⚠ Bottleneck
-                          </span>
-                        )}
-                        {col.isDone && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">
-                            ✓ Done
-                          </span>
-                        )}
-                      </div>
-                      {/* Task count + load bar */}
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-2xl font-bold text-ink leading-none">{col.currentTaskCount}</span>
-                        <span className="text-xs text-muted leading-none mt-1">task{col.currentTaskCount !== 1 ? "s" : ""}</span>
-                      </div>
-                      {!col.isDone && (
-                        <div className="mt-1.5 h-1.5 w-full bg-border rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${col.isBottleneck ? "bg-orange-400" : "bg-blue-400"}`}
-                            style={{ width: mounted ? `${Math.max(4, Math.round((col.currentTaskCount / maxTasks) * 100))}%` : "0%", transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex flex-col gap-1.5 text-xs">
-                      {col.isDone ? (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted">Completed</span>
-                            <span className="font-semibold text-green-700 dark:text-green-300">{summary.completed} / {summary.total}</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-500 dark:bg-green-500 rounded-full" style={{ width: `${completionPct}%` }} />
-                          </div>
-                          <div className="flex justify-between items-center pt-0.5">
-                            <span className="text-muted">{completionPct}% done</span>
-                          </div>
-                          {summary.avgCycleTimeMs !== null && (
-                            <div className="flex justify-between items-center pt-1 border-t border-green-200 dark:border-green-900/40">
-                              <span className="text-muted">Avg cycle time</span>
-                              <span className="font-medium text-ink">{formatDuration(summary.avgCycleTimeMs)}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {(() => {
-                            const stagnant = data.tasks.filter(
-                              (t) => t.columnId === col.id && t.currentPhaseMs > 3 * MS_DAY
-                            ).length;
-                            return (
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted">3+ days in phase</span>
-                                <span className={`font-medium ${stagnant > 0 ? "text-yellow-600" : "text-ink"}`}>
-                                  {stagnant > 0 ? `${stagnant} task${stagnant !== 1 ? "s" : ""}` : "None"}
-                                </span>
-                              </div>
-                            );
-                          })()}
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted">Avg stay</span>
-                            <span className={`font-medium ${col.isBottleneck ? "text-orange-500" : "text-ink"}`}>
-                              {col.avgPhaseTimeMs !== null ? formatDuration(col.avgPhaseTimeMs) : "—"}
-                            </span>
-                          </div>
-                          {col.longestStagnantTitle && (
-                            <div className="pt-1 border-t border-border">
-                              <p className="text-muted mb-0.5">Longest in phase</p>
-                              <p
-                                className={`font-medium truncate ${(col.longestStagnantMs ?? 0) > 3 * MS_DAY ? "text-red-500" : "text-ink"}`}
-                                title={col.longestStagnantTitle}
-                              >
-                                {col.longestStagnantTitle}
-                              </p>
-                              <p className="text-muted">{formatDuration(col.longestStagnantMs!)}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+        {/* Workflow */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ChartCard
+            title="Tasks by phase"
+            subtitle="Where work sits right now"
+            headerExtra={
+              <>
+                <StatusLegend items={PHASE_LEGEND(accentHex)} />
+                {bottleneckPhase && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs text-orange-600 dark:text-orange-400">
+                    <strong>{bottleneckPhase.name}</strong> is the bottleneck: {bottleneckPhase.tasks} task{bottleneckPhase.tasks !== 1 ? "s" : ""} waiting
                   </div>
+                )}
+              </>
+            }
+          >
+            {phaseTaskData.length === 0 ? (
+              <EmptyChartState text="No columns on this board yet." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={phaseTaskData} margin={{ top: 24, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
+                  <CartesianGrid vertical={false} stroke={borderHex} strokeOpacity={0.6} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickStyle} />
+                  <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={false} width={0} />
+                  <RechartsTooltip cursor={barCursor} content={<PhaseTaskTooltip />} />
+                  <Bar
+                    dataKey="tasks"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={40}
+                    isAnimationActive
+                    animationDuration={800}
+                    label={taskCountLabel}
+                  >
+                    {phaseTaskData.map((entry) => (
+                      <Cell key={entry.id} fill={entry.isDone ? STATUS_GOOD : entry.isBottleneck ? STATUS_WARN : accentHex} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
 
-                  {/* Arrow between columns */}
-                  {i < columns.length - 1 && (
-                    <div className="flex items-center justify-center px-2 flex-shrink-0">
-                      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" className="text-muted/40">
-                        <path d="M0 8 H16 M10 2 L18 8 L10 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            </div>
-          );
-        })()}
-      </Section>
-
-      <Section title="Project Health">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <HealthMetric
-            label="3+ days in phase"
-            value={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""}`}
-            sub={`${Math.round(summary.stagnantRate * 100)}% of active, in phase 3+ days`}
-            color={summary.stagnantRate > 0.3 ? "text-red-500" : summary.stagnantRate > 0.1 ? "text-yellow-600" : "text-green-600"}
-          />
-          <HealthMetric
-            label="Comment density"
-            value={summary.commentDensity.toFixed(1)}
-            sub="avg comments per task"
-            color={summary.commentDensity >= 1 ? "text-green-600" : "text-yellow-600"}
-          />
-          <HealthMetric
-            label="Deadline adherence"
-            value={summary.deadlineAdherence ? `${summary.deadlineAdherence.onTime}/${summary.deadlineAdherence.total}` : "—"}
-            sub={summary.deadlineAdherence ? `${Math.round((summary.deadlineAdherence.onTime / summary.deadlineAdherence.total) * 100)}% completed on time` : "No completed tasks with deadline"}
-            color={!summary.deadlineAdherence ? "text-muted" : summary.deadlineAdherence.onTime / summary.deadlineAdherence.total >= 0.7 ? "text-green-600" : "text-red-500"}
-          />
+          <ChartCard
+            title="Time spent per phase"
+            subtitle="Average time a task stays before moving on"
+            headerExtra={<StatusLegend items={PHASE_LEGEND(accentHex)} />}
+          >
+            {summary.historyTruncated && (
+              <p className="text-[11px] text-yellow-600 dark:text-yellow-400 mb-2 -mt-1">Some older tasks are estimated -- history is tracked for the last 90 days.</p>
+            )}
+            {phaseTimeData.length === 0 ? (
+              <EmptyChartState text="Not enough movement history yet." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={phaseTimeData} layout="vertical" margin={{ top: 0, right: 40, left: 8, bottom: 0 }} barCategoryGap="30%">
+                  <CartesianGrid horizontal={false} stroke={borderHex} strokeOpacity={0.6} />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={tickStyle} width={90} />
+                  <RechartsTooltip cursor={barCursor} content={<PhaseTimeTooltip />} />
+                  <Bar
+                    dataKey="days"
+                    radius={[0, 4, 4, 0]}
+                    maxBarSize={22}
+                    isAnimationActive
+                    animationDuration={800}
+                    label={phaseTimeLabel}
+                  >
+                    {phaseTimeData.map((entry) => (
+                      <Cell key={entry.id} fill={entry.isDone ? STATUS_GOOD : entry.isBottleneck ? STATUS_WARN : accentHex} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
         </div>
-      </Section>
 
-      {/* Tasks table */}
-      <Section title="All Tasks">
-        <div className="flex items-center gap-2 mb-3">
-          {(["all", "active", "overdue", "unassigned"] as FilterKey[]).map((f) => {
-            const unassignedCount = data.tasks.filter((t) => t.assignee === "(unassigned)").length;
-            const label =
-              f === "all" ? `All (${data.tasks.length})` :
-              f === "unassigned" ? `Unassigned (${unassignedCount})` :
-              f.charAt(0).toUpperCase() + f.slice(1);
-            return (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${filter === f ? "bg-ink text-paper border-ink" : "bg-card-bg border-border text-muted hover:text-ink"}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-          <span className="ml-auto text-xs text-muted">{filteredTasks.length} shown</span>
-        </div>
-        <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <SortTh label="Title" k="title" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-                  <SortTh label="Assignee" k="assignee" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-                  <SortTh label="Priority" k="priority" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-                  <Th align="left">Phase</Th>
-                  <SortTh label="In phase" k="currentPhaseMs" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="right" />
-                  <SortTh label="Age" k="totalAgeMs" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="right" />
-                  <Th align="left">Deadline</Th>
-                  <SortTh label="Notes" k="commentCount" sortKey={sortKey} dir={sortDir} onSort={handleSort} align="right" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredTasks.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-muted text-sm">No tasks match this filter.</td></tr>
-                ) : filteredTasks.map((t) => {
-                  const overdue = !t.columnIsDone && isDeadlineOverdue(t.deadline);
-                  const isStagnant = !t.columnIsDone && t.currentPhaseMs > 3 * MS_DAY;
-                  return (
-                    <tr key={t.id} className={`hover:bg-border/30 transition-colors ${t.columnIsDone ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <span className="truncate block text-ink font-medium" title={t.title}>{t.title}</span>
-                      </td>
-                      <td className="px-4 py-3 text-muted text-xs">{t.assignee || <span className="italic">none</span>}</td>
-                      <td className="px-4 py-3">
-                        {(() => { const pc = getPriorityConfig(t.priority); return (
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md ${pc.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${pc.dot}`} />
-                            {pc.label}
-                          </span>
-                        ); })()}
-                      </td>
-                      <td className={`px-4 py-3 text-xs ${t.columnIsDone ? "text-green-600 font-bold" : "text-muted"}`}>{t.columnLabel}</td>
-                      <td className={`px-4 py-3 text-right text-xs font-mono ${isStagnant ? "text-red-500 font-semibold" : "text-muted"}`}>
-                        {formatDuration(t.currentPhaseMs)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs font-mono text-muted">{formatDuration(t.totalAgeMs)}</td>
-                      <td className={`px-4 py-3 text-xs ${overdue ? "text-red-500 font-medium" : "text-muted"}`}>
-                        {formatDate(t.deadline)}{overdue ? " ⚠" : ""}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs text-muted">{t.commentCount > 0 ? t.commentCount : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* Priority + health */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ChartCard
+            title="Priority mix"
+            subtitle="Open vs completed, by priority"
+            height={220}
+            headerExtra={<StatusLegend items={[{ label: "Open", color: accentHex }, { label: "Done", color: STATUS_GOOD }]} />}
+          >
+            {priorityMix.every((p) => p.total === 0) ? (
+              <EmptyChartState text="No tasks yet." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={priorityMix} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }} barCategoryGap="26%">
+                  <CartesianGrid horizontal={false} stroke={borderHex} strokeOpacity={0.6} />
+                  <XAxis type="number" hide allowDecimals={false} />
+                  <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} tick={tickStyle} width={56} />
+                  <RechartsTooltip cursor={barCursor} content={<PriorityTooltip />} />
+                  <Bar dataKey="open" stackId="pm" fill={accentHex} isAnimationActive animationDuration={800} />
+                  <Bar dataKey="done" stackId="pm" fill={STATUS_GOOD} radius={[0, 4, 4, 0]} isAnimationActive animationDuration={800} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
+          <div className="flex flex-col gap-4">
+            <MeterCard
+              label="Stagnant rate"
+              description="Share of active tasks that haven't moved in 3+ days."
+              displayValue={`${Math.round(summary.stagnantRate * 100)}%`}
+              sub={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""} stuck 3+ days`}
+              ratio={summary.stagnantRate}
+              textColorClass={stagnantColors.text}
+              barColorClass={stagnantColors.bar}
+              mounted={mounted}
+            />
+            {summary.deadlineAdherence && deadlineColors ? (
+              <MeterCard
+                label="Deadline adherence"
+                description="Share of completed tasks finished by their deadline."
+                displayValue={`${Math.round(deadlineRate! * 100)}%`}
+                sub={`${summary.deadlineAdherence.onTime} of ${summary.deadlineAdherence.total} completed on time`}
+                ratio={deadlineRate!}
+                textColorClass={deadlineColors.text}
+                barColorClass={deadlineColors.bar}
+                mounted={mounted}
+              />
+            ) : (
+              <div className="bg-card-bg rounded-xl border border-border p-4 flex-1 flex flex-col justify-center items-center text-center gap-1">
+                <span className="text-sm font-medium text-ink">Deadline adherence</span>
+                <span className="text-xs text-muted">Share of completed tasks finished by their deadline. No completed tasks with a deadline yet.</span>
+              </div>
+            )}
           </div>
         </div>
-      </Section>
-
-      {/* Team breakdown */}
-      {hasAssignees && (
-        <Section title="Team">
-          <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <Th align="left">Member</Th>
-                  <Th align="right">Tasks</Th>
-                  <Th align="right">Done</Th>
-                  <Th align="right">Rate</Th>
-                  <Th align="right">Overdue</Th>
-                  <Th align="right">Avg cycle</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {assignees.map((a) => {
-                  const rate = a.total > 0 ? Math.round((a.completed / a.total) * 100) : 0;
-                  return (
-                    <tr key={a.name} className="hover:bg-border/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-ink">{a.name}</td>
-                      <td className="px-4 py-3 text-right text-muted">{a.total}</td>
-                      <td className="px-4 py-3 text-right text-green-600">{a.completed}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`text-xs font-medium ${rate >= 60 ? "text-green-600" : rate >= 30 ? "text-yellow-600" : "text-red-500"}`}>{rate}%</span>
-                      </td>
-                      <td className={`px-4 py-3 text-right text-xs ${a.overdue > 0 ? "text-red-500 font-medium" : "text-muted"}`}>
-                        {a.overdue > 0 ? a.overdue : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs font-mono text-muted">
-                        {a.avgCycleTimeMs !== null ? formatDuration(a.avgCycleTimeMs) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </Section>
+      </div>
       )}
-
-      {/* Completion Leaderboard removed to simplify analytics and reduce load */}
 
       <div className="h-8" />
     </div>
@@ -542,21 +473,37 @@ export default function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
 
 // ── Sub-components ────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, subtitle, headerExtra, height = 260, children }: { title: string; subtitle?: string; headerExtra?: React.ReactNode; height?: number; children: React.ReactNode }) {
   return (
-    <div className="mb-8">
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">{title}</h3>
-      {children}
+    <div className="bg-card-bg rounded-xl border border-border p-5">
+      <div className="mb-4">
+        <h4 className="text-sm font-semibold text-ink">{title}</h4>
+        {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+      </div>
+      {headerExtra}
+      <div style={{ width: "100%", height }}>{children}</div>
     </div>
   );
 }
 
-function Th({ align, children }: { align: "left" | "right"; children: React.ReactNode }) {
+// Color-only identity is never enough on its own (the bottleneck/done colors
+// aren't self-explanatory) -- this makes the meaning of the bar colors
+// visible on the chart itself instead of only surfacing on hover.
+function StatusLegend({ items }: { items: { label: string; color: string }[] }) {
   return (
-    <th className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-widest text-muted text-${align}`}>
-      {children}
-    </th>
+    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mb-3 -mt-1">
+      {items.map((it) => (
+        <span key={it.label} className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: it.color }} />
+          {it.label}
+        </span>
+      ))}
+    </div>
   );
+}
+
+function EmptyChartState({ text }: { text: string }) {
+  return <div className="h-full flex items-center justify-center text-xs text-muted">{text}</div>;
 }
 
 function SummaryCard({ label, value, sub, valueColor = "text-ink" }: { label: string; value: string; sub: string; valueColor?: string }) {
@@ -569,27 +516,92 @@ function SummaryCard({ label, value, sub, valueColor = "text-ink" }: { label: st
   );
 }
 
-function HealthMetric({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
+function MeterCard({ label, description, displayValue, sub, ratio, textColorClass, barColorClass, mounted }: {
+  label: string; description: string; displayValue: string; sub: string; ratio: number;
+  textColorClass: string; barColorClass: string; mounted: boolean;
+}) {
+  const pct = Math.max(0, Math.min(1, ratio)) * 100;
   return (
-    <div className="bg-card-bg rounded-xl border border-border p-4">
-      <div className={`text-xl font-bold ${color}`}>{value}</div>
-      <div className="mt-1 text-xs text-muted">{sub}</div>
-      <div className="mt-1.5 text-xs font-medium text-ink">{label}</div>
+    <div className="bg-card-bg rounded-xl border border-border p-4 flex-1 flex flex-col gap-2.5 justify-center">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-ink">{label}</span>
+        <span className={`text-lg font-bold ${textColorClass}`}>{displayValue}</span>
+      </div>
+      <p className="text-xs text-muted -mt-2">{description}</p>
+      <div className="h-2 w-full bg-ink/10 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${barColorClass}`}
+          style={{ width: mounted ? `${pct}%` : "0%", transition: "width 0.9s cubic-bezier(0.4, 0, 0.2, 1)" }}
+        />
+      </div>
+      <span className="text-xs text-muted">{sub}</span>
     </div>
   );
 }
 
-function SortTh({ label, k, sortKey, dir, onSort, align }: { label: string; k: SortKey; sortKey: SortKey; dir: "asc" | "desc"; onSort: (k: SortKey) => void; align: "left" | "right" }) {
-  const active = sortKey === k;
+// ── Tooltips ──────────────────────────────────────────────────
+
+interface TooltipPayload { payload: Record<string, unknown> }
+
+function PhaseTaskTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as { name: string; tasks: number; throughput: number; isDone: boolean; isBottleneck: boolean; longestStagnantTitle: string | null; longestStagnantMs: number | null };
   return (
-    <th
-      className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-widest cursor-pointer select-none hover:text-ink transition-colors text-${align} ${active ? "text-ink" : "text-muted"}`}
-      onClick={() => onSort(k)}
-    >
-      {label}
-      {active ? <span className="ml-1 opacity-60">{dir === "asc" ? "\u2191" : "\u2193"}</span> : <span className="ml-1 opacity-20">{"\u2195"}</span>}
-    </th>
+    <div className="bg-card-bg border border-border rounded-xl shadow-modal px-3 py-2.5 text-xs max-w-[220px]">
+      <p className="font-semibold text-ink mb-1">{d.name}</p>
+      <p className="text-muted">{d.tasks} task{d.tasks !== 1 ? "s" : ""} currently here</p>
+      {d.throughput > 0 && <p className="text-muted">{d.throughput} have passed through</p>}
+      {!d.isDone && d.longestStagnantTitle && (
+        <p className="text-muted mt-1 pt-1 border-t border-border">
+          Longest waiting: <span className="text-ink">{d.longestStagnantTitle}</span> ({formatDuration(d.longestStagnantMs ?? 0)})
+        </p>
+      )}
+      {d.isBottleneck && <p className="text-orange-500 font-medium mt-1">Bottleneck</p>}
+    </div>
   );
 }
 
+function PhaseTimeTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as { name: string; raw: number; isBottleneck: boolean };
+  return (
+    <div className="bg-card-bg border border-border rounded-xl shadow-modal px-3 py-2.5 text-xs">
+      <p className="font-semibold text-ink mb-1">{d.name}</p>
+      <p className="text-muted">Avg {formatDuration(d.raw)} per task</p>
+      {d.isBottleneck && <p className="text-orange-500 font-medium mt-1">Current bottleneck</p>}
+    </div>
+  );
+}
 
+function PriorityTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as { label: string; open: number; done: number; total: number };
+  return (
+    <div className="bg-card-bg border border-border rounded-xl shadow-modal px-3 py-2.5 text-xs">
+      <p className="font-semibold text-ink mb-0.5">{d.label} priority</p>
+      <p className="text-muted">{d.total} task{d.total !== 1 ? "s" : ""} total</p>
+      <p className="text-muted">{d.open} open, {d.done} done</p>
+    </div>
+  );
+}
+
+function CompletionsTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as { label: string; count: number; isCurrent?: boolean };
+  return (
+    <div className="bg-card-bg border border-border rounded-xl shadow-modal px-3 py-2.5 text-xs">
+      <p className="font-semibold text-ink mb-0.5">{d.isCurrent ? "This week (so far)" : `Week of ${d.label}`}</p>
+      <p className="text-muted">{d.count} completed</p>
+    </div>
+  );
+}
+
+// Memoized: the board polls every 3s regardless of which panel is open
+// (useRealtime's fallback interval, unconditional in BoardContainer), which
+// re-renders this component's parent constantly. Recharts replays each bar's
+// enter animation (hiding its value label until it "finishes") on every
+// re-render of the chart tree, not just when data actually changes -- without
+// this memo the value labels flickered on/off every ~3s even though the
+// underlying analytics numbers never changed. Requires `onClose` to be a
+// stable reference from the caller (see BoardContainer's useCallback).
+export default memo(AnalyticsPanel);
