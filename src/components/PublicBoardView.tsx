@@ -211,11 +211,11 @@ export default function PublicBoardView({ token }: { token: string }) {
   }, [filteredTasks]);
 
   if (status === "loading") {
-    return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading board...</div>;
+    return <div className="min-h-screen bg-paper flex items-center justify-center text-sm text-muted">Loading board...</div>;
   }
   if (status === "error" || !data) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+      <div className="min-h-screen bg-paper flex flex-col items-center justify-center text-center px-6">
         <p className="text-sm font-medium text-ink">This board isn&apos;t available for public viewing.</p>
         <p className="text-xs text-muted mt-1">The link may have been revoked, or public viewing was turned off.</p>
       </div>
