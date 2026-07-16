@@ -6,6 +6,7 @@ import { getPriorityConfig } from "@/lib/priority";
 import { resolveColumnPalette } from "@/lib/columnPalette";
 import PriorityIcon from "./PriorityIcon";
 import MarkdownText from "./MarkdownText";
+import FilterBar from "./FilterBar";
 
 interface PublicTag {
   id: string;
@@ -147,6 +148,9 @@ export default function PublicBoardView({ token }: { token: string }) {
   const [data, setData] = useState<PublicBoardData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedTask, setSelectedTask] = useState<PublicTask | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
 
   useEffect(() => {
     fetch(`/api/public/boards/${token}`)
@@ -168,16 +172,43 @@ export default function PublicBoardView({ token }: { token: string }) {
     return [...nonDone, ...done];
   }, [data]);
 
+  const allTags = useMemo(() => {
+    if (!data) return [];
+    const map = new Map<string, PublicTag>();
+    for (const task of data.tasks) {
+      for (const tag of task.tags) {
+        if (!map.has(tag.id)) map.set(tag.id, tag);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
+
+  const filteredTasks = useMemo(() => {
+    if (!data) return [];
+    return data.tasks.filter((task) => {
+      if (searchQuery) {
+        const words = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+        const haystack = [task.title, ...task.tags.map((t) => t.name)].join(" ").toLowerCase();
+        if (!words.every((w) => haystack.includes(w))) return false;
+      }
+      if (selectedTags.length > 0) {
+        const taskTagIds = task.tags.map((t) => t.id);
+        if (!selectedTags.some((id) => taskTagIds.includes(id))) return false;
+      }
+      if (selectedPriorities.length > 0 && !selectedPriorities.includes(task.priority)) return false;
+      return true;
+    });
+  }, [data, searchQuery, selectedTags, selectedPriorities]);
+
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, PublicTask[]>();
-    if (!data) return map;
-    for (const task of data.tasks) {
+    for (const task of filteredTasks) {
       const list = map.get(task.column) ?? [];
       list.push(task);
       map.set(task.column, list);
     }
     return map;
-  }, [data]);
+  }, [filteredTasks]);
 
   if (status === "loading") {
     return <div className="flex-1 flex items-center justify-center text-sm text-muted">Loading board...</div>;
@@ -204,10 +235,29 @@ export default function PublicBoardView({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-6">
-        <h1 className="text-xl font-bold tracking-tight text-ink mb-6">{data.boardName}</h1>
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex flex-wrap items-center gap-4 py-5 border-b border-border/60">
+          <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{data.boardName}</h1>
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <FilterBar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedAssignees={[]}
+              setSelectedAssignees={() => {}}
+              selectedTags={selectedTags}
+              setSelectedTags={setSelectedTags}
+              selectedPriorities={selectedPriorities}
+              setSelectedPriorities={setSelectedPriorities}
+              members={[]}
+              tags={allTags}
+              totalTasks={data.tasks.length}
+              filteredTasksCount={filteredTasks.length}
+              hideAssignee
+            />
+          </div>
+        </div>
 
-        <div className="overflow-x-auto pb-4">
+        <div className="overflow-x-auto pb-4 pt-6">
           <div className="flex gap-4" style={{ minWidth: sortedColumns.length * 280 }}>
             {sortedColumns.map((col, index) => {
               const palette = resolveColumnPalette(col.color, index);

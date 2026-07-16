@@ -16,9 +16,12 @@ interface Props {
   selectedPriorities: string[];
   setSelectedPriorities: (ps: string[]) => void;
   members: BoardMemberData[];
-  tags: Tag[];
+  tags: Pick<Tag, "id" | "name" | "color">[];
   totalTasks: number;
   filteredTasksCount: number;
+  // Public/read-only board views never expose assignee data, so the whole
+  // Assignee filter (button + dropdown + mobile section) is skipped.
+  hideAssignee?: boolean;
 }
 
 function FilterBar({
@@ -34,6 +37,7 @@ function FilterBar({
   tags,
   totalTasks,
   filteredTasksCount,
+  hideAssignee = false,
 }: Props) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -165,16 +169,18 @@ function FilterBar({
         </div>
 
         {/* Assignees */}
-        <div className="relative">
-          <button ref={assigneeTriggerRef} onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")} aria-expanded={openDropdown === "assignee"} aria-haspopup="menu" className={filterButtonClass(selectedAssignees.length > 0)}>
-            <span>Assignee</span>
-            {selectedAssignees.length > 0 && countBadge(selectedAssignees.length)}
-            {chevron(openDropdown === "assignee")}
-          </button>
-          <DropdownMenu open={openDropdown === "assignee"} onClose={() => setOpenDropdown(null)} anchorRef={assigneeTriggerRef} align="right" className="w-56 sm:left-0 sm:right-auto">
-            {assigneeRows}
-          </DropdownMenu>
-        </div>
+        {!hideAssignee && (
+          <div className="relative">
+            <button ref={assigneeTriggerRef} onClick={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")} aria-expanded={openDropdown === "assignee"} aria-haspopup="menu" className={filterButtonClass(selectedAssignees.length > 0)}>
+              <span>Assignee</span>
+              {selectedAssignees.length > 0 && countBadge(selectedAssignees.length)}
+              {chevron(openDropdown === "assignee")}
+            </button>
+            <DropdownMenu open={openDropdown === "assignee"} onClose={() => setOpenDropdown(null)} anchorRef={assigneeTriggerRef} align="right" className="w-56 sm:left-0 sm:right-auto">
+              {assigneeRows}
+            </DropdownMenu>
+          </div>
+        )}
 
         {/* Tags */}
         <div className="relative">
@@ -247,10 +253,12 @@ function FilterBar({
               </div>
             </div>
             <div className="p-3 space-y-4">
-              <div>
-                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Assignee</p>
-                <div className="space-y-1">{assigneeRows}</div>
-              </div>
+              {!hideAssignee && (
+                <div>
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Assignee</p>
+                  <div className="space-y-1">{assigneeRows}</div>
+                </div>
+              )}
               <div>
                 <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Tags</p>
                 <div className="space-y-1">{tagRows}</div>
