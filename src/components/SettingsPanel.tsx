@@ -568,7 +568,7 @@ export default function SettingsPanel({
             {/* Public view */}
             {currentUserRole === "owner" && (
             <section>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Public View</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Visibility</h4>
               <div className="p-4 bg-card-bg border border-border rounded-xl space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
