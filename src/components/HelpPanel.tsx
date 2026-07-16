@@ -7,6 +7,12 @@ type Tab = "support" | "changelog";
 
 const CHANGELOG: { date: string; title: string; description: string; href?: string }[] = [
   {
+    date: "Jul 16, 2026",
+    title: "The Semester Break Update",
+    description: "A month of new features. Share boards with read-only links, see your project through rebuilt chart-based analytics, attach files to tasks, restore deleted tasks for 30 days, get push notifications, and track student contributions in the new Participation tab.",
+    href: "/changelog/semester-break-update",
+  },
+  {
     date: "Jun 17, 2026",
     title: "Reliability Update",
     description: "A full sweep of improvements across the app. Deadlines, drag-and-drop, notifications, group search, and the class clone flow are all tightened up. Roster CSV imports now send invite emails to newly added students, capped at 100 per file.",
