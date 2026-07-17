@@ -74,6 +74,10 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const columnMap = new Map(columns.map((c) => [c.id, c]));
+  // The first column is intake (To Do / Backlog / Wishlist) -- cards sit there
+  // by design until someone picks them up, so it's excluded from "stagnant"
+  // alongside Done. Only columns in between count as active work in progress.
+  const firstColumnId = columns[0]?.id ?? null;
 
   function endOfDay(d: Date): Date {
     const r = new Date(d);
@@ -169,6 +173,7 @@ export async function GET(request: NextRequest) {
       id: col.id,
       label: col.label,
       isDone: col.isDone,
+      isFirst: col.id === firstColumnId,
       currentTaskCount: currentTasks.length,
       throughput,
       avgPhaseTimeMs,
@@ -179,10 +184,11 @@ export async function GET(request: NextRequest) {
 
   // ── Bottleneck detection ──────────────────────────────────────
   // Score = currentTaskCount × avgPhaseTimeMs (or currentPhaseMs proxy if no avg).
-  // Only non-done columns with at least 1 task are candidates.
+  // Only middle columns (not intake, not Done) with at least 1 task are candidates --
+  // a big backlog aging in the first column is expected, not a bottleneck.
   // Exactly one column gets the bottleneck flag — the one with the highest score.
   // Require at least 2 tasks to flag a bottleneck — avoids mislabeling on small boards
-  const nonDonePhases = phaseStats.filter((p) => !p.isDone && p.currentTaskCount >= 2);
+  const nonDonePhases = phaseStats.filter((p) => !p.isDone && !p.isFirst && p.currentTaskCount >= 2);
   let bottleneckId: string | null = null;
   if (nonDonePhases.length > 0) {
     const scored = nonDonePhases.map((p) => ({
@@ -211,7 +217,7 @@ export async function GET(request: NextRequest) {
     // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done
     // tasks so they never trip the stagnant threshold.
     const currentPhaseMs = isDone ? 0 : now.getTime() - getEnteredCurrentColumn(t).getTime();
-    return { priority: t.priority, columnIsDone: isDone, cycleTimeMs, currentPhaseMs };
+    return { priority: t.priority, columnId: t.column, columnIsDone: isDone, cycleTimeMs, currentPhaseMs };
   });
 
   // ── Summary ───────────────────────────────────────────────────
@@ -232,9 +238,11 @@ export async function GET(request: NextRequest) {
       ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length
       : null;
 
-  // Stagnation: in-progress tasks that haven't moved in 3+ days
+  // Stagnation: tasks in a middle column (not the intake column, not Done)
+  // that haven't moved in 3+ days. Backlog items are excluded -- they're
+  // meant to sit untouched until someone picks them up.
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-  const activeTasks = taskAggregates.filter((t) => !t.columnIsDone);
+  const activeTasks = taskAggregates.filter((t) => !t.columnIsDone && t.columnId !== firstColumnId);
   const stagnantCount = activeTasks.filter((t) => t.currentPhaseMs > THREE_DAYS_MS).length;
 
   // Deadline adherence: completed tasks with a deadline.

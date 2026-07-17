@@ -20,6 +20,7 @@ interface PhaseStats {
   id: string;
   label: string;
   isDone: boolean;
+  isFirst: boolean;
   currentTaskCount: number;
   throughput: number;
   avgPhaseTimeMs: number | null;
@@ -159,13 +160,14 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
 
   const bottleneckPhase = useMemo(() => phaseTaskData.find((c) => c.isBottleneck) ?? null, [phaseTaskData]);
 
-  // Longest-waiting active task across every non-done column -- the one
-  // thing on this board most worth someone's attention right now.
+  // Longest-waiting active task across every middle column -- the one thing
+  // on this board most worth someone's attention right now. The intake column
+  // (To Do / Backlog) is excluded alongside Done: cards sit there by design.
   const oldestStagnant = useMemo(() => {
     if (!data) return null;
     let max: { title: string; ms: number } | null = null;
     for (const c of data.columns) {
-      if (c.isDone || c.longestStagnantMs == null || !c.longestStagnantTitle) continue;
+      if (c.isDone || c.isFirst || c.longestStagnantMs == null || !c.longestStagnantTitle) continue;
       if (!max || c.longestStagnantMs > max.ms) max = { title: c.longestStagnantTitle, ms: c.longestStagnantMs };
     }
     return max;
