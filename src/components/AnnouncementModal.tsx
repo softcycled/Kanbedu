@@ -53,22 +53,26 @@ export default function AnnouncementModal() {
         onClick={(e) => e.stopPropagation()}
         className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md motion-safe:animate-modal-in overflow-hidden relative"
       >
-        <button
-          onClick={dismiss}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 p-1.5 rounded-full bg-black/35 text-white/90 hover:bg-black/55 hover:text-white transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-        </button>
+        <div className="flex justify-end p-3 pb-0">
+          <button
+            onClick={dismiss}
+            aria-label="Close"
+            className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
 
-        <Image
-          src="/screenshots/announcement-analytics.png"
-          alt="The redesigned Analytics tab"
-          width={1024}
-          height={799}
-          className="w-full h-auto"
-          priority
-        />
+        <div className="px-4 pt-1 pb-4">
+          <Image
+            src="/screenshots/announcement-analytics.png"
+            alt="The redesigned Analytics tab"
+            width={1024}
+            height={799}
+            className="w-full h-auto rounded-xl border border-border/60"
+            priority
+          />
+        </div>
 
         <div className="p-6 border-t border-border/60">
           <p className="text-xs font-medium uppercase tracking-widest text-muted mb-2">New update</p>
