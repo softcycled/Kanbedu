@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         completedAt: true,
         deadline: true,
+        _count: { select: { comments: true } },
         columnHistory: {
           where: { enteredAt: { gte: HISTORY_CUTOFF } },
           orderBy: { enteredAt: "asc" },
@@ -152,11 +153,14 @@ export async function GET(request: NextRequest) {
           : null;
     }
 
-    // Longest waiting current task — use open history enteredAt as source of truth
+    // Longest waiting current task — use open history enteredAt as source of truth.
+    // Tasks with any comments are excluded: a comment thread means someone's
+    // actively discussing it, so it isn't just sitting there ignored.
     let longestStagnantMs: number | null = null;
     let longestStagnantTitle: string | null = null;
-    if (currentTasks.length > 0) {
-      const withEnteredAt = currentTasks.map((t) => ({
+    const waitingCandidates = currentTasks.filter((t) => t._count.comments === 0);
+    if (waitingCandidates.length > 0) {
+      const withEnteredAt = waitingCandidates.map((t) => ({
         title: t.title,
         enteredAt: getEnteredCurrentColumn(t),
       }));
@@ -217,7 +221,7 @@ export async function GET(request: NextRequest) {
     // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done
     // tasks so they never trip the stagnant threshold.
     const currentPhaseMs = isDone ? 0 : now.getTime() - getEnteredCurrentColumn(t).getTime();
-    return { priority: t.priority, columnId: t.column, columnIsDone: isDone, cycleTimeMs, currentPhaseMs };
+    return { priority: t.priority, columnId: t.column, columnIsDone: isDone, hasComments: t._count.comments > 0, cycleTimeMs, currentPhaseMs };
   });
 
   // ── Summary ───────────────────────────────────────────────────
@@ -239,11 +243,13 @@ export async function GET(request: NextRequest) {
       : null;
 
   // Stagnation: tasks in a middle column (not the intake column, not Done)
-  // that haven't moved in 3+ days. Backlog items are excluded -- they're
-  // meant to sit untouched until someone picks them up.
-  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+  // that haven't moved in 5+ days. Backlog items are excluded -- they're
+  // meant to sit untouched until someone picks them up. Tasks with any
+  // comments are excluded too -- a comment thread means someone's actively
+  // discussing it, so it isn't just sitting there ignored.
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
   const activeTasks = taskAggregates.filter((t) => !t.columnIsDone && t.columnId !== firstColumnId);
-  const stagnantCount = activeTasks.filter((t) => t.currentPhaseMs > THREE_DAYS_MS).length;
+  const stagnantCount = activeTasks.filter((t) => !t.hasComments && t.currentPhaseMs > FIVE_DAYS_MS).length;
 
   // Deadline adherence: completed tasks with a deadline.
   // Use setUTCHours to extend to end-of-UTC-day — consistent regardless of server timezone.

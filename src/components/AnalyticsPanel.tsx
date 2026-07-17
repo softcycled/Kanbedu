@@ -234,7 +234,7 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const { summary } = data;
   const deadlineRate = summary.deadlineAdherence ? summary.deadlineAdherence.onTime / summary.deadlineAdherence.total : null;
   const stagnantColors =
-    summary.stagnantRate > 0.3 ? { text: "text-red-500", bar: "bg-red-500" } :
+    summary.stagnantRate > 0.3 ? { text: "text-amber-600", bar: "bg-amber-500" } :
     summary.stagnantRate > 0.1 ? { text: "text-yellow-600", bar: "bg-yellow-500" } :
     { text: "text-green-600", bar: "bg-green-500" };
   const deadlineColors =
@@ -287,10 +287,10 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
         <SummaryCard label="Overdue" value={String(summary.overdue)} sub="" valueColor={summary.overdue > 0 ? "text-red-500" : "text-ink"} />
         <SummaryCard label="Avg cycle time" value={summary.avgCycleTimeMs !== null ? formatDuration(summary.avgCycleTimeMs) : "—"} sub="to complete" />
         <SummaryCard
-          label="Oldest stuck task"
+          label="Longest waiting task"
           value={oldestStagnant ? formatDuration(oldestStagnant.ms) : "—"}
-          sub={oldestStagnant ? (oldestStagnant.title.length > 24 ? `${oldestStagnant.title.slice(0, 24)}…` : oldestStagnant.title) : "Nothing stuck"}
-          valueColor={oldestStagnant && oldestStagnant.ms > 3 * MS_DAY ? "text-red-500" : "text-ink"}
+          sub={oldestStagnant ? (oldestStagnant.title.length > 24 ? `${oldestStagnant.title.slice(0, 24)}…` : oldestStagnant.title) : "All caught up"}
+          valueColor={oldestStagnant && oldestStagnant.ms > 5 * MS_DAY ? "text-amber-600" : "text-ink"}
         />
       </div>
 
@@ -437,10 +437,10 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
 
           <div className="flex flex-col gap-4">
             <MeterCard
-              label="Stagnant rate"
-              description="Share of active tasks that haven't moved in 3+ days."
+              label="Needs a nudge"
+              description="Share of active tasks that haven't moved in 5+ days and have no comments yet."
               displayValue={`${Math.round(summary.stagnantRate * 100)}%`}
-              sub={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""} stuck 3+ days`}
+              sub={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""} haven't moved in 5+ days`}
               ratio={summary.stagnantRate}
               textColorClass={stagnantColors.text}
               barColorClass={stagnantColors.bar}
