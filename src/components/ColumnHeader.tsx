@@ -18,6 +18,7 @@ interface Props {
   onSetColor?: (name: string | null) => void;
   isDragging?: boolean;
   dragListeners?: Record<string, unknown>;
+  onAddTaskClick?: () => void;
 }
 
 export default function ColumnHeader({
@@ -34,6 +35,7 @@ export default function ColumnHeader({
   onSetColor,
   isDragging = false,
   dragListeners,
+  onAddTaskClick,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
@@ -133,6 +135,21 @@ export default function ColumnHeader({
       <span className="text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5 flex-shrink-0">
         {taskCount}
       </span>
+
+      {/* + Quick add — always reachable even with the header pinned above a long, scrolled list */}
+      {onAddTaskClick && (
+        <button
+          type="button"
+          aria-label={`Add task to ${label}`}
+          title="Add task"
+          draggable={false}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onAddTaskClick(); }}
+          className="flex-shrink-0 p-1.5 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>
+        </button>
+      )}
 
       {/* ⋯ options menu */}
       <div className="relative flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>

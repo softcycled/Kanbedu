@@ -1152,7 +1152,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       ) : (
         <div
           ref={scrollRef}
-          className="flex-1 min-h-0 overflow-x-auto overflow-y-auto no-scrollbar"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden no-scrollbar"
           style={{ cursor: isPanning ? 'grabbing' : 'grab', userSelect: isPanning ? 'none' : undefined }}
           onMouseDown={handlePanMouseDown}
         >
@@ -1165,7 +1165,7 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={sortedColumns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-              <div className="flex gap-7 min-h-full pb-8 px-4 md:px-10 pt-6">
+              <div className="flex gap-7 h-full pb-8 px-4 md:px-10 pt-6">
             {isLoading ? (
               // Render simple skeleton columns while loading
               Array.from({ length: Math.max(1, columns.length || 3) }).map((_, i) => (

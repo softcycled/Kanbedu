@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   column: string;
   onAdd: (title: string, column: string) => Promise<void>;
   prominent?: boolean;
+  // Bumped by a parent (e.g. the column header's "+" button) to open this
+  // input from outside, no matter where it sits in a scrolled task list.
+  activateSignal?: number;
 }
 
 const TITLE_CHAR_LIMIT = 200;
 
-export default function AddTask({ column, onAdd, prominent = false }: Props) {
+export default function AddTask({ column, onAdd, prominent = false, activateSignal }: Props) {
   const [active, setActive] = useState(false);
   const [value, setValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -22,6 +25,16 @@ export default function AddTask({ column, onAdd, prominent = false }: Props) {
     setActive(true);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
+
+  // activateSignal starts undefined/0 (falsy) so this never fires on mount --
+  // only on an actual bump from the parent. Focusing the input scrolls it
+  // into view automatically within its scrollable column, even if it's
+  // currently below the fold.
+  useEffect(() => {
+    if (!activateSignal) return;
+    handleActivate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activateSignal]);
 
   const handleSubmit = async () => {
     // Guard against double-submit: rapid Enter presses while the first create is

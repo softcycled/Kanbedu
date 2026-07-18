@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -73,12 +73,19 @@ function KanbanColumn({
     onSetDoneColumn(columnId);
   }, [onSetDoneColumn, columnId]);
 
+  // Bumped to pop open + focus the AddTask input from the header's "+" button,
+  // regardless of how far the task list is scrolled.
+  const [addTaskSignal, setAddTaskSignal] = useState(0);
+  const handleAddTaskClick = useCallback(() => {
+    setAddTaskSignal((n) => n + 1);
+  }, []);
+
   return (
     <div
       ref={setSortableRef}
       style={style}
       {...attributes}
-      className="flex flex-col min-w-0 flex-shrink-0 w-[72vw] md:w-80"
+      className="flex flex-col min-w-0 flex-shrink-0 w-[72vw] md:w-80 h-full"
     >
       <ColumnHeader
         columnId={columnId}
@@ -94,12 +101,13 @@ function KanbanColumn({
         isDynamic={isDynamic}
         isDragging={isDragging}
         dragListeners={listeners}
+        onAddTaskClick={handleAddTaskClick}
       />
 
-      {/* Drop zone */}
+      {/* Drop zone — scrolls independently so the header above stays put */}
       <div
         ref={setDropRef}
-        className={`rounded-2xl p-3 transition-colors duration-150 min-h-[120px] ${
+        className={`flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl p-3 transition-colors duration-150 ${
           isOver ? "bg-accent-light" : "bg-column-bg"
         }`}
       >
@@ -145,7 +153,7 @@ function KanbanColumn({
           </div>
         )}
 
-        <AddTask column={columnId} onAdd={onAddTask} prominent={false} />
+        <AddTask column={columnId} onAdd={onAddTask} prominent={false} activateSignal={addTaskSignal} />
       </div>
     </div>
   );
