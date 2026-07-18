@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Task } from "@/lib/types";
 import { formatTimeAgo } from "@/lib/utils";
+import ConfirmModal from "./ConfirmModal";
 
 type DeletedTask = Task & { deletedAt: string | Date | null; deletedByName?: string | null };
 
@@ -21,6 +22,7 @@ export default function TrashPanel({ boardId, isOpen, onClose, onRestored }: Pro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [emptyConfirmOpen, setEmptyConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,9 +66,20 @@ export default function TrashPanel({ boardId, isOpen, onClose, onRestored }: Pro
     }
   };
 
+  const emptyTrash = async () => {
+    try {
+      const res = await fetch(`/api/tasks/deleted?boardId=${boardId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`Empty trash failed: ${res.status}`);
+      setTasks([]);
+    } catch (err) {
+      console.error("Failed to empty trash:", err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
+    <>
     <div role="dialog" aria-modal="true" aria-label="Recently deleted tasks" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-[2px] motion-safe:animate-fade-in" onClick={onClose}>
       <div className="bg-card-bg rounded-2xl shadow-modal w-full max-w-md max-h-[80vh] flex flex-col motion-safe:animate-modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -74,9 +87,19 @@ export default function TrashPanel({ boardId, isOpen, onClose, onRestored }: Pro
             <p className="text-sm font-semibold text-ink">Recently deleted</p>
             <p className="text-xs text-muted mt-0.5">Restorable for 30 days, then permanently removed.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {!loading && !error && tasks.length > 0 && (
+              <button
+                onClick={() => setEmptyConfirmOpen(true)}
+                className="text-xs font-medium text-muted hover:text-red-500 transition-colors"
+              >
+                Empty trash
+              </button>
+            )}
+            <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">
@@ -116,5 +139,16 @@ export default function TrashPanel({ boardId, isOpen, onClose, onRestored }: Pro
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      isOpen={emptyConfirmOpen}
+      title="Empty trash?"
+      message={`Permanently delete ${tasks.length} task${tasks.length === 1 ? "" : "s"}? This skips the 30-day restore window and can't be undone.`}
+      confirmLabel="Delete forever"
+      danger
+      onClose={() => setEmptyConfirmOpen(false)}
+      onConfirm={emptyTrash}
+    />
+    </>
   );
 }

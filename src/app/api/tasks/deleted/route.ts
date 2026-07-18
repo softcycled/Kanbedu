@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { getBoardNameOverrides } from "@/lib/classNames";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthzDenied } from "@/lib/securityLog";
 
 const PURGE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -83,4 +85,45 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ tasks: mapped });
+}
+
+// DELETE /api/tasks/deleted?boardId= — permanently empty the trash for a board,
+// skipping the 30-day restore window. Same authorization as viewing trash:
+// educators/TAs only on a class group board, any member on a personal board.
+export async function DELETE(request: NextRequest) {
+  const session = await getVerifiedSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const boardId = new URL(request.url).searchParams.get("boardId");
+  if (!boardId) return NextResponse.json({ error: "boardId is required" }, { status: 400 });
+
+  const rl = await checkRateLimit(session.userId, "api_write", 300, 15);
+  if (!rl.allowed) return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+
+  const membership = await prisma.boardMember.findUnique({
+    where: { userId_boardId: { userId: session.userId, boardId } },
+    select: { id: true },
+  });
+  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const group = await prisma.group.findUnique({ where: { boardId }, select: { classId: true } });
+  if (group) {
+    const role = await getClassRole(session.userId, group.classId);
+    if (role !== "educator" && role !== "ta") {
+      logAuthzDenied(request, "/api/tasks/deleted", session.userId, "DELETE empty-trash not educator");
+      return NextResponse.json({ error: "Only educators can empty the trash." }, { status: 403 });
+    }
+  }
+
+  const trashed = await prisma.task.findMany({
+    where: { columnRel: { boardId }, deletedAt: { not: null } },
+    select: { id: true },
+  });
+  if (trashed.length === 0) return NextResponse.json({ deletedCount: 0 });
+
+  const ids = trashed.map((t) => t.id);
+  await prisma.notification.deleteMany({ where: { taskId: { in: ids } } });
+  await prisma.task.deleteMany({ where: { id: { in: ids } } });
+
+  return NextResponse.json({ deletedCount: ids.length });
 }
