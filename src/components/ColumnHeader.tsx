@@ -136,14 +136,17 @@ export default function ColumnHeader({
         {taskCount}
       </span>
 
-      {/* + Quick add — always reachable even with the header pinned above a long, scrolled list */}
+      {/* + Quick add, always reachable even with the header pinned above a long, scrolled list.
+          preventDefault on pointerdown stops the browser from blurring an open AddTask input in
+          this column first -- without it, a click here would commit whatever draft was mid-typing
+          before reopening a fresh input. */}
       {onAddTaskClick && (
         <button
           type="button"
           aria-label={`Add task to ${label}`}
           title="Add task"
           draggable={false}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={(e) => { e.stopPropagation(); onAddTaskClick(); }}
           className="flex-shrink-0 p-1.5 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg text-muted hover:text-ink hover:bg-column-bg transition-colors"
         >

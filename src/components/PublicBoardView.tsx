@@ -231,15 +231,15 @@ export default function PublicBoardView({ token }: { token: string }) {
   const selectedColumnLabel = selectedColumn?.label ?? "";
 
   return (
-    <div className="min-h-screen bg-paper">
-      <div className="sticky top-0 z-40 bg-accent/10 border-b border-accent/20 backdrop-blur-sm">
+    <div className="h-screen flex flex-col overflow-hidden bg-paper">
+      <div className="flex-shrink-0 bg-accent/10 border-b border-accent/20 backdrop-blur-sm">
         <div className="max-w-[1400px] mx-auto px-6 py-2.5 flex items-center gap-2 text-xs font-medium text-accent">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
           You&apos;re viewing in preview mode. This board can&apos;t be edited.
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-6">
+      <div className="flex-shrink-0 max-w-[1400px] w-full mx-auto px-6">
         <div className="flex flex-wrap items-center gap-4 py-5 border-b border-border/60">
           <h1 className="text-xl font-bold tracking-tight text-ink shrink-0">{data.boardName}</h1>
           <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -260,20 +260,24 @@ export default function PublicBoardView({ token }: { token: string }) {
             />
           </div>
         </div>
+      </div>
 
-        <div className="overflow-x-auto pb-4 pt-6">
-          <div className="flex gap-4" style={{ minWidth: sortedColumns.length * 280 }}>
+      {/* Columns area scrolls independently per column (each header pinned above its own
+          list), matching the authenticated board's layout instead of growing the whole page. */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden no-scrollbar">
+        <div className="max-w-[1400px] mx-auto px-6 h-full">
+          <div className="flex gap-4 h-full pb-4 pt-6" style={{ minWidth: sortedColumns.length * 280 }}>
             {sortedColumns.map((col, index) => {
               const palette = resolveColumnPalette(col.color, index);
               const tasks = (tasksByColumn.get(col.id) ?? []).sort((a, b) => a.order - b.order);
               return (
-                <div key={col.id} className="flex-1 flex flex-col min-w-[260px]">
-                  <div className={`flex items-center gap-2 px-2.5 py-2 mb-3 rounded-lg border ${palette.bg} ${palette.border}`}>
+                <div key={col.id} className="flex-1 flex flex-col min-w-[260px] h-full">
+                  <div className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-2 mb-3 rounded-lg border ${palette.bg} ${palette.border}`}>
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${palette.dot}`} />
                     <h2 className={`text-sm font-bold tracking-wide ${palette.text} flex-1`}>{col.label}</h2>
                     <span className="text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5">{tasks.length}</span>
                   </div>
-                  <div className="flex-1 rounded-xl bg-column-bg p-2 min-h-[120px]">
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-xl bg-column-bg p-2">
                     <div className="flex flex-col gap-3">
                       {tasks.map((task) => (
                         <PublicTaskCard key={task.id} task={task} isDone={col.isDone} onClick={() => setSelectedTask(task)} />

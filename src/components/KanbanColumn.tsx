@@ -104,7 +104,7 @@ function KanbanColumn({
         onAddTaskClick={handleAddTaskClick}
       />
 
-      {/* Drop zone — scrolls independently so the header above stays put */}
+      {/* Drop zone, scrolls independently so the header above stays put */}
       <div
         ref={setDropRef}
         className={`flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl p-3 transition-colors duration-150 ${
