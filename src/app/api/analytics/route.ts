@@ -108,12 +108,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Helper: find when a task entered its CURRENT column (open history entry).
-  // Falls back to columnUpdatedAt, then createdAt.
+  // Falls back to columnUpdatedAt, which is a non-null column always set to the
+  // last time the task changed columns.
   const getEnteredCurrentColumn = (t: (typeof tasks)[number]): Date => {
     const open = t.columnHistory
       .filter((h) => h.columnId === t.column && h.exitedAt === null)
       .sort((a, b) => b.enteredAt.getTime() - a.enteredAt.getTime())[0];
-    return open?.enteredAt ?? new Date(t.columnUpdatedAt) ?? t.createdAt;
+    return open?.enteredAt ?? new Date(t.columnUpdatedAt);
   };
 
   // ── Phase stats ───────────────────────────────────────────────
