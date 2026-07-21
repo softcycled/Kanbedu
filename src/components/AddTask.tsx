@@ -33,7 +33,6 @@ export default function AddTask({ column, onAdd, prominent = false, activateSign
   useEffect(() => {
     if (!activateSignal) return;
     handleActivate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activateSignal]);
 
   const handleSubmit = async () => {
