@@ -106,10 +106,20 @@ Always call `resolveColumnPalette(color, index)` from `src/lib/columnPalette.ts`
 - Auth/permissions flow changes
 - Environment variable changes
 - Major architecture replacement
+- Major dependency upgrades
 - Deleting more than ~10 files
 - Any deployment action or production state change
 
 For big actions (push to main, deploys): respond "Yes, boss?" first, wait for explicit confirmation.
+
+---
+
+## Parallel sessions
+
+Multiple AI sessions often work in this tree at the same time.
+
+- Run `git status` before staging. Modified files you did not touch belong to another session: leave them alone, stage only your own files.
+- If `dev` carries commits you did not review and only your work is approved for release, push your approved commit by hash (`git push origin <hash>:main`), never `dev:main` blindly.
 
 ---
 

@@ -46,8 +46,8 @@ const AVATAR_COLORS: AvatarColor[] = [
   { name: "Sand Yellow",     hex: "#C9B87A" },
   { name: "Clay Orange",     hex: "#BE6A43" },
   { name: "Rose Red",        hex: "#C45C6A" },
-  { name: "Coral Red",       hex: "#D47060" },
-  { name: "Crimson Red",     hex: "#A83252" },
+  { name: "Coral Red",       hex: "#d46660" },
+  { name: "Crimson Red",     hex: "#921a1a" },
   { name: "Blush Pink",      hex: "#D4A0A8" },
   { name: "Lavender Purple", hex: "#9B8CC4" },
   { name: "Violet Purple",   hex: "#7A5FAF" },
@@ -61,6 +61,7 @@ interface LockedColor extends AvatarColor {
 
 const LOCKED_COLORS: LockedColor[] = [
   { name: "Channel Orange", hex: "#F37521", unlockedBy: "softcycled" },
+  { name: "Blonded White", hex: "#fffbdd", unlockedBy: "softcycled" },
 ];
 
 const ALL_COLORS = [...AVATAR_COLORS, ...EXTRA_COLORS];

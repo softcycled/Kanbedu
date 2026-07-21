@@ -177,7 +177,7 @@ export default function PricingPage() {
                       <>
                         <span className="text-4xl font-bold tracking-tight text-ink">{PRO_PRICE_YEARLY}</span>
                         <span className="text-sm text-muted ml-1.5">/year</span>
-                        <p className="text-xs text-muted mt-2">Two months free. You don&apos;t pay for semester breaks.</p>
+                        <p className="text-xs text-muted mt-2">You don&apos;t pay for semester breaks.</p>
                       </>
                     ) : (
                       <>

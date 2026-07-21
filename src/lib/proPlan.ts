@@ -2,11 +2,12 @@
 // pricing page and the in-app Settings > Lecturer Pro tab so the two can
 // never drift apart. Edit prices and features here only.
 
-// RM160 = exactly 10 months of RM16, so "2 months free" is verifiably true.
+// RM99.99/year vs RM9.99 x 12 = RM119.88 is a ~17% discount, not an exact
+// month count -- keep the label a plain percentage, not "N months free".
 // The label below must stay true if either price changes; recompute before editing.
-export const PRO_PRICE_MONTHLY = "RM16";
-export const PRO_PRICE_YEARLY = "RM160";
-export const PRO_YEARLY_DISCOUNT_LABEL = "2 months free";
+export const PRO_PRICE_MONTHLY = "RM9.99";
+export const PRO_PRICE_YEARLY = "RM99.99";
+export const PRO_YEARLY_DISCOUNT_LABEL = "save ~17%";
 // Shown wherever prices appear until Pro is purchasable. Remove at launch.
 export const PRO_PRICE_DISCLAIMER = "Prices may change until Lecturer Pro officially launches.";
 

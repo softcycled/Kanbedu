@@ -117,10 +117,16 @@ export async function DELETE(request: NextRequest) {
   // a taskId from another board (or one that isn't deleted) just matches
   // nothing -- no separate ownership check needed beyond the membership above.
   if (taskId) {
-    const [deleted] = await prisma.$transaction([
-      prisma.task.deleteMany({ where: { columnRel: { boardId }, deletedAt: { not: null }, id: taskId } }),
-      prisma.notification.deleteMany({ where: { taskId } }),
-    ]);
+    const deleted = await prisma.$transaction(async (tx) => {
+      const result = await tx.task.deleteMany({ where: { columnRel: { boardId }, deletedAt: { not: null }, id: taskId } });
+      // Only clear notifications if the scoped delete actually matched -- otherwise
+      // an arbitrary taskId for another board's task would leave its task alone
+      // (correctly scoped) but still wipe that unrelated task's notifications.
+      if (result.count > 0) {
+        await tx.notification.deleteMany({ where: { taskId } });
+      }
+      return result;
+    });
     if (deleted.count === 0) {
       return NextResponse.json({ error: "Task not found in trash." }, { status: 404 });
     }
