@@ -242,8 +242,6 @@ export default function Sidebar({
   mobileOpen,
   onMobileOpenChange,
 }: Props) {
-  const [newBoardName, setNewBoardName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
   const [isCreateJoinOpen, setIsCreateJoinOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [classModalMode, setClassModalMode] = useState<"options" | "create" | "join">("options");
@@ -256,7 +254,6 @@ export default function Sidebar({
   const router = useRouter();
   const [account, setAccount] = useState<{ name: string; email: string; handle: string | null; color: string } | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [popupView, setPopupView] = useState<"menu" | "notifications">("menu");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -291,13 +288,12 @@ export default function Sidebar({
   }, [accountOpen]);
 
   const handleSignOut = async () => {
-    setSigningOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
       router.refresh();
     } catch {
-      setSigningOut(false);
+      // Navigation will not happen on failure; the sign-out button stays available for a retry.
     }
   };
 
@@ -394,21 +390,6 @@ export default function Sidebar({
     const newIndex = list.findIndex((c) => c.id === over.id);
     const reordered = arrayMove(list, oldIndex, newIndex);
     await onClassReorder(reordered.map((c) => c.id));
-  };
-
-  const handleCreateBoard = async () => {
-    const name = newBoardName.trim();
-    if (!name) return;
-    setIsCreating(true);
-    try {
-      await onCreateBoard(name);
-      setNewBoardName("");
-      setIsCreateJoinOpen(false);
-      onPanelChange("board");
-      setMobileOpen(false);
-    } finally {
-      setIsCreating(false);
-    }
   };
 
   // Board settings ("Manage") and Analytics now live in the board-name dropdown
@@ -718,7 +699,6 @@ export default function Sidebar({
         onCreate={async (name: string) => {
           await onCreateBoard(name);
           setIsCreateJoinOpen(false);
-          setNewBoardName("");
           onPanelChange("board");
           setMobileOpen(false);
         }}

@@ -84,7 +84,7 @@ export default function SettingsPanel({
   const [nameValue, setNameValue] = useState(board?.name ?? "");
   const [isSavingName, setIsSavingName] = useState(false);
 
-  const { members, loadingMembers, reloadMembers, setMembersForBoard } = useBoardResources(board?.id ?? null);
+  const { members, loadingMembers, setMembersForBoard } = useBoardResources(board?.id ?? null);
 
   const router = useRouter();
 

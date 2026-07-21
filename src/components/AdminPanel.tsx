@@ -100,11 +100,9 @@ export default function AdminPanel() {
   };
 
   const [confirmDeleteReportId, setConfirmDeleteReportId] = useState<string | null>(null);
-  const [isDeletingReport, setIsDeletingReport] = useState(false);
 
   const performDeleteReport = async () => {
     if (!confirmDeleteReportId) return;
-    setIsDeletingReport(true);
     try {
       const res = await fetch(`/api/admin/reports/${confirmDeleteReportId}`, {
         method: "DELETE",
@@ -115,7 +113,6 @@ export default function AdminPanel() {
     } catch (error) {
       console.error("Failed to delete report:", error);
     } finally {
-      setIsDeletingReport(false);
       setConfirmDeleteReportId(null);
     }
   };

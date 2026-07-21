@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { Task, Comment, TaskActivity, Attachment } from "@/lib/types";
 import dynamic from "next/dynamic";
 const DiffViewer = dynamic(() => import("./DiffViewer"), { ssr: false, loading: () => null });
@@ -121,12 +121,7 @@ export default function TaskModal({
   }, []);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("#4A90A4");
   const [tagCreatePhase, setTagCreatePhase] = useState<"name" | "color" | null>(null);
-  const tagQuery = newTagName.trim().toLowerCase();
-  const suggestionTags = tagQuery
-    ? allBoardTags.filter((t) => t.name.toLowerCase().includes(tagQuery))
-    : allBoardTags;
   
 
   useEffect(() => {
@@ -160,8 +155,6 @@ export default function TaskModal({
   const descriptionOriginalRef = useRef<string>("");
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const savedIndicatorTimeoutRef = useRef<number | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -499,7 +492,6 @@ export default function TaskModal({
       flushUpdatesRef.current?.();
       isMounted.current = false;
       if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
-      if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
     };
   }, []);
 
@@ -603,9 +595,6 @@ export default function TaskModal({
         descriptionLastRecordedRef.current = d2.description ?? "";
         historyStaleRef.current = true;
       }
-      setJustSaved(true);
-      if (savedIndicatorTimeoutRef.current) window.clearTimeout(savedIndicatorTimeoutRef.current);
-      savedIndicatorTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1400);
     } catch (err) {
       // Safety net for an unexpected throw (onUpdate is not expected to
       // throw in normal operation - see above). Board.tsx has not shown a
@@ -815,31 +804,6 @@ export default function TaskModal({
 
     // fire the update in background (do not await to keep UI snappy)
     void handleUpdateWithFeedback(task.id, { tagIds: newIds } as any);
-  };
-
-  const handleCreateTag = async () => {
-    const name = newTagName.trim();
-    if (!name || !task) return;
-    try {
-      const res = await fetch("/api/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color: newTagColor, boardId }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        // Update shared cache so other components see the new tag without refetch.
-        setTagsForBoard((prev) => [...(prev || []), created]);
-        setNewTagName("");
-        setIsCreatingTag(false);
-        setTagCreatePhase(null);
-        // Automatically assign the new tag to the task (non-blocking)
-        toggleTag(created.id);
-        onBroadcast?.();
-      }
-    } catch (error) {
-      console.error("Failed to create tag:", error);
-    }
   };
 
     const handleCreateTagWithColor = async (colorHex: string) => {

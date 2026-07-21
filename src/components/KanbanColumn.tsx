@@ -5,8 +5,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Task, ColumnData } from "@/lib/types";
-import { resolveColumnPalette } from "@/lib/columnPalette";
+import { Task } from "@/lib/types";
 import TaskCard from "./TaskCard";
 import AddTask from "./AddTask";
 import ColumnHeader from "./ColumnHeader";
@@ -45,7 +44,6 @@ function KanbanColumn({
   isBoardEmpty = false,
 }: Props) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: columnId });
-  const colors = resolveColumnPalette(color, columnIndex);
   const {
     setNodeRef: setSortableRef,
     attributes,

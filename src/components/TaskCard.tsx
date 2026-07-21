@@ -41,7 +41,6 @@ function TaskCard({ task, onClick }: Props) {
   } as React.CSSProperties;
 
   const deadlineInfo = formatDeadlineLabel(task.deadline, task.completedAt);
-  const overdue = deadlineInfo.severity === "overdue";
 
   // commentCount is kept in sync by Board.handleAddComment; fall back to array length only if absent
   const commentCount = task.commentCount ?? task.comments?.length ?? 0;

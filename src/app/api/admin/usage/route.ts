@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/auth";
 import { logSecurityEvent } from "@/lib/securityLog";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getVerifiedSession();
     if (!session) {

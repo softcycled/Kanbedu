@@ -30,7 +30,7 @@ export async function GET(
   try {
     // Attempt to connect (no-op if already connected) to surface connect latency
     await prisma.$connect();
-  } catch (err) {
+  } catch {
     // ignore - $connect may error if already connected in some setups
   }
   const connectMs = Date.now() - connectStart;
@@ -99,35 +99,6 @@ export async function GET(
       select: { id: true, url: true, filename: true, size: true, contentType: true, uploadedBy: true, createdAt: true },
     },
   };
-
-  const detailedInclude: any = wantAll
-    ? {
-        comments: { orderBy: { createdAt: "asc" } },
-        assigneeUser: { select: { id: true, name: true, color: true, handle: true } },
-        tags: true,
-        activities: {
-          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        },
-      }
-    : undefined;
-
-  // If only activities are requested, include activities only (plus minimal scalars)
-  const activityInclude: any = wantActivities && !wantAll
-    ? {
-        activities: {
-          include: { user: { select: { id: true, name: true, color: true, handle: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        },
-      }
-    : undefined;
-
-  // If only comments are requested
-  const commentsInclude: any = wantComments && !wantAll
-    ? { comments: { orderBy: { createdAt: "asc" } } }
-    : undefined;
 
   // Fetch the main task row with a lean select (no nested activities/comments by default)
   const taskQueryStart = Date.now();
@@ -293,7 +264,7 @@ export async function PATCH(
   const connectStart = Date.now();
   try {
     await prisma.$connect();
-  } catch (err) {
+  } catch {
     // ignore
   }
   const connectMs = Date.now() - connectStart;
