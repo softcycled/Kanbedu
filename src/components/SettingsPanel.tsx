@@ -780,7 +780,7 @@ export default function SettingsPanel({
                     <button
                       onClick={() => setRemoveConfirmOpen(true)}
                       disabled={!removeTarget || currentUserRole !== "owner" || isRemoving}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:border-red-500/70 hover:bg-red-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {isRemoving ? "Removing…" : "Remove"}
                     </button>
@@ -820,7 +820,7 @@ export default function SettingsPanel({
                     onClick={() => setDeletingBoard(board)}
                     disabled={boards.length <= 1 || currentUserRole !== "owner"}
                     title={boards.length <= 1 ? "Create another board first to delete this one" : currentUserRole !== "owner" ? "Only the board owner can delete this board" : "Delete board"}
-                    className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:border-red-500/70 hover:bg-red-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Delete
                   </button>

@@ -164,7 +164,7 @@ export default function TrashPanel({ boardId, isOpen, onClose, onRestored }: Pro
             <p className="text-xs text-muted">{tasks.length} task{tasks.length === 1 ? "" : "s"} in trash</p>
             <button
               onClick={() => setConfirmTarget("all")}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-500/40 text-red-500 hover:border-red-500/70 hover:bg-red-500/15 transition-colors"
             >
               Empty trash
             </button>

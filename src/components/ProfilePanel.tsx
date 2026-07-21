@@ -896,7 +896,7 @@ export default function ProfilePanel({ onClose }: { onClose?: () => void }) {
                   <SettingRow label="Delete account" description="Permanently removes your account and all data">
                     <button
                       onClick={() => { setDeleteOpen(true); setDeletePassword(""); setDeleteError(null); }}
-                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/8 transition-colors"
+                      className="px-3.5 py-1.5 text-sm font-medium rounded-lg border border-red-500/40 text-red-500 hover:border-red-500/70 hover:bg-red-500/15 transition-colors"
                     >
                       Delete
                     </button>
