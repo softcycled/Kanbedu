@@ -42,7 +42,7 @@ type SortOrder = "flagCount" | "alpha";
 
 interface Props {
   classId: string;
-  onOpenBoard: (g: { id: string; name: string; boardId: string }) => void;
+  onOpenBoard: (g: { id: string; name: string; boardId: string; focusTaskId?: string }) => void;
   onFlagCount?: (n: number) => void;
   // Bumped by the parent whenever Roster creates/deletes a group, so Integrity
   // picks up the change without requiring a full page reload.
@@ -290,29 +290,46 @@ export default function IntegrityPanel({ classId, onOpenBoard, onFlagCount, relo
                 />
                 <ul className="divide-y divide-border/50">
                   {g.flagged.map((t) => (
-                    <li key={t.id} className="px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-ink truncate" title={t.title}>{t.title}</p>
-                        <p className="text-[11px] text-muted mt-0.5">
-                          {t.assignee} · in {t.columnLabel}
-                          {t.isSpeedRun && <> · done in <span className="font-mono text-red-600">{formatDuration(t.cycleTimeMs)}</span></>}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 flex-shrink-0">
-                        {t.isSpeedRun && <FlagChip kind="speedRun" />}
-                        {t.isColumnSkip && (
-                          <FlagChip
-                            kind="columnSkip"
-                            tooltip={t.skippedColumns.length > 0 ? `Skipped: ${t.skippedColumns.join(", ")}` : undefined}
-                          />
-                        )}
-                        {t.isMovedByOther && (
-                          <FlagChip
-                            kind="movedByOther"
-                            tooltip={t.movedBy ? `Moved by ${t.movedBy}` : undefined}
-                          />
-                        )}
-                      </div>
+                    <li key={t.id}>
+                      {/* Whole row opens the flagged task's board and its detail
+                          modal, so an educator can inspect it without hunting the
+                          board manually. */}
+                      <button
+                        type="button"
+                        onClick={() => onOpenBoard({ id: g.groupId, name: g.name, boardId: g.boardId, focusTaskId: t.id })}
+                        aria-label={`Open “${t.title}” in ${g.name}`}
+                        className="w-full text-left px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 hover:bg-ink/[0.035] transition-colors group/row"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-ink truncate" title={t.title}>{t.title}</p>
+                          <p className="text-[11px] text-muted mt-0.5">
+                            {t.assignee} · in {t.columnLabel}
+                            {t.isSpeedRun && <> · done in <span className="font-mono text-red-600">{formatDuration(t.cycleTimeMs)}</span></>}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 flex-shrink-0">
+                          {t.isSpeedRun && <FlagChip kind="speedRun" />}
+                          {t.isColumnSkip && (
+                            <FlagChip
+                              kind="columnSkip"
+                              tooltip={t.skippedColumns.length > 0 ? `Skipped: ${t.skippedColumns.join(", ")}` : undefined}
+                            />
+                          )}
+                          {t.isMovedByOther && (
+                            <FlagChip
+                              kind="movedByOther"
+                              tooltip={t.movedBy ? `Moved by ${t.movedBy}` : undefined}
+                            />
+                          )}
+                        </div>
+                        <svg
+                          width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          aria-hidden
+                          className="flex-shrink-0 text-muted/40 group-hover/row:text-muted transition-colors"
+                        >
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                      </button>
                     </li>
                   ))}
                 </ul>

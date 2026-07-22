@@ -60,9 +60,13 @@ interface Props {
   onOpenSettings?: () => void;
   // Opens the analytics panel for this board, from the board-name dropdown.
   onOpenAnalytics?: () => void;
+  // Deep-link target (class Integrity panel): when set, open this task's detail
+  // as soon as it's present in the loaded list, so an educator lands straight on
+  // the flagged task instead of hunting for it on the board.
+  focusTaskId?: string;
 }
 
-export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false, onOpenSettings, onOpenAnalytics }: Props) {
+export default function Board({ boardId, boardName, tasks, columns, onTasksChange, onColumnsChange, currentUserId, isLoading = false, headerTitle, headerTrailing, onOpenNav, canViewTrash = false, onOpenSettings, onOpenAnalytics, focusTaskId }: Props) {
   const [trashOpen, setTrashOpen] = useState(false);
   // Broadcasting is now server-side only — this is a stable no-op to satisfy call sites
   const broadcastRefresh = useCallback((_payload?: unknown) => {}, []);
@@ -910,6 +914,20 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
   }, []);
+
+  // Deep-link from the Integrity panel: open the flagged task's detail as soon
+  // as the board's tasks have loaded. A ref guards it so it fires once per
+  // target and doesn't re-open after the educator closes the modal (task list
+  // updates from realtime would otherwise re-trigger it).
+  const focusHandledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusTaskId || focusHandledRef.current === focusTaskId) return;
+    const target = tasks.find((t) => t.id === focusTaskId);
+    if (target) {
+      focusHandledRef.current = focusTaskId;
+      setSelectedTask(target);
+    }
+  }, [focusTaskId, tasks]);
 
   const [isPanning, setIsPanning] = useState(false);
 

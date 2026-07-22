@@ -37,6 +37,9 @@ interface Props {
   onOpenNav?: () => void;
   // Only educators/TAs see the trash on class group boards.
   canViewTrash?: boolean;
+  // Deep-link target from the Integrity panel — forwarded to <Board>, which
+  // opens this task's detail once the board data has loaded.
+  focusTaskId?: string;
 }
 
 interface BoardCache {
@@ -51,7 +54,7 @@ const boardCache = new Map<string, BoardCache>();
 // Single-board wrapper used inside a class workspace. Mirrors the per-board
 // data plumbing of BoardContainer (load tasks/columns, surgical realtime
 // refresh) for exactly one group board, then renders the shared <Board>.
-export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret, headerTitle, headerTrailing, onOpenNav, canViewTrash }: Props) {
+export default function GroupBoardView({ boardId, boardName, currentUserId, realtimeSecret, headerTitle, headerTrailing, onOpenNav, canViewTrash, focusTaskId }: Props) {
   const initialCache = boardCache.get(boardId);
   const isFresh = !!initialCache && Date.now() - initialCache.fetchedAt <= CACHE_TTL_MS;
 
@@ -202,6 +205,7 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         onOpenNav={onOpenNav}
         canViewTrash={canViewTrash}
         onOpenAnalytics={() => setView("analytics")}
+        focusTaskId={focusTaskId}
       />
     </div>
   );

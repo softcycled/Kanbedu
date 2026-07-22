@@ -159,7 +159,7 @@ export default function ClassWorkspace(props: Props) {
   // Track which tabs have ever been opened so we can keep them mounted after
   // first visit — switching back is instant with no re-fetch.
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set<Tab>(["monitor"]));
-  const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null; groupId: string } | null>(null);
+  const [openBoard, setOpenBoard] = useState<{ boardId: string; name: string; secret: string | null; groupId: string; focusTaskId?: string } | null>(null);
   // Bumped whenever Roster creates/deletes a group, so Monitor and Integrity
   // (which stay mounted across tab switches) refetch instead of showing stale data.
   const [groupsVersion, setGroupsVersion] = useState(0);
@@ -192,9 +192,9 @@ export default function ClassWorkspace(props: Props) {
   // `groups` prop. The realtime secret is only known for groups present at load;
   // newly created ones simply open without live updates until the next reload.
   const openGroupBoard = useCallback(
-    (g: { id: string; name: string; boardId: string }) => {
+    (g: { id: string; name: string; boardId: string; focusTaskId?: string }) => {
       const known = groups.find((gr) => gr.boardId === g.boardId || gr.id === g.id);
-      setOpenBoard({ boardId: g.boardId, name: g.name, secret: known?.realtimeSecret ?? null, groupId: g.id });
+      setOpenBoard({ boardId: g.boardId, name: g.name, secret: known?.realtimeSecret ?? null, groupId: g.id, focusTaskId: g.focusTaskId });
     },
     [groups]
   );
@@ -267,6 +267,7 @@ export default function ClassWorkspace(props: Props) {
           realtimeSecret={openBoard.secret}
           headerTitle={<GroupTitleMenu name={openBoard.name} onRename={renameOpenGroupBoard} />}
           canViewTrash
+          focusTaskId={openBoard.focusTaskId}
         />
       </div>
     );
