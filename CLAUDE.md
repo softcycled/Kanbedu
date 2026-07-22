@@ -114,6 +114,16 @@ For big actions (push to main, deploys): respond "Yes, boss?" first, wait for ex
 
 ---
 
+## Sweep rule: no single-instance fixes
+
+When asked to change, rename, or fix something, the request covers every instance of it, not just the one the user pointed at. "Here" scopes the example, not the fix.
+
+- Grep the whole repo for the string/value/pattern BEFORE editing. Fix all identical instances in the same turn.
+- Similar-but-not-identical instances: name them and ask, never silently skip them.
+- If the same value or copy lives in more than one place, that duplication is itself the bug: extract it into one shared source (like `proPlan.ts`, `groupSearch.ts`, `waiting.ts`) so a partial fix becomes impossible.
+
+---
+
 ## Parallel sessions
 
 Multiple AI sessions often work in this tree at the same time.
