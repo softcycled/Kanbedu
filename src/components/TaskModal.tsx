@@ -711,9 +711,14 @@ export default function TaskModal({
   }, [handleClose]);
 
   useEffect(() => {
+    // Only intercept Escape while a task is actually open. TaskModal stays
+    // mounted with task=null (it renders null below), so without this guard its
+    // handler would keep calling stopPropagation() on every Escape and swallow
+    // the board's own Escape-to-close (ClassWorkspace / BoardContainer).
+    if (!task) return;
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  }, [handleKeyDown, task]);
 
   // Focus trap: keep Tab/Shift+Tab inside the panel
   useEffect(() => {
