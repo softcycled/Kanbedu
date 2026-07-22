@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import GroupBoardView from "./GroupBoardView";
 import { trackEvent } from "@/lib/analytics";
 import { DropdownMenu, DropdownItem } from "../ui/DropdownMenu";
+import AnalyticsMenuItem from "../AnalyticsMenuItem";
 
 function PanelSkeleton() {
   return (
@@ -95,7 +96,7 @@ function TabBar({ tabs, tab, setTab, setVisitedTabs }: {
 // doubles as a dropdown trigger (mirrors BoardHeaderMenu on personal boards).
 // Only action is renaming — invite/leave don't apply here, the class-level
 // Settings tab already owns those.
-function GroupTitleMenu({ name, onRename }: { name: string; onRename: (newName: string) => void }) {
+function GroupTitleMenu({ name, onRename, onOpenAnalytics }: { name: string; onRename: (newName: string) => void; onOpenAnalytics?: () => void }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +138,9 @@ function GroupTitleMenu({ name, onRename }: { name: string; onRename: (newName: 
         </svg>
       </button>
       <DropdownMenu open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} className="w-[212px]">
+        {onOpenAnalytics && (
+          <AnalyticsMenuItem onSelect={() => { setOpen(false); onOpenAnalytics(); }} />
+        )}
         <DropdownItem
           onClick={() => { setOpen(false); setEditing(true); }}
           icon={
@@ -265,7 +269,7 @@ export default function ClassWorkspace(props: Props) {
           boardName={openBoard.name}
           currentUserId={currentUserId}
           realtimeSecret={openBoard.secret}
-          headerTitle={<GroupTitleMenu name={openBoard.name} onRename={renameOpenGroupBoard} />}
+          headerTitle={({ onOpenAnalytics }) => <GroupTitleMenu name={openBoard.name} onRename={renameOpenGroupBoard} onOpenAnalytics={onOpenAnalytics} />}
           canViewTrash
           focusTaskId={openBoard.focusTaskId}
         />

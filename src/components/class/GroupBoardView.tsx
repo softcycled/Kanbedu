@@ -30,9 +30,12 @@ interface Props {
   boardName: string;
   currentUserId: string;
   realtimeSecret?: string | null;
-  // Forwarded to <Board> so the class shell can render a breadcrumb title and a
-  // "Leave class" action inside the single board header row.
-  headerTitle?: ReactNode;
+  // Forwarded to <Board> as the header title. Either a plain node, or a render
+  // function handed an `onOpenAnalytics` opener so the title's own dropdown
+  // (educator Rename menu / student breadcrumb menu) can carry the Analytics
+  // entry, wired to this board's Analytics view. That replaces the old
+  // standalone analytics icon, matching how personal boards surface it.
+  headerTitle?: ReactNode | ((opts: { onOpenAnalytics: () => void }) => ReactNode);
   headerTrailing?: ReactNode;
   onOpenNav?: () => void;
   // Only educators/TAs see the trash on class group boards.
@@ -188,6 +191,13 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
     );
   }
 
+  // Analytics now lives in the title dropdown (via the render-prop opener),
+  // not a standalone icon — so onOpenAnalytics is no longer passed to <Board>.
+  const resolvedHeaderTitle =
+    typeof headerTitle === "function"
+      ? headerTitle({ onOpenAnalytics: () => setView("analytics") })
+      : headerTitle;
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       <Board
@@ -200,11 +210,10 @@ export default function GroupBoardView({ boardId, boardName, currentUserId, real
         onColumnsChange={setColumns}
         isLoading={isLoading}
         currentUserId={currentUserId}
-        headerTitle={headerTitle}
+        headerTitle={resolvedHeaderTitle}
         headerTrailing={headerTrailing}
         onOpenNav={onOpenNav}
         canViewTrash={canViewTrash}
-        onOpenAnalytics={() => setView("analytics")}
         focusTaskId={focusTaskId}
       />
     </div>

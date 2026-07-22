@@ -1052,19 +1052,6 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </button>
-          {headerTitle && onOpenAnalytics && (
-            <button
-              onClick={onOpenAnalytics}
-              aria-label="Analytics"
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-transparent text-muted hover:text-ink transition-colors"
-            >
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="8" width="3" height="7" rx="0.5" />
-                <rect x="6" y="4" width="3" height="11" rx="0.5" />
-                <rect x="11" y="1" width="3" height="14" rx="0.5" />
-              </svg>
-            </button>
-          )}
           {canViewTrash && (
             <button
               onClick={() => setTrashOpen(true)}
@@ -1156,23 +1143,6 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
               </svg>
             </button>
           </div>
-          {/* Class group boards only: personal boards surface Analytics in the
-              board-name dropdown (BoardHeaderMenu), which never renders when a
-              headerTitle is provided — so class boards get this standalone entry. */}
-          {headerTitle && onOpenAnalytics && (
-            <button
-              onClick={onOpenAnalytics}
-              title="Analytics"
-              aria-label="Analytics"
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-border/30 bg-column-bg text-muted/70 hover:text-ink/80 transition-colors flex-shrink-0"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="8" width="3" height="7" rx="0.5" />
-                <rect x="6" y="4" width="3" height="11" rx="0.5" />
-                <rect x="11" y="1" width="3" height="14" rx="0.5" />
-              </svg>
-            </button>
-          )}
           {canViewTrash && (
             <button
               onClick={() => setTrashOpen(true)}

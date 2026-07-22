@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import useBoardResources from "@/hooks/useBoardResources";
 import ConfirmModal from "./ConfirmModal";
 import { DropdownMenu, DropdownItem, DropdownDivider } from "./ui/DropdownMenu";
+import AnalyticsMenuItem from "./AnalyticsMenuItem";
 
 interface Props {
   boardId: string;
@@ -111,18 +112,7 @@ export default function BoardHeaderMenu({ boardId, boardName, currentUserId, onO
           Board settings
         </DropdownItem>
         {onOpenAnalytics && (
-          <DropdownItem
-            onClick={() => { setOpen(false); onOpenAnalytics(); }}
-            icon={
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="8" width="3" height="7" rx="0.5" />
-                <rect x="6" y="4" width="3" height="11" rx="0.5" />
-                <rect x="11" y="1" width="3" height="14" rx="0.5" />
-              </svg>
-            }
-          >
-            Analytics
-          </DropdownItem>
+          <AnalyticsMenuItem onSelect={() => { setOpen(false); onOpenAnalytics(); }} />
         )}
         {canLeave && (
           <>

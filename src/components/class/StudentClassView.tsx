@@ -7,6 +7,7 @@ import ConfirmModal from "../ConfirmModal";
 import { useToasts } from "../Toasts";
 import { trackEvent } from "@/lib/analytics";
 import { DropdownMenu, DropdownItem, DropdownDivider } from "../ui/DropdownMenu";
+import AnalyticsMenuItem from "../AnalyticsMenuItem";
 
 const GroupBoardView = dynamic(() => import("./GroupBoardView"), {
   ssr: false,
@@ -50,12 +51,14 @@ function GroupBoardTitleMenu({
   hasBoard,
   onBoardSettingsClick,
   onLeaveClick,
+  onOpenAnalytics,
 }: {
   className: string;
   groupName: string | null;
   hasBoard: boolean;
   onBoardSettingsClick: () => void;
   onLeaveClick: () => void;
+  onOpenAnalytics?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -99,6 +102,9 @@ function GroupBoardTitleMenu({
             >
               Board settings
             </DropdownItem>
+            {onOpenAnalytics && (
+              <AnalyticsMenuItem onSelect={() => { setOpen(false); onOpenAnalytics(); }} />
+            )}
             <DropdownDivider />
           </>
         )}
@@ -138,13 +144,17 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
     if (!ok) push({ title: "Couldn't leave the class", description: "Please try again." });
   };
 
-  const breadcrumb = (
+  // A fresh component instance per render site (see GroupBoardTitleMenu's note).
+  // `onOpenAnalytics` is only wired in the board case, where GroupBoardView hands
+  // it down; the lobby has no board, so no Analytics entry.
+  const renderBreadcrumb = (opts?: { onOpenAnalytics?: () => void }) => (
     <GroupBoardTitleMenu
       className={activeClass.name}
       groupName={activeClass.groupName ?? null}
       hasBoard={!!activeClass.boardId}
       onBoardSettingsClick={() => activeClass.boardId && onOpenBoardSettings(activeClass.boardId)}
       onLeaveClick={() => setConfirmLeave(true)}
+      onOpenAnalytics={opts?.onOpenAnalytics}
     />
   );
 
@@ -160,14 +170,14 @@ export default function StudentClassView({ activeClass, currentUserId, onLeave, 
           boardName={activeClass.groupName || "Your group"}
           currentUserId={currentUserId}
           realtimeSecret={activeClass.realtimeSecret ?? null}
-          headerTitle={breadcrumb}
+          headerTitle={({ onOpenAnalytics }) => renderBreadcrumb({ onOpenAnalytics })}
           onOpenNav={onOpenNav}
         />
       ) : (
         <>
           {/* No board yet — a slim header carries the same context; Leave lives in the title's dropdown. */}
           <div className="flex-shrink-0 flex items-center gap-2 px-6 md:px-10 py-3 border-b border-border/60">
-            {breadcrumb}
+            {renderBreadcrumb()}
           </div>
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
             <div className="w-12 h-12 rounded-full bg-ink/5 flex items-center justify-center mb-4">
