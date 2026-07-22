@@ -22,7 +22,7 @@ interface MonitorGroup {
   total: number;
   done: number;
   percent: number;
-  stalled: number;
+  waiting: number;
   overdue: number;
   needsAttention: boolean;
   perColumn: { label: string; isDone: boolean; count: number }[];
@@ -60,7 +60,7 @@ function Avatar({ member }: { member: MonitorMember }) {
 // leaderboard or cross-group ranking. Attention cues are framed as help signals.
 export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Props) {
   const [groups, setGroups] = useState<MonitorGroup[]>([]);
-  const [stallDays, setStallDays] = useState(3);
+  const [waitingDays, setWaitingDays] = useState(5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -76,7 +76,7 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "Failed to load monitor.");
       const data = await res.json();
       setGroups(data.groups || []);
-      setStallDays(data.stallDays ?? 3);
+      setWaitingDays(data.waitingDays ?? 5);
     } catch (e: any) {
       if (!silent) setError(e?.message || "Failed to load monitor.");
     } finally {
@@ -216,16 +216,16 @@ export default function MonitorPanel({ classId, onOpenBoard, reloadSignal }: Pro
               ))}
             </div>
 
-            {(g.stalled > 0 || g.overdue > 0) && (
+            {(g.waiting > 0 || g.overdue > 0) && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {g.overdue > 0 && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                     {g.overdue} overdue
                   </span>
                 )}
-                {g.stalled > 0 && (
+                {g.waiting > 0 && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
-                    {g.stalled} stalled &gt;{stallDays}d
+                    {g.waiting} waiting &gt;{waitingDays}d
                   </span>
                 )}
               </div>

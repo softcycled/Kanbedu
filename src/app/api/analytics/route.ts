@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, isMemberOfBoard } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthzDenied } from "@/lib/securityLog";
+import { isWaiting } from "@/lib/waiting";
 
 export async function GET(request: NextRequest) {
   const session = await getVerifiedSession();
@@ -220,9 +221,10 @@ export async function GET(request: NextRequest) {
     const isDone = col?.isDone ?? false;
     const cycleTimeMs = t.completedAt ? t.completedAt.getTime() - t.createdAt.getTime() : null;
     // currentPhaseMs is only meaningful for active tasks; freeze at 0 for done
-    // tasks so they never trip the stagnant threshold.
-    const currentPhaseMs = isDone ? 0 : now.getTime() - getEnteredCurrentColumn(t).getTime();
-    return { priority: t.priority, columnId: t.column, columnIsDone: isDone, hasComments: t._count.comments > 0, cycleTimeMs, currentPhaseMs };
+    // tasks so they never trip the waiting threshold.
+    const enteredColumnAt = getEnteredCurrentColumn(t).getTime();
+    const currentPhaseMs = isDone ? 0 : now.getTime() - enteredColumnAt;
+    return { priority: t.priority, columnId: t.column, columnIsDone: isDone, hasComments: t._count.comments > 0, cycleTimeMs, currentPhaseMs, enteredColumnAt };
   });
 
   // ── Summary ───────────────────────────────────────────────────
@@ -243,14 +245,21 @@ export async function GET(request: NextRequest) {
       ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length
       : null;
 
-  // Stagnation: tasks in a middle column (not the intake column, not Done)
-  // that haven't moved in 5+ days. Backlog items are excluded -- they're
-  // meant to sit untouched until someone picks them up. Tasks with any
-  // comments are excluded too -- a comment thread means someone's actively
-  // discussing it, so it isn't just sitting there ignored.
-  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  // "Waiting": tasks parked in an active column past the threshold. Same rule
+  // as the educator Monitor — see src/lib/waiting.ts. Backlog (intake column)
+  // and Done are excluded, and tasks with a comment thread are excluded too
+  // since someone's already discussing them. The rate is over active,
+  // non-backlog tasks (the pool that could plausibly be waiting).
   const activeTasks = taskAggregates.filter((t) => !t.columnIsDone && t.columnId !== firstColumnId);
-  const stagnantCount = activeTasks.filter((t) => !t.hasComments && t.currentPhaseMs > FIVE_DAYS_MS).length;
+  const stagnantCount = taskAggregates.filter((t) =>
+    isWaiting({
+      isDoneColumn: t.columnIsDone,
+      isFirstColumn: t.columnId === firstColumnId,
+      hasComments: t.hasComments,
+      enteredColumnAt: t.enteredColumnAt,
+      now: now.getTime(),
+    })
+  ).length;
 
   // Deadline adherence: completed tasks with a deadline.
   // Use setUTCHours to extend to end-of-UTC-day — consistent regardless of server timezone.

@@ -2,10 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession, getClassRole } from "@/lib/auth";
 import { logSecurityEvent } from "@/lib/securityLog";
+import { isWaiting, WAITING_DAYS } from "@/lib/waiting";
 
-// A task is "stalled" if it has sat in a non-done column without movement for
-// this many days. Surfaced as a help signal, never as a ranking.
-const STALL_DAYS = 3;
+// The "waiting" signal (task parked in an active column past the threshold)
+// shares one definition with the board Analytics panel — see src/lib/waiting.ts.
+// Surfaced as a help signal for lecturers, never as a ranking.
 
 // GET: per-group progress snapshot for the educator Monitor overview.
 // Intentionally returns each group's OWN progress only — no cross-group ranking.
@@ -40,7 +41,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         ? []
         : await prisma.task.findMany({
             where: { column: { in: allColumnIds }, deletedAt: null },
-            select: { column: true, deadline: true, completedAt: true, columnUpdatedAt: true, createdAt: true },
+            select: {
+              column: true,
+              deadline: true,
+              completedAt: true,
+              columnUpdatedAt: true,
+              _count: { select: { comments: true } },
+            },
           });
     const tasksByColumn = new Map<string, typeof allTasks>();
     for (const t of allTasks) {
@@ -50,7 +57,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const now = Date.now();
-    const stallMs = STALL_DAYS * 24 * 60 * 60 * 1000;
 
     function endOfDay(d: Date): number {
       const r = new Date(d);
@@ -61,11 +67,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const result = groups.map((g) => {
       const columns = g.board.columns;
       const doneColumnIds = new Set(columns.filter((c) => c.isDone).map((c) => c.id));
+      // Intake column (To Do / Backlog / Wishlist): cards sit there by design,
+      // so it's excluded from the "waiting" signal alongside Done.
+      const firstColumnId = columns[0]?.id ?? null;
       const tasks = columns.flatMap((c) => tasksByColumn.get(c.id) ?? []);
 
       const total = tasks.length;
       let done = 0;
-      let stalled = 0;
+      let waiting = 0;
       let overdue = 0;
       const perColumnMap = new Map<string, number>();
 
@@ -78,8 +87,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         }
         // Not in a done column: candidate for help signals.
         if (t.deadline && endOfDay(t.deadline) < now) overdue++;
-        const neverMoved = t.columnUpdatedAt.getTime() === t.createdAt.getTime();
-        if (!neverMoved && now - t.columnUpdatedAt.getTime() > stallMs) stalled++;
+        if (
+          isWaiting({
+            isDoneColumn: false,
+            isFirstColumn: t.column === firstColumnId,
+            hasComments: t._count.comments > 0,
+            enteredColumnAt: t.columnUpdatedAt.getTime(),
+            now,
+          })
+        )
+          waiting++;
       }
 
       const perColumn = columns.map((c) => ({
@@ -96,9 +113,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         total,
         done,
         percent: total === 0 ? 0 : Math.round((done / total) * 100),
-        stalled,
+        waiting,
         overdue,
-        needsAttention: stalled > 0 || overdue > 0,
+        needsAttention: waiting > 0 || overdue > 0,
         perColumn,
         members: g.members.map((m) => ({
           id: m.user.id,
@@ -110,7 +127,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       };
     });
 
-    return NextResponse.json({ groups: result, stallDays: STALL_DAYS });
+    return NextResponse.json({ groups: result, waitingDays: WAITING_DAYS });
   } catch (error) {
     console.error("Failed to load monitor:", error);
     return NextResponse.json({ error: "Failed to load monitor." }, { status: 500 });

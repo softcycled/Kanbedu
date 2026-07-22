@@ -437,7 +437,7 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
 
           <div className="flex flex-col gap-4">
             <MeterCard
-              label="Needs a nudge"
+              label="Waiting"
               description="Share of active tasks that haven't moved in 5+ days and have no comments yet."
               displayValue={`${Math.round(summary.stagnantRate * 100)}%`}
               sub={`${summary.stagnantCount} task${summary.stagnantCount !== 1 ? "s" : ""} haven't moved in 5+ days`}
