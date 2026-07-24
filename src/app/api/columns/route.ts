@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // If no columns exist for this board, create defaults
     if (columns.length === 0) {
       const defaultColumns = [
-        { label: "To Do", order: 0, isDone: false, boardId },
+        { label: "To Do", order: 0, isDone: false, isStart: true, boardId },
         { label: "In Progress", order: 1, isDone: false, boardId },
         { label: "Done", order: 2, isDone: true, boardId },
       ];

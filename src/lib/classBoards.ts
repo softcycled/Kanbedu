@@ -17,6 +17,7 @@ export class ClassLimitReachedError extends Error {
 export interface PresetColumn {
   label: string;
   isDone: boolean;
+  isStart: boolean;
 }
 export interface PresetTask {
   title: string;
@@ -33,9 +34,9 @@ export interface PresetData {
 // default board columns created in /api/boards.
 export const DEFAULT_PRESET: PresetData = {
   columns: [
-    { label: "To Do", isDone: false },
-    { label: "In Progress", isDone: false },
-    { label: "Done", isDone: true },
+    { label: "To Do", isDone: false, isStart: true },
+    { label: "In Progress", isDone: false, isStart: false },
+    { label: "Done", isDone: true, isStart: false },
   ],
   tasks: [],
 };
@@ -46,7 +47,8 @@ export function coercePreset(columns: unknown, tasks: unknown): PresetData {
   const cols = Array.isArray(columns)
     ? (columns as any[])
         .filter((c) => c && typeof c.label === "string" && c.label.trim())
-        .map((c) => ({ label: String(c.label), isDone: !!c.isDone }))
+        // Start and Done are mutually exclusive; a done column can't also be start.
+        .map((c) => ({ label: String(c.label), isDone: !!c.isDone, isStart: !!c.isStart && !c.isDone }))
     : [];
   const safeColumns = cols.length > 0 ? cols : DEFAULT_PRESET.columns;
 
@@ -88,7 +90,7 @@ export async function createGroupBoard(
   for (let i = 0; i < preset.columns.length; i++) {
     const col = preset.columns[i];
     const created = await tx.column.create({
-      data: { label: col.label, order: i, isDone: col.isDone, boardId: board.id },
+      data: { label: col.label, order: i, isDone: col.isDone, isStart: col.isStart, boardId: board.id },
     });
     columnIds.push(created.id);
   }

@@ -64,12 +64,18 @@ export const updateColumnSchema = z
   .object({
     label: z.string().trim().min(1, "Label must be non-empty.").max(60, "Label is too long.").optional(),
     isDone: z.boolean().optional(),
+    isStart: z.boolean().optional(),
     // A palette name selects an explicit color; null resets to color-by-position.
     color: z.enum(["blue", "orange", "green", "purple", "pink", "cyan", "yellow", "red"]).nullable().optional(),
   })
-  .refine((data) => data.label !== undefined || data.isDone !== undefined || data.color !== undefined, {
-    message: "No valid fields to update.",
-  });
+  .refine(
+    (data) =>
+      data.label !== undefined ||
+      data.isDone !== undefined ||
+      data.isStart !== undefined ||
+      data.color !== undefined,
+    { message: "No valid fields to update." }
+  );
 
 export const reorderColumnsSchema = z.object({
   columns: z.array(
@@ -196,6 +202,7 @@ export const savePresetSchema = z.object({
       z.object({
         label: z.string().trim().min(1, "Column label is required.").max(40),
         isDone: z.boolean().default(false),
+        isStart: z.boolean().default(false),
       })
     )
     .min(1, "At least one column is required.")

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Skeleton from "../Skeleton";
 
-interface PColumn { label: string; isDone: boolean; }
+interface PColumn { label: string; isDone: boolean; isStart: boolean; }
 interface PTask { title: string; description: string; columnIndex: number; priority: string; }
 
 interface Props { classId: string; readOnly?: boolean; }
@@ -40,7 +40,7 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
 
   const markDirty = () => { setSaved(false); setError(null); };
 
-  const addColumn = () => { setColumns((c) => [...c, { label: "New column", isDone: false }]); markDirty(); };
+  const addColumn = () => { setColumns((c) => [...c, { label: "New column", isDone: false, isStart: false }]); markDirty(); };
   const removeColumn = (idx: number) => {
     setColumns((c) => c.filter((_, i) => i !== idx));
     // Re-point or drop tasks referencing removed/shifted columns.
@@ -55,8 +55,27 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
     setColumns((c) => c.map((col, i) => (i === idx ? { ...col, label } : col)));
     markDirty();
   };
+  // Done is single-select: only one done column. Marking a column done also
+  // clears its Start flag (a column is Start OR Done, never both).
   const setDoneColumn = (idx: number) => {
-    setColumns((c) => c.map((col, i) => ({ ...col, isDone: i === idx ? !col.isDone : false })));
+    setColumns((c) =>
+      c.map((col, i) => {
+        if (i !== idx) return { ...col, isDone: false };
+        const nextDone = !col.isDone;
+        return { ...col, isDone: nextDone, isStart: nextDone ? false : col.isStart };
+      })
+    );
+    markDirty();
+  };
+  // Start allows several columns; toggling it clears Done on that column.
+  const setStartColumn = (idx: number) => {
+    setColumns((c) =>
+      c.map((col, i) => {
+        if (i !== idx) return col;
+        const nextStart = !col.isStart;
+        return { ...col, isStart: nextStart, isDone: nextStart ? false : col.isDone };
+      })
+    );
     markDirty();
   };
 
@@ -126,9 +145,19 @@ export default function PresetEditor({ classId, readOnly = false }: Props) {
               className="flex-1 px-2.5 py-1.5 text-sm rounded-lg border border-border bg-column-bg text-ink outline-none focus:border-ink/30 disabled:opacity-60"
             />
             <button
+              onClick={() => setStartColumn(i)}
+              disabled={readOnly}
+              className={`w-24 shrink-0 text-center text-[11px] py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${
+                col.isStart ? "border-ink/40 text-ink bg-ink/8" : "border-border text-muted hover:text-ink"
+              }`}
+              title="Start column: cards here never flag as waiting"
+            >
+              {col.isStart ? "Start column" : "Mark start"}
+            </button>
+            <button
               onClick={() => setDoneColumn(i)}
               disabled={readOnly}
-              className={`w-28 shrink-0 text-center text-[11px] py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${
+              className={`w-24 shrink-0 text-center text-[11px] py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${
                 col.isDone ? "border-emerald-400/70 text-emerald-700 bg-emerald-400/10" : "border-border text-muted hover:text-ink"
               }`}
               title="Mark as the 'done' column"

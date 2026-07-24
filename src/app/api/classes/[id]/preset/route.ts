@@ -57,7 +57,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "A seed task references a column that does not exist." }, { status: 400 });
     }
 
-    const columns = result.data.columns.map((c) => ({ label: c.label, isDone: c.isDone }));
+    // Start and Done are mutually exclusive; a done column can't also be start.
+    const columns = result.data.columns.map((c) => ({ label: c.label, isDone: c.isDone, isStart: c.isStart && !c.isDone }));
     const tasks = result.data.tasks.map((t) => ({
       title: t.title,
       description: t.description,

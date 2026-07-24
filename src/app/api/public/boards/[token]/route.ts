@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
         publicViewEnabled: true,
         columns: {
           orderBy: { order: "asc" },
-          select: { id: true, label: true, order: true, isDone: true, color: true },
+          select: { id: true, label: true, order: true, isDone: true, isStart: true, color: true },
         },
       },
     });

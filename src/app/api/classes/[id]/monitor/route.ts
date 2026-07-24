@@ -67,9 +67,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const result = groups.map((g) => {
       const columns = g.board.columns;
       const doneColumnIds = new Set(columns.filter((c) => c.isDone).map((c) => c.id));
-      // Intake column (To Do / Backlog / Wishlist): cards sit there by design,
-      // so it's excluded from the "waiting" signal alongside Done.
-      const firstColumnId = columns[0]?.id ?? null;
+      // Start columns (To Do / Backlog / Wishlist): cards sit there by design,
+      // so they're excluded from the "waiting" signal alongside Done. A board
+      // may have several, so this is a set, not just the first column.
+      const startColumnIds = new Set(columns.filter((c) => c.isStart).map((c) => c.id));
       const tasks = columns.flatMap((c) => tasksByColumn.get(c.id) ?? []);
 
       const total = tasks.length;
@@ -90,7 +91,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         if (
           isWaiting({
             isDoneColumn: false,
-            isFirstColumn: t.column === firstColumnId,
+            isStartColumn: startColumnIds.has(t.column),
             hasComments: t._count.comments > 0,
             enteredColumnAt: t.columnUpdatedAt.getTime(),
             now,

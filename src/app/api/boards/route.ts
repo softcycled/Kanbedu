@@ -30,7 +30,7 @@ export async function GET() {
         });
         await tx.column.createMany({
           data: [
-            { label: "To Do", order: 0, isDone: false, boardId: created.id },
+            { label: "To Do", order: 0, isDone: false, isStart: true, boardId: created.id },
             { label: "In Progress", order: 1, isDone: false, boardId: created.id },
             { label: "Done", order: 2, isDone: true, boardId: created.id },
           ],
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       });
       await tx.column.createMany({
         data: [
-          { label: "To Do", order: 0, isDone: false, boardId: created.id },
+          { label: "To Do", order: 0, isDone: false, isStart: true, boardId: created.id },
           { label: "In Progress", order: 1, isDone: false, boardId: created.id },
           { label: "Done", order: 2, isDone: true, boardId: created.id },
         ],

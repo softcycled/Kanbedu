@@ -188,7 +188,7 @@ async function main() {
 
   // ── Columns ────────────────────────────────────────────────
   const colTodo = await prisma.column.create({
-    data: { label: "To Do", order: 0, isDone: false, boardId: board.id },
+    data: { label: "To Do", order: 0, isDone: false, isStart: true, boardId: board.id },
   });
   const colInProgress = await prisma.column.create({
     data: { label: "In Progress", order: 1, isDone: false, boardId: board.id },
@@ -569,7 +569,7 @@ async function main() {
   const b2 = await prisma.board.create({
     data: { id: "demo-board-seed-0002", name: "[Struggling] Mobile App MVP Sprint", order: 1 },
   });
-  const b2Todo = await prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, boardId: b2.id } });
+  const b2Todo = await prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, isStart: true, boardId: b2.id } });
   const b2InProg = await prisma.column.create({ data: { label: "In Progress", order: 1, isDone: false, boardId: b2.id } });
   const b2Testing = await prisma.column.create({ data: { label: "Testing", order: 2, isDone: false, boardId: b2.id } });
   const b2Done = await prisma.column.create({ data: { label: "Done", order: 3, isDone: true, boardId: b2.id } });
@@ -892,7 +892,7 @@ async function main() {
   const b3 = await prisma.board.create({
     data: { id: "demo-board-seed-0003", name: "[Winding Down] Research Paper", order: 2 },
   });
-  const b3LitRev  = await prisma.column.create({ data: { label: "Literature Review", order: 0, isDone: false, boardId: b3.id } });
+  const b3LitRev  = await prisma.column.create({ data: { label: "Literature Review", order: 0, isDone: false, isStart: true, boardId: b3.id } });
   const b3Writing = await prisma.column.create({ data: { label: "Writing",           order: 1, isDone: false, boardId: b3.id } });
   const b3Editing = await prisma.column.create({ data: { label: "Editing",           order: 2, isDone: false, boardId: b3.id } });
   const b3Done    = await prisma.column.create({ data: { label: "Done",              order: 3, isDone: true,  boardId: b3.id } });
@@ -1178,7 +1178,7 @@ async function seedDemoClass(userMap: Map<string, string>, ownerId: string) {
     data: {
       classId: cls.id,
       columns: [
-        { label: "To Do", isDone: false },
+        { label: "To Do", isDone: false, isStart: true },
         { label: "In Progress", isDone: false },
         { label: "Done", isDone: true },
       ],
@@ -1270,7 +1270,7 @@ async function seedDemoClass(userMap: Map<string, string>, ownerId: string) {
   async function makeGroup(name: string, order: number, students: string[], tasks: ClassTask[]) {
     const board = await prisma.board.create({ data: { name, order: 100 + order } });
     const cols = await Promise.all([
-      prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, boardId: board.id } }),
+      prisma.column.create({ data: { label: "To Do", order: 0, isDone: false, isStart: true, boardId: board.id } }),
       prisma.column.create({ data: { label: "In Progress", order: 1, isDone: false, boardId: board.id } }),
       prisma.column.create({ data: { label: "Done", order: 2, isDone: true, boardId: board.id } }),
     ]);
@@ -1339,7 +1339,7 @@ async function reseedBoard() {
     data: { id: boardId, name: `Reseeded board ${new Date().toISOString()}`, order: 999 },
   });
 
-  const colTodo = await prisma.column.create({ data: { label: "To Do (reseed)", order: 0, isDone: false, boardId: board.id } });
+  const colTodo = await prisma.column.create({ data: { label: "To Do (reseed)", order: 0, isDone: false, isStart: true, boardId: board.id } });
   const colIn = await prisma.column.create({ data: { label: "In Progress (reseed)", order: 1, isDone: false, boardId: board.id } });
   const colDone = await prisma.column.create({ data: { label: "Done (reseed)", order: 2, isDone: true, boardId: board.id } });
 

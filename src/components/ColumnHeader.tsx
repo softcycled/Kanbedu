@@ -9,9 +9,11 @@ interface Props {
   label: string;
   taskCount: number;
   isDone: boolean;
+  isStart: boolean;
   onRename: (newLabel: string) => Promise<void>;
   onDelete: () => void;
   onSetDone: () => void;
+  onSetStart: () => void;
   isDynamic: boolean;
   columnIndex?: number;
   color?: string | null;
@@ -26,9 +28,11 @@ export default function ColumnHeader({
   label,
   taskCount,
   isDone,
+  isStart,
   onRename,
   onDelete,
   onSetDone,
+  onSetStart,
   isDynamic,
   columnIndex = 0,
   color = null,
@@ -124,6 +128,13 @@ export default function ColumnHeader({
         </h2>
       )}
 
+      {/* Start badge — cards here park by design and never flag "waiting". Visual only. */}
+      {isStart && (
+        <span className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-ink/10 text-ink/70 select-none">
+          Start
+        </span>
+      )}
+
       {/* Done badge — visual only */}
       {isDone && (
         <span className="flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 select-none">
@@ -189,8 +200,19 @@ export default function ColumnHeader({
                 </DropdownItem>
               )}
               <DropdownDivider />
-              {/* Mark as Done — only shown for non-done columns */}
-              {!isDone && (
+              {/* Mark as Start — cards here never flag "waiting". Not offered on the Done column. */}
+              {!isStart && !isDone && (
+                <DropdownItem onClick={() => { onSetStart(); closeMenu(); }}>
+                  Mark as Start
+                </DropdownItem>
+              )}
+              {isStart && (
+                <DropdownItem onClick={() => { onSetStart(); closeMenu(); }}>
+                  Remove start
+                </DropdownItem>
+              )}
+              {/* Mark as Done — only for plain active columns */}
+              {!isDone && !isStart && (
                 <DropdownItem onClick={() => { onSetDone(); closeMenu(); }}>
                   Mark as Done
                 </DropdownItem>

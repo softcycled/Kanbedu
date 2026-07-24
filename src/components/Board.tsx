@@ -214,12 +214,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     return () => window.removeEventListener("resize", update);
   }, [viewMode]);
 
-  // Done column is always pinned last. nonDone sorted by order so index-based
-  // colours are stable if the columns array ever arrives out-of-sequence.
+  // Board reads left→right: Start columns pinned first, Done pinned last, active
+  // in between. Each group is sorted by order so index-based colours stay stable
+  // if the columns array ever arrives out-of-sequence.
   const sortedColumns = useMemo(() => {
-    const nonDone = columns.filter((c) => !c.isDone).sort((a, b) => a.order - b.order);
+    const start = columns.filter((c) => c.isStart && !c.isDone).sort((a, b) => a.order - b.order);
+    const active = columns.filter((c) => !c.isStart && !c.isDone).sort((a, b) => a.order - b.order);
     const done = columns.filter((c) => c.isDone);
-    return [...nonDone, ...done];
+    return [...start, ...active, ...done];
   }, [columns]);
 
   // ── Column actions ─────────────────────────────────────────────
@@ -259,9 +261,12 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
         body: JSON.stringify({ isDone: newIsDone }),
       });
       if (res.ok) {
-        // Server enforces single-done: clear all then set this one.
+        // Server enforces single-done: clear all then set this one. A column
+        // becoming Done also stops being a Start column.
         const updated = columns.map((c) =>
-          c.id === columnId ? { ...c, isDone: newIsDone } : newIsDone ? { ...c, isDone: false } : c
+          c.id === columnId
+            ? { ...c, isDone: newIsDone, isStart: newIsDone ? false : c.isStart }
+            : newIsDone ? { ...c, isDone: false } : c
         );
         // Marking as done: move that column to the rightmost position and persist the new order.
         const finalColumns = newIsDone
@@ -281,6 +286,36 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
       }
     } catch (error) {
       console.error("Failed to set done column:", error);
+      toasts.push({ title: "Could not update column", description: "Please try again." });
+    }
+  }, [columns, broadcastRefresh, toasts]);
+
+  const handleSetStartColumn = useCallback(async (columnId: string) => {
+    const col = columns.find((c) => c.id === columnId);
+    if (!col) return;
+    // Toggle: if already a start column, un-mark it; otherwise mark it as start.
+    const newIsStart = !col.isStart;
+    try {
+      const res = await fetch(`/api/columns/${columnId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isStart: newIsStart }),
+      });
+      if (res.ok) {
+        // A start column can't also be done (server clears isDone). No reorder
+        // needed: sortedColumns already clusters every Start column on the left,
+        // so marking a column Start slides it into the parking zone in its current
+        // order (and un-marking returns it to the active group where it was).
+        const updated = columns.map((c) =>
+          c.id === columnId ? { ...c, isStart: newIsStart, isDone: newIsStart ? false : c.isDone } : c
+        );
+        onColumnsChange(updated);
+        broadcastRefresh();
+      } else {
+        toasts.push({ title: "Could not update column", description: "Please try again." });
+      }
+    } catch (error) {
+      console.error("Failed to set start column:", error);
       toasts.push({ title: "Could not update column", description: "Please try again." });
     }
   }, [columns, broadcastRefresh, toasts]);
@@ -580,7 +615,8 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     }
 
     const column = columns.find((c) => c.id === active.id);
-    if (column && !column.isDone) {
+    // Start and Done columns are pinned (left / right) and not draggable.
+    if (column && !column.isDone && !column.isStart) {
       setActiveColumn(column);
     }
   }, [tasks, columns]);
@@ -632,18 +668,21 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
     // Check if dragging a column
     const draggedColumn = sortedColumns.find((c) => c.id === activeId);
     if (draggedColumn) {
-      // Done column is pinned to the end — never draggable.
-      if (draggedColumn.isDone) return;
+      // Start and Done columns are pinned (left / right) and never draggable.
+      if (draggedColumn.isDone || draggedColumn.isStart) return;
 
       const overTask = tasksRef.current.find((t) => t.id === overId);
       const overColumnId = overTask ? overTask.column : overId;
       if (!sortedColumns.find((c) => c.id === overColumnId)) return;
 
       const oldIndex = sortedColumns.findIndex((c) => c.id === activeId);
-      // Clamp target so non-done columns can't land after the done column.
+      // Clamp target so active columns stay between the pinned groups: after the
+      // last Start column, before the first Done column.
       const doneIndex = sortedColumns.findIndex((c) => c.isDone);
+      const lastStartIndex = sortedColumns.map((c) => c.isStart).lastIndexOf(true);
       let newIndex = sortedColumns.findIndex((c) => c.id === overColumnId);
       if (doneIndex !== -1 && newIndex >= doneIndex) newIndex = doneIndex - 1;
+      if (newIndex <= lastStartIndex) newIndex = lastStartIndex + 1;
 
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
@@ -1204,12 +1243,14 @@ export default function Board({ boardId, boardName, tasks, columns, onTasksChang
                   label={col.label}
                   columnIndex={index}
                   isDone={col.isDone}
+                  isStart={col.isStart}
                   tasks={getTasksByColumn(col.id)}
                   onTaskClick={handleTaskClick}
                   onAddTask={handleAddTask}
                   onRenameColumn={handleRenameColumn}
                   onDeleteColumn={handleDeleteColumnClick}
                   onSetDoneColumn={handleSetDoneColumn}
+                  onSetStartColumn={handleSetStartColumn}
                   color={col.color}
                   onSetColor={handleSetColumnColor}
                   isDynamic={columns.length > 1}

@@ -76,10 +76,11 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const columnMap = new Map(columns.map((c) => [c.id, c]));
-  // The first column is intake (To Do / Backlog / Wishlist) -- cards sit there
-  // by design until someone picks them up, so it's excluded from "stagnant"
-  // alongside Done. Only columns in between count as active work in progress.
-  const firstColumnId = columns[0]?.id ?? null;
+  // Start columns (To Do / Backlog / Wishlist) -- cards sit there by design
+  // until someone picks them up, so they're excluded from "stagnant" alongside
+  // Done. Only active columns in between count as work in progress. A board may
+  // have several start columns, so this is a set.
+  const startColumnIds = new Set(columns.filter((c) => c.isStart).map((c) => c.id));
 
   function endOfDay(d: Date): Date {
     const r = new Date(d);
@@ -179,7 +180,7 @@ export async function GET(request: NextRequest) {
       id: col.id,
       label: col.label,
       isDone: col.isDone,
-      isFirst: col.id === firstColumnId,
+      isStart: col.isStart,
       currentTaskCount: currentTasks.length,
       throughput,
       avgPhaseTimeMs,
@@ -190,11 +191,11 @@ export async function GET(request: NextRequest) {
 
   // ── Bottleneck detection ──────────────────────────────────────
   // Score = currentTaskCount × avgPhaseTimeMs (or currentPhaseMs proxy if no avg).
-  // Only middle columns (not intake, not Done) with at least 1 task are candidates --
-  // a big backlog aging in the first column is expected, not a bottleneck.
+  // Only active columns (not Start, not Done) with at least 1 task are candidates --
+  // a big backlog aging in a start column is expected, not a bottleneck.
   // Exactly one column gets the bottleneck flag — the one with the highest score.
   // Require at least 2 tasks to flag a bottleneck — avoids mislabeling on small boards
-  const nonDonePhases = phaseStats.filter((p) => !p.isDone && !p.isFirst && p.currentTaskCount >= 2);
+  const nonDonePhases = phaseStats.filter((p) => !p.isDone && !p.isStart && p.currentTaskCount >= 2);
   let bottleneckId: string | null = null;
   if (nonDonePhases.length > 0) {
     const scored = nonDonePhases.map((p) => ({
@@ -246,15 +247,15 @@ export async function GET(request: NextRequest) {
       : null;
 
   // "Waiting": tasks parked in an active column past the threshold. Same rule
-  // as the educator Monitor — see src/lib/waiting.ts. Backlog (intake column)
+  // as the educator Monitor — see src/lib/waiting.ts. Start columns (backlog)
   // and Done are excluded, and tasks with a comment thread are excluded too
   // since someone's already discussing them. The rate is over active,
   // non-backlog tasks (the pool that could plausibly be waiting).
-  const activeTasks = taskAggregates.filter((t) => !t.columnIsDone && t.columnId !== firstColumnId);
+  const activeTasks = taskAggregates.filter((t) => !t.columnIsDone && !startColumnIds.has(t.columnId));
   const stagnantCount = taskAggregates.filter((t) =>
     isWaiting({
       isDoneColumn: t.columnIsDone,
-      isFirstColumn: t.columnId === firstColumnId,
+      isStartColumn: startColumnIds.has(t.columnId),
       hasComments: t.hasComments,
       enteredColumnAt: t.enteredColumnAt,
       now: now.getTime(),

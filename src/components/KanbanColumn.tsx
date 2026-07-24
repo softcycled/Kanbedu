@@ -15,12 +15,14 @@ interface Props {
   label: string;
   columnIndex: number;
   isDone: boolean;
+  isStart: boolean;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onAddTask: (title: string, column: string) => Promise<void>;
   onRenameColumn: (columnId: string, newLabel: string) => Promise<void>;
   onDeleteColumn: (columnId: string) => void;
   onSetDoneColumn: (columnId: string) => void;
+  onSetStartColumn: (columnId: string) => void;
   color?: string | null;
   onSetColor?: (columnId: string, name: string | null) => void;
   isDynamic?: boolean;
@@ -32,12 +34,14 @@ function KanbanColumn({
   label,
   columnIndex,
   isDone,
+  isStart,
   tasks,
   onTaskClick,
   onAddTask,
   onRenameColumn,
   onDeleteColumn,
   onSetDoneColumn,
+  onSetStartColumn,
   color = null,
   onSetColor,
   isDynamic = false,
@@ -50,7 +54,8 @@ function KanbanColumn({
     listeners,
     isDragging,
     transform,
-  } = useSortable({ id: columnId, disabled: isDone });
+    // Start and Done columns are pinned (left / right), so they can't be dragged.
+  } = useSortable({ id: columnId, disabled: isDone || isStart });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -71,6 +76,10 @@ function KanbanColumn({
     onSetDoneColumn(columnId);
   }, [onSetDoneColumn, columnId]);
 
+  const handleSetStart = useCallback(() => {
+    onSetStartColumn(columnId);
+  }, [onSetStartColumn, columnId]);
+
   // Bumped to pop open + focus the AddTask input from the header's "+" button,
   // regardless of how far the task list is scrolled.
   const [addTaskSignal, setAddTaskSignal] = useState(0);
@@ -90,10 +99,12 @@ function KanbanColumn({
         label={label}
         columnIndex={columnIndex}
         isDone={isDone}
+        isStart={isStart}
         taskCount={tasks.length}
         onRename={handleRename}
         onDelete={handleDelete}
         onSetDone={handleSetDone}
+        onSetStart={handleSetStart}
         color={color}
         onSetColor={onSetColor ? (name) => onSetColor(columnId, name) : undefined}
         isDynamic={isDynamic}

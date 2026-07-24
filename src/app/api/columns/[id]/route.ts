@@ -42,18 +42,27 @@ export async function PATCH(
     }
     const data = result.data;
 
-    if (data.isDone !== undefined && membership.role !== "owner") {
-      return NextResponse.json({ error: "Only board owners can change the done column." }, { status: 403 });
+    // Marking a column as Start or Done reshapes the board's flow, so it's owner-only.
+    if ((data.isDone !== undefined || data.isStart !== undefined) && membership.role !== "owner") {
+      return NextResponse.json({ error: "Only board owners can change the start/done columns." }, { status: 403 });
     }
 
-    const updateData: { label?: string; isDone?: boolean; color?: string | null } = {};
+    // Start and Done are mutually exclusive — a column is one or the other, never both.
+    if (data.isDone === true && data.isStart === true) {
+      return NextResponse.json({ error: "A column can't be both Start and Done." }, { status: 400 });
+    }
+
+    const updateData: { label?: string; isDone?: boolean; isStart?: boolean; color?: string | null } = {};
     if (data.label !== undefined) updateData.label = data.label;
     if (data.isDone !== undefined) updateData.isDone = data.isDone;
+    if (data.isStart !== undefined) updateData.isStart = data.isStart;
     if (data.color !== undefined) updateData.color = data.color;
 
     // Enforce only one done column per board: clear isDone on all siblings first,
     // and clear completedAt on any tasks that were in those sibling "done" columns.
     if (updateData.isDone === true) {
+      // A column becoming Done can't also be a Start column.
+      updateData.isStart = false;
       const current = await prisma.column.findUnique({ where: { id: id } });
       if (current) {
         // Find sibling done columns before clearing them
@@ -90,6 +99,24 @@ export async function PATCH(
       if (!otherDone) {
         return NextResponse.json({ error: "Board must have at least one 'Done' column. Mark another column as done before un-marking this one." }, { status: 400 });
       }
+      await prisma.task.updateMany({
+        where: { column: id },
+        data: { completedAt: null },
+      });
+    }
+
+    // Marking a column as Start: Start and Done are mutually exclusive, so a
+    // column becoming Start stops being Done. Preserve the "board keeps a Done
+    // column" invariant and clear completion on its tasks, mirroring un-marking Done.
+    if (updateData.isStart === true && columnInfo.isDone === true) {
+      const otherDone = await prisma.column.findFirst({
+        where: { boardId: columnInfo.boardId, id: { not: id }, isDone: true },
+        select: { id: true },
+      });
+      if (!otherDone) {
+        return NextResponse.json({ error: "Board must have at least one 'Done' column. Mark another column as done before making this one a Start column." }, { status: 400 });
+      }
+      updateData.isDone = false;
       await prisma.task.updateMany({
         where: { column: id },
         data: { completedAt: null },

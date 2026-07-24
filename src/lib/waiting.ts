@@ -17,10 +17,10 @@ export const WAITING_MS = WAITING_DAYS * 24 * 60 * 60 * 1000;
 export interface WaitingInput {
   /** Task's current column is a Done column — finished work is never waiting. */
   isDoneColumn: boolean;
-  /** Current column is the intake column (To Do / Backlog / Wishlist). Cards
-   *  sit there by design until someone picks them up, so backlog is never
-   *  "waiting". */
-  isFirstColumn: boolean;
+  /** Current column is a Start column (To Do / Backlog / Wishlist). Cards sit
+   *  there by design until someone picks them up, so a start column is never
+   *  "waiting". A board may have several, and none of them accrue the signal. */
+  isStartColumn: boolean;
   /** The task has at least one comment. An active thread means someone is
    *  already on it, so it isn't sitting there ignored. */
   hasComments: boolean;
@@ -32,11 +32,11 @@ export interface WaitingInput {
 
 export function isWaiting({
   isDoneColumn,
-  isFirstColumn,
+  isStartColumn,
   hasComments,
   enteredColumnAt,
   now,
 }: WaitingInput): boolean {
-  if (isDoneColumn || isFirstColumn || hasComments) return false;
+  if (isDoneColumn || isStartColumn || hasComments) return false;
   return now - enteredColumnAt > WAITING_MS;
 }

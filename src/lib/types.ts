@@ -13,6 +13,7 @@ export interface ColumnData {
   label: string;
   order: number;
   isDone: boolean;
+  isStart: boolean;
   color?: string | null;
   boardId: string;
 }

@@ -65,7 +65,7 @@ export default async function Home({
     });
     await prisma.column.createMany({
       data: [
-        { label: "To Do", order: 0, isDone: false, boardId: board.id },
+        { label: "To Do", order: 0, isDone: false, isStart: true, boardId: board.id },
         { label: "In Progress", order: 1, isDone: false, boardId: board.id },
         { label: "Done", order: 2, isDone: true, boardId: board.id },
       ],

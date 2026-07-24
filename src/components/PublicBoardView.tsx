@@ -30,6 +30,7 @@ interface PublicColumn {
   label: string;
   order: number;
   isDone: boolean;
+  isStart: boolean;
   color: string | null;
 }
 
@@ -166,13 +167,14 @@ export default function PublicBoardView({ token }: { token: string }) {
       .catch(() => setStatus("error"));
   }, [token]);
 
-  // Done column pinned last, matching the rule every other board view follows
-  // for stable, correct palette resolution.
+  // Start columns pinned first, Done pinned last, matching the rule every other
+  // board view follows for stable, correct palette resolution.
   const sortedColumns = useMemo(() => {
     if (!data) return [];
-    const nonDone = data.columns.filter((c) => !c.isDone).sort((a, b) => a.order - b.order);
+    const start = data.columns.filter((c) => c.isStart && !c.isDone).sort((a, b) => a.order - b.order);
+    const active = data.columns.filter((c) => !c.isStart && !c.isDone).sort((a, b) => a.order - b.order);
     const done = data.columns.filter((c) => c.isDone);
-    return [...nonDone, ...done];
+    return [...start, ...active, ...done];
   }, [data]);
 
   const allTags = useMemo(() => {
@@ -275,6 +277,9 @@ export default function PublicBoardView({ token }: { token: string }) {
                   <div className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-2 mb-3 rounded-lg border ${palette.bg} ${palette.border}`}>
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${palette.dot}`} />
                     <h2 className={`text-sm font-bold tracking-wide ${palette.text} flex-1`}>{col.label}</h2>
+                    {col.isStart && (
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-ink/10 text-ink/70 select-none">Start</span>
+                    )}
                     <span className="text-xs text-muted font-mono bg-ink/5 rounded-md px-1.5 py-0.5">{tasks.length}</span>
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-xl bg-column-bg p-2">

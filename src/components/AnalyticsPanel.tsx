@@ -20,7 +20,7 @@ interface PhaseStats {
   id: string;
   label: string;
   isDone: boolean;
-  isFirst: boolean;
+  isStart: boolean;
   currentTaskCount: number;
   throughput: number;
   avgPhaseTimeMs: number | null;
@@ -135,7 +135,7 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const phaseTaskData = useMemo(() => {
     if (!data) return [];
     return data.columns.map((c) => ({
-      id: c.id, name: c.label, tasks: c.currentTaskCount, isDone: c.isDone, isBottleneck: c.isBottleneck,
+      id: c.id, name: c.label, tasks: c.currentTaskCount, isDone: c.isDone, isStart: c.isStart, isBottleneck: c.isBottleneck,
       throughput: c.throughput, longestStagnantMs: c.longestStagnantMs, longestStagnantTitle: c.longestStagnantTitle,
     }));
   }, [data]);
@@ -161,13 +161,13 @@ function AnalyticsPanel({ boardName, boardId, onClose }: Props) {
   const bottleneckPhase = useMemo(() => phaseTaskData.find((c) => c.isBottleneck) ?? null, [phaseTaskData]);
 
   // Longest-waiting active task across every middle column -- the one thing
-  // on this board most worth someone's attention right now. The intake column
-  // (To Do / Backlog) is excluded alongside Done: cards sit there by design.
+  // on this board most worth someone's attention right now. Start columns
+  // (To Do / Backlog) are excluded alongside Done: cards sit there by design.
   const oldestStagnant = useMemo(() => {
     if (!data) return null;
     let max: { title: string; ms: number } | null = null;
     for (const c of data.columns) {
-      if (c.isDone || c.isFirst || c.longestStagnantMs == null || !c.longestStagnantTitle) continue;
+      if (c.isDone || c.isStart || c.longestStagnantMs == null || !c.longestStagnantTitle) continue;
       if (!max || c.longestStagnantMs > max.ms) max = { title: c.longestStagnantTitle, ms: c.longestStagnantMs };
     }
     return max;
@@ -547,13 +547,13 @@ interface TooltipPayload { payload: Record<string, unknown> }
 
 function PhaseTaskTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
   if (!active || !payload?.length) return null;
-  const d = payload[0].payload as { name: string; tasks: number; throughput: number; isDone: boolean; isBottleneck: boolean; longestStagnantTitle: string | null; longestStagnantMs: number | null };
+  const d = payload[0].payload as { name: string; tasks: number; throughput: number; isDone: boolean; isStart: boolean; isBottleneck: boolean; longestStagnantTitle: string | null; longestStagnantMs: number | null };
   return (
     <div className="bg-card-bg border border-border rounded-xl shadow-modal px-3 py-2.5 text-xs max-w-[220px]">
       <p className="font-semibold text-ink mb-1">{d.name}</p>
       <p className="text-muted">{d.tasks} task{d.tasks !== 1 ? "s" : ""} currently here</p>
       {d.throughput > 0 && <p className="text-muted">{d.throughput} have passed through</p>}
-      {!d.isDone && d.longestStagnantTitle && (
+      {!d.isDone && !d.isStart && d.longestStagnantTitle && (
         <p className="text-muted mt-1 pt-1 border-t border-border">
           Longest waiting: <span className="text-ink">{d.longestStagnantTitle}</span> ({formatDuration(d.longestStagnantMs ?? 0)})
         </p>
